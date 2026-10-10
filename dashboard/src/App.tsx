@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bell, ClipboardCheck, Gauge, Inbox, LogOut, Network } from "lucide-react";
+import { Bell, ClipboardCheck, Flag, Gauge, Inbox, LogOut, Network } from "lucide-react";
 import { Brand } from "@/components/Brand";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { FeedbackView } from "@/components/FeedbackView";
 import { AvailabilityView } from "@/components/AvailabilityView";
 import { CaseView } from "@/components/CaseView";
 import { IncomingView } from "@/components/IncomingView";
@@ -10,9 +11,9 @@ import { NetworkView } from "@/components/NetworkView";
 import { ReviewView } from "@/components/ReviewView";
 import { api, session, setUnauthorizedHandler, subscribe } from "@/api";
 import { cn } from "@/lib/utils";
-import type { CaseDetail, Hospital, ReferralRow, ReviewItem, StaffUser } from "@/types";
+import type { CaseDetail, Hospital, ReferralRow, ReviewItem, StaffUser, TriageFeedback } from "@/types";
 
-type View = "incoming" | "availability" | "network" | "reviews";
+type View = "incoming" | "availability" | "network" | "reviews" | "feedback";
 
 function beep() {
   try {
@@ -41,6 +42,7 @@ export default function App() {
   const [hospital, setHospital] = useState<Hospital | null>(null);
   const [network, setNetwork] = useState<{ hospitals: Hospital[]; ok: boolean }>({ hospitals: [], ok: true });
   const [reviews, setReviews] = useState<ReviewItem[]>([]);
+  const [feedback, setFeedback] = useState<TriageFeedback[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [alerts, setAlerts] = useState(typeof Notification !== "undefined" && Notification.permission === "granted");
   const openRef = useRef<string | null>(null);
@@ -76,6 +78,7 @@ export default function App() {
     if (view === "availability") loadHospital().catch(() => {});
     if (view === "network") loadNetwork().catch(() => {});
     if (view === "reviews") loadReviews().catch(() => {});
+    if (view === "feedback") api.allFeedback().then(setFeedback).catch(() => {});
   }, [user, view, loadHospital, loadNetwork, loadReviews]);
 
   // Live events, plus a slow poll as a safety net (proxies can drop SSE).
@@ -113,6 +116,7 @@ export default function App() {
     { id: "incoming", label: "Patients", icon: Inbox, show: isHospital },
     { id: "availability", label: "Disponibilité", icon: Gauge, show: isHospital },
     { id: "reviews", label: "À vérifier", icon: ClipboardCheck, show: isClinician },
+    { id: "feedback", label: "Retours", icon: Flag, show: isClinician },
     { id: "network", label: "Réseau", icon: Network, show: true },
   ];
 
@@ -156,6 +160,7 @@ export default function App() {
         {view === "availability" && hospital && <AvailabilityView hospital={hospital} onChanged={setHospital} />}
         {view === "network" && <NetworkView hospitals={network.hospitals} simulatorOk={network.ok} />}
         {view === "reviews" && <ReviewView items={reviews} onDone={() => loadReviews()} />}
+        {view === "feedback" && <FeedbackView items={feedback} onError={setError} />}
         </ErrorBoundary>
       </main>
     </div>

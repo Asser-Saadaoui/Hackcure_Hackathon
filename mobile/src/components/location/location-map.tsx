@@ -1,41 +1,40 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
-import MapView, { Circle, Marker } from 'react-native-maps';
+import { WebView } from 'react-native-webview';
 
 import { YOU_COLOR, type LocationMapProps } from '@/components/location/types';
+import { leafletPage } from '@/components/map/leaflet-html';
 import { Radius } from '@/constants/theme';
 
-/** Native location picker: draggable marker, tap to move, accuracy circle. */
+/** Native location picker: Leaflet + OpenStreetMap in a WebView. Drag the pin or tap the map to move it. */
 export function LocationMap({ value, accuracyM, onChange, height = 320, youLabel }: LocationMapProps) {
-  const ref = useRef<MapView>(null);
-  const coord = { latitude: value.lat, longitude: value.lng };
+  const ref = useRef<WebView>(null);
+  const ready = useRef(false);
+  const html = useMemo(() => leafletPage('pick'), []);
+  const payload = JSON.stringify({ lat: value.lat, lng: value.lng, accuracy: accuracyM ?? null, color: YOU_COLOR, label: youLabel });
+  const push = () => ref.current?.injectJavaScript(`window.sahUpdate && window.sahUpdate(${payload}); true;`);
 
-  useEffect(() => {
-    ref.current?.animateToRegion({ ...coord, latitudeDelta: 0.012, longitudeDelta: 0.012 }, 400);
-  }, [value.lat, value.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (ready.current) push(); }, [payload]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <View style={[styles.box, { height }]}>
-      <MapView
+      <WebView
         ref={ref}
+        originWhitelist={['*']}
+        source={{ html }}
         style={StyleSheet.absoluteFill}
-        initialRegion={{ ...coord, latitudeDelta: 0.012, longitudeDelta: 0.012 }}
-        onPress={(e) => onChange({ lat: e.nativeEvent.coordinate.latitude, lng: e.nativeEvent.coordinate.longitude })}>
-        {accuracyM ? (
-          <Circle center={coord} radius={accuracyM} strokeColor={YOU_COLOR} strokeWidth={1} fillColor="rgba(37,99,235,0.12)" />
-        ) : null}
-        <Marker
-          coordinate={coord}
-          title={youLabel}
-          pinColor={YOU_COLOR}
-          draggable
-          onDragEnd={(e) => onChange({ lat: e.nativeEvent.coordinate.latitude, lng: e.nativeEvent.coordinate.longitude })}
-        />
-      </MapView>
+        javaScriptEnabled
+        scrollEnabled={false}
+        onMessage={(e) => {
+          const msg = JSON.parse(e.nativeEvent.data);
+          if (msg.ready) { ready.current = true; push(); return; }
+          if (typeof msg.lat === 'number' && typeof msg.lng === 'number') onChange({ lat: msg.lat, lng: msg.lng });
+        }}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  box: { borderRadius: Radius.xl, overflow: 'hidden' },
+  box: { borderRadius: Radius.xl, overflow: 'hidden', backgroundColor: '#E5E7EB' },
 });

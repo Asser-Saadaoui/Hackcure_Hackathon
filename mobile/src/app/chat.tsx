@@ -15,7 +15,7 @@ import { Hassanito } from '@/components/hassanito';
 import { PrototypeNotice } from '@/components/prototype-notice';
 import { Colors, Fonts, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useI18n } from '@/i18n';
-import { api, USING_MOCK } from '@/lib/api';
+import { api } from '@/lib/api';
 import { HttpError } from '@/lib/http-api';
 import { getJSON, Keys, remove, setJSON } from '@/lib/storage';
 import type { Turn, TurnResult } from '@/lib/types';
@@ -29,7 +29,6 @@ import type { Turn, TurnResult } from '@/lib/types';
  *   under_review → a clinician is reviewing → Result screen (review state)
  *   result       → Result screen
  *   degraded     → AI unavailable: safe message + call 190
- * In demo mode the mock always answers `question` with a demo reply.
  */
 
 type Item = {
@@ -70,7 +69,7 @@ export default function ChatScreen() {
           router.push({ pathname: '/emergency', params: { caseId: c.id } });
         } else if (c.status === 'TRIAGING' && c.turns.at(-1)?.role === 'ASSISTANT') setMascotState('guiding');
       } catch (error) {
-        if (USING_MOCK || error instanceof HttpError && error.status === 404) await remove(Keys.currentCase);
+        if (error instanceof HttpError && error.status === 404) await remove(Keys.currentCase);
         else {
           setCaseId(id); // retain the reference across network failures
           setResumeError(true);

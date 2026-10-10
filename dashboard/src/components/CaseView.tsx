@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   Ambulance, ArrowLeft, ArrowRightLeft, Check, ChevronDown, Clock, FileJson, FileText, Footprints, Hospital, MapPin, ShieldAlert,
-  TriangleAlert, User, X,
+  Flag, TriangleAlert, User, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { ChatPanel } from "@/components/ChatPanel";
 import { LevelBadge } from "@/components/LevelBadge";
+import { FeedbackPanel } from "@/components/FeedbackPanel";
 import { ReroutePanel } from "@/components/ReroutePanel";
 import { api, downloadFhir, openReportPdf } from "@/api";
 import { AMBULANCE, ago, EQUIPMENT, LANG, pct, STATUS, time } from "@/lib/format";
@@ -32,6 +33,32 @@ function Bar({ label, value, hint }: { label: string; value: number | null; hint
   );
 }
 
+/** Diverging bars: how much each element moved the NLP score (right = towards emergency). */
+function ModelFactors({ factors }: { factors: { label: string; contribution: number; direction: "up" | "down" }[] }) {
+  const max = Math.max(...factors.map((f) => Math.abs(f.contribution)), 0.05);
+  return (
+    <div className="space-y-1.5 rounded-lg border p-3">
+      <p className="text-xs font-semibold uppercase text-muted-foreground">Ce qui a pesé sur le modèle de langage</p>
+      {factors.map((f) => {
+        const width = `${Math.round((Math.abs(f.contribution) / max) * 50)}%`;
+        return (
+          <div key={f.label} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_3.5rem] items-center gap-2 text-sm">
+            <span className="truncate" title={f.label}>{f.label}</span>
+            <div className="relative h-2.5 rounded-full bg-secondary">
+              <span className="absolute left-1/2 top-[-3px] h-[16px] w-px bg-border" />
+              <span className={cn("absolute top-0 h-2.5 rounded-full", f.direction === "up" ? "left-1/2 bg-red-500" : "right-1/2 bg-emerald-500")} style={{ width }} />
+            </div>
+            <span className={cn("text-right text-xs tabular-nums", f.direction === "up" ? "text-red-700" : "text-emerald-700")}>
+              {f.contribution > 0 ? "+" : ""}{Math.round(f.contribution * 100)} pts
+            </span>
+          </div>
+        );
+      })}
+      <p className="text-[11px] text-muted-foreground">Variation du score du modèle quand l'élément est retiré du dossier. → vers l'urgence · ← vers « non urgent ». Indicatif, non calibré cliniquement.</p>
+    </div>
+  );
+}
+
 function Fact({ icon: Icon, children }: { icon: typeof Clock; children: React.ReactNode }) {
   return <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-xs font-medium"><Icon className="h-3.5 w-3.5 text-muted-foreground" />{children}</span>;
 }
@@ -47,6 +74,8 @@ export function CaseView({ detail, onBack, onChanged }: { detail: CaseDetail; on
   const [reason, setReason] = useState(REJECT_REASONS[0]);
   const [explanation, setExplanation] = useState("");
   const [tab, setTab] = useState("summary");
+  const [reporting, setReporting] = useState(false);
+  const [reported, setReported] = useState(false);
   const pending = r.status === "SENT" || r.status === "INFO_REQUESTED";
   const open = pending || r.status === "ACCEPTED";
   const criticalFlags = a.triggeredRules.filter((x) => x.severity === "critical");
@@ -71,6 +100,9 @@ export function CaseView({ detail, onBack, onChanged }: { detail: CaseDetail; on
         <div className="flex items-center justify-between">
           <button onClick={onBack} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /> Patients</button>
           <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={() => { setReporting(true); setReported(false); }} title="Le niveau donné par Sahhanito était faux">
+              <Flag className="mr-1.5 h-4 w-4" />Signaler un faux négatif
+            </Button>
             <Button variant="outline" size="sm" title="HL7 FHIR R4 (Bundle document) à importer dans le dossier patient de l'hôpital"
               onClick={() => downloadFhir(r.id, c.referenceCode).catch((err) => setError((err as Error).message))}>
               <FileJson className="mr-1.5 h-4 w-4" />Export FHIR
@@ -120,6 +152,11 @@ export function CaseView({ detail, onBack, onChanged }: { detail: CaseDetail; on
         )}
       </div>
 
+      {reporting && (
+        <FeedbackPanel referralId={r.id} aiLevel={c.level} onCancel={() => setReporting(false)}
+          onDone={() => { setReporting(false); setReported(true); }} />
+      )}
+      {reported && <p className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">Merci : le signalement est transmis à l'équipe IA.</p>}
       {moved && <p className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">Patient réorienté vers {moved}. Le dossier reste consultable dans l'historique.</p>}
       {rerouting && (
         <ReroutePanel referralId={r.id} accepted={r.status === "ACCEPTED"} onCancel={() => setRerouting(false)}
@@ -164,6 +201,7 @@ export function CaseView({ detail, onBack, onChanged }: { detail: CaseDetail; on
               <CardContent className="space-y-3">
                 <p className="text-sm font-medium" dir="auto">{why.headline}</p>
                 <List items={why.points} />
+                {why.modelFactors && why.modelFactors.length > 0 && <ModelFactors factors={why.modelFactors} />}
                 <p className="text-xs">
                   <span className={cn("rounded-full px-2 py-0.5 font-medium",
                     why.confidence === "élevée" ? "bg-emerald-100 text-emerald-800" : why.confidence === "moyenne" ? "bg-amber-100 text-amber-900" : "bg-red-100 text-red-800")}>

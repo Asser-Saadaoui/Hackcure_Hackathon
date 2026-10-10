@@ -42,7 +42,8 @@ export interface CaseDetail {
     actions: string[];
   };
   transcript: Turn[];
-  explanation: { headline: string; points: string[]; confidence: string; confidenceNote: string };
+  explanation: { headline: string; points: string[]; confidence: string; confidenceNote: string;
+    modelFactors?: { label: string; contribution: number; direction: "up" | "down" }[]; modelSaturated?: boolean };
   patientAge: string | number | null;
   journey: { referralId: string; facilityName: string; status: ReferralStatus; statusLabel: string; reason: string | null;
     decidedBy: string | null; sentAt: string; decidedAt: string | null }[];
@@ -62,6 +63,25 @@ export interface Availability {
 export interface Alternative {
   key: string; name: string; km: number; eta: number; reason: string; capable: boolean;
   bedsAvailable: number | null; waitMinutes: number | null; source: "simulator" | "staff" | "unknown";
+}
+
+export interface TriageFeedback {
+  id: string; caseId: string; referralId: string | null; hospitalKey: string | null; hospitalName: string | null;
+  kind: "FALSE_NEGATIVE" | "FALSE_POSITIVE"; aiLevel: Level | null; actualLevel: Level; missedSigns: string[]; note: string | null;
+  reportedBy: string; createdAt: string;
+  snapshot: { p_nlp: number | null; s_rule: number | null; p_final: number | null; uncertainty: string | null; rules: string[]; chief_complaint: string; language: string } | null;
+}
+
+export interface SimSettings { icu_beds: number; regular_beds: number; num_doctors: number; num_nurses: number; mean_inter_arrival_minutes: number; seed: number }
+export interface SimEvent { kind: "surge" | "shortage" | "outage" | "closed" | "holds"; remainingMinutes: number; factor?: number; fraction?: number; equipment?: string; beds?: number }
+export interface SimHospital {
+  key: string; name: string; type: string; equipment: string[]; settings: SimSettings; defaults: SimSettings; events: SimEvent[];
+  view: { bedsAvailable: number; bedsTotal: number; icuAvailable: number; icuTotal: number; waitMinutes: number; doctorsAvailable: number;
+    doctorsTotal: number; nursesAvailable: number; waitingPatients: number; staffShortage: boolean; accepting: boolean; equipmentDown: string[]; simulationMinutes: number };
+}
+export interface Scenario {
+  speed: number; paused: boolean; autoOutages: boolean; tickSeconds: number; presets: { id: string; label: string }[];
+  log: { at: string; text: string }[]; hospitals: SimHospital[];
 }
 
 export interface Hospital { key: string; name: string; nameAr?: string; type: string; lat: number; lng: number; specialties: string[]; equipment: string[]; availability: Availability }

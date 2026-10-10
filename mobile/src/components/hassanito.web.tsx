@@ -3,19 +3,18 @@ import { Asset } from 'expo-asset';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { useI18n } from '@/i18n';
-import { MASCOT_STATES, mascotCopy, mascotFrame, resolveMascotState, type MascotProps, type MascotState } from './hassanito-state';
+import { mascotCopy, mascotFrame, resolveMascotState, type MascotProps } from './hassanito-state';
 
 const directions = Asset.fromModule(require('../../assets/mascots/sahhanito-directions.webp')).uri;
 const reactions = Asset.fromModule(require('../../assets/mascots/sahhanito-reactions.webp')).uri;
 export function Hassanito({ state = 'idle', compact = false, message, presentation = 'inline' }: MascotProps) {
   const { language, rtl } = useI18n();
-  const [preview, setPreview] = useState<MascotState>();
   const [focused, setFocused] = useState(false);
   useFocusEffect(useCallback(() => {
     setFocused(true);
     return () => setFocused(false);
   }, []));
-  const active = resolveMascotState(state, preview);
+  const active = resolveMascotState(state);
   const [reduceMotion, setReduceMotion] = useState(() => typeof window === 'undefined' || window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   useEffect(() => {
     const query = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -45,17 +44,10 @@ export function Hassanito({ state = 'idle', compact = false, message, presentati
       @keyframes hassanito-celebrate{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
       @media(max-width:600px){.hassanito-hero .hassanito-figure{width:140px!important;height:140px!important}}
       @media(prefers-reduced-motion:reduce){.hassanito *{animation:none!important;transition:none!important}}
-      .hassanito-debug{width:100%;font-size:11px;color:#526a80;margin-top:8px}
     `}</style>
     {appFrame || reduceMotion || !focused ? <div className="hassanito-figure" role="img" aria-label={active === 'alert' ? 'Hassanito, calm and still' : `Hassanito, ${active}`}
       style={{ width: size, height: size, backgroundImage: `url(${frame.sheet === 'directions' ? directions : reactions})`, backgroundSize: '300% 300%', backgroundPosition: `${(frame.index % 3) * 50}% ${Math.floor(frame.index / 3) * 50}%` }} />
       : <Mascot directions={directions} reactions={reactions} size={size} label="Hassanito, Sahhanito’s owl companion" className="hassanito-figure" />}
     <div className="hassanito-bubble" role={active === 'alert' ? 'alert' : 'status'}>{message ?? mascotCopy(language, active)}</div>
-    {__DEV__ && !compact && <details className="hassanito-debug"><summary>Mascot preview</summary><label>Development state: {' '}
-      <select aria-label="Mascot state preview" value={preview ?? ''} disabled={state === 'alert'}
-        onChange={event => setPreview(event.target.value ? event.target.value as MascotState : undefined)}>
-        <option value="">Follow app</option>{MASCOT_STATES.map(s => <option key={s} value={s}>{s}</option>)}
-      </select>
-    </label></details>}
   </section>;
 }

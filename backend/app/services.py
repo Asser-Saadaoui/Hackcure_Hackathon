@@ -692,6 +692,35 @@ CONFIDENCE_FR = {'LOW': ('élevée', 'Les signaux concordent.'), 'MEDIUM': ('moy
                  'HIGH': ('faible', 'Informations insuffisantes : jugement clinique nécessaire.')}
 
 
+FACTOR_FR = {
+    'other_symptom': 'Symptôme(s) signalé(s)', 'severe_headache': 'Maux de tête sévères', 'age_missing': 'Âge non précisé',
+    'age_given': 'Âge du patient', 'duration_given': 'Durée des symptômes', 'duration_missing': 'Durée non précisée',
+    'sex_missing': 'Sexe non précisé', 'sex_given': 'Sexe du patient', 'severity_missing': 'Intensité non précisée',
+    'severity_given': 'Intensité décrite', 'vitals_missing': 'Constantes non mesurées',
+    'third_person_report': 'Signalé par un proche', 'episodic_presentation': 'Épisodes répétés',
+}
+VITAL_FR = {'oxygen_saturation': 'saturation en oxygène', 'heart_rate': 'fréquence cardiaque', 'systolic': 'tension artérielle',
+            'diastolic': 'tension artérielle', 'temperature_c': 'température', 'respiratory_rate': 'fréquence respiratoire', 'glucose': 'glycémie'}
+
+
+def model_factors(case):
+    """NLP explanation (leave-one-group-out, computed by the AI) with French labels."""
+    exp = (case.assessment or {}).get('nlp_explanation') or {}
+    out = []
+    for f in exp.get('factors', []):
+        c = f['concept']
+        if f['kind'] == 'vital' and f['group'].startswith('vital.'):
+            label = f"Constante mesurée : {VITAL_FR.get(c, c)}"
+        else:
+            label = FACTOR_FR.get(c) or FR_CONCEPTS.get(c) or c.replace('_', ' ')
+        if f.get('status') == 'absent':
+            label = f'Absence : {label.lower()}'
+        elif f.get('status') == 'uncertain':
+            label = f'{label} (incertain)'
+        out.append(dict(label=label, contribution=f['contribution'], direction='up' if f['contribution'] > 0 else 'down'))
+    return dict(factors=out, saturated=bool(exp.get('saturated')), method=exp.get('method'))
+
+
 def explanation(case):
     """Plain-French reasons for the level, for ED staff (the raw scores stay available as technical details)."""
     a, d, ai = case.assessment or {}, case.decision or {}, case.ai_decision or {}
@@ -711,6 +740,18 @@ def explanation(case):
         points.append("Le modèle de langage n'a pas détecté de signe de gravité.")
     else:
         points.append('Le modèle de langage estime un risque modéré.')
+    mf = model_factors(case)
+    if mf['factors']:
+        ups = [f['label'] for f in mf['factors'] if f['direction'] == 'up'][:3]
+        downs = [f['label'] for f in mf['factors'] if f['direction'] == 'down'][:2]
+        text = 'Pour le modèle de langage, ont surtout compté'
+        if ups:
+            text += ' vers l\'urgence : ' + ', '.join(ups)
+        if downs:
+            text += (' ; ' if ups else ' ') + 'dans l\'autre sens : ' + ', '.join(downs)
+        points.append(text + '.')
+    elif mf['saturated']:
+        points.append('Le modèle de langage s\'appuie sur plusieurs éléments concordants (aucun élément seul ne change son score).')
     if ai.get('basis') == 'rule_floor':
         points.append('Le niveau minimum imposé par les règles de sécurité s\'applique.')
     if case.review:
@@ -718,7 +759,7 @@ def explanation(case):
     rationale = (ai.get('rationale_all') or {}).get('fr') or d.get('rationale') or ''
     conf, conf_note = CONFIDENCE_FR.get(a.get('uncertainty') or 'HIGH', CONFIDENCE_FR['HIGH'])
     return dict(headline=f"{LEVEL_FR.get(level, level)} : {rationale}".strip(' :'), points=points,
-                confidence=conf, confidenceNote=conf_note)
+                confidence=conf, confidenceNote=conf_note, modelFactors=mf['factors'], modelSaturated=mf['saturated'])
 
 
 def patient_age(case):

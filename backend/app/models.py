@@ -143,6 +143,23 @@ class HospitalSettings(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
+class TriageFeedback(Base):
+    """Clinical feedback on the AI's level, mainly false negatives (under-triage), for the AI team."""
+    __tablename__ = 'triage_feedback'
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    case_id: Mapped[str] = mapped_column(ForeignKey('cases.id'), index=True)
+    referral_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    hospital_key: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    kind: Mapped[str] = mapped_column(String(16))                 # FALSE_NEGATIVE | FALSE_POSITIVE
+    ai_level: Mapped[str | None] = mapped_column(String(12), nullable=True)
+    actual_level: Mapped[str] = mapped_column(String(12))
+    missed_signs: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    snapshot: Mapped[dict | None] = mapped_column(JSON, nullable=True)   # AI scores, rules, version at report time
+    reported_by: Mapped[str] = mapped_column(String(120))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+
+
 class AuditLog(Base):
     __tablename__ = 'audit_log'
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)

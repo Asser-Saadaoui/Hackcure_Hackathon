@@ -4,7 +4,7 @@ This integration continues `feat/sahhanito-platform`, based on main's merged pla
 
 ## Run
 
-Use the service commands in the root README. In `mobile/`, run `npm ci`, set `EXPO_PUBLIC_API_URL` to your backend origin in an ignored `.env.local`, and run `npm run web` or `npm start`. A phone needs your computer's LAN address, not `localhost`. Without an API URL the existing offline mock is used and clearly labelled.
+Use the service commands in the root README. In `mobile/`, run `npm ci`, set `EXPO_PUBLIC_API_URL` to your backend origin in an ignored `.env.local`, and run `npm run web` or `npm start`. A phone needs your computer's LAN address, not `localhost`. The patient app uses the HTTP backend only; offline mock and developer routes were removed upstream. Configure the API URL as described in the mobile README.
 
 `npm run web:build` exports for same-origin deployment on Windows or Unix. An explicitly set API URL takes precedence. `npm run android:apk` uses EAS; account credentials and signing are required. Native bundle exports are not installable APKs and do not demonstrate device compatibility.
 
@@ -17,10 +17,10 @@ Use the service commands in the root README. In `mobile/`, run `npm ci`, set `EX
 - Dashboard summaries are memoized, calculated from one case response, and protected against stale or unfocused requests. Retained screens pause their mascot animations and unmount the pointer-tracking component while unfocused. There is no new polling loop or animation library.
 
 - `src/components/hassanito-state.ts`: six app states, translated companion messages, native atlas cells, emergency precedence over development previews.
-- `hassanito.web.tsx`: the real `page-mascot` component using only `directions`, `reactions`, `size`, `label`, and `className`. Normal idle/listening states track the cursor and react to clicks. App-owned thinking/guiding/happy states select explicit atlas frames, with gentle thinking tilt and a short completion bounce. A larger hero presentation follows the starter demo's prominent owl/speech bubble. Emergency and reduced-motion settings render a still frame. Development controls are collapsed by default.
+- `hassanito.web.tsx`: the real `page-mascot` component using only `directions`, `reactions`, `size`, `label`, and `className`. Normal idle/listening states track the cursor and react to clicks. App-owned thinking/guiding/happy states select explicit atlas frames, with gentle thinking tilt and a short completion bounce. A larger hero presentation follows the starter demo's prominent owl/speech bubble. Emergency and reduced-motion settings render a still frame. Patient-facing developer controls were removed upstream and remain absent.
 - `hassanito.tsx`: explicit native atlas states, hero/inline presentation, gentle 3-pixel floating motion, thinking opacity animation, and system reduced-motion support. Alert states remain still. Web uses CSS transforms and Page Mascot's pointer reactions.
 - `assets/mascots/`: the two transparent 3×3 atlases; about 544 KB combined. The official Page Mascot validator measures 0.00 px body shift at 140 px, 92.5% minimum overlap, 80.6% palette match, and 5.9% shoulder-width difference.
-- `prototype-notice.tsx`: keeps clinical-validation and simulated hospital/ambulance limitations visible. It identifies mock mode separately.
+- `prototype-notice.tsx`: keeps clinical-validation and simulated hospital/ambulance limitations visible.
 - Existing screens map intake/typing to listening, sending to thinking, follow-ups and care to guiding, routine completion to happy, and emergency to alert. Waiting for hospital response uses explicit text. GPS is requested after the patient taps the location action.
 - Staff dashboard uses the same still portrait and bilingual brand. Its authenticated workflow is retained.
 
@@ -43,3 +43,7 @@ No model was retrained or retuned. The original ensemble, 0.15 experimental thre
 Hospital capacity and ambulance movement are simulated. Staff acceptance is an application event, not proof that a real hospital has received or accepted a patient. No emergency dispatch occurs. Optional existing LLM phrasing was disabled during local actual-service tests; no API key is needed for template mode. No deployment, signed APK, real-device test, or clinical validation is claimed.
 
 Known tooling warnings: Expo reports unused Leaflet CSS image URLs (the maps use div icons), and the existing dependency tree has npm audit findings. No breaking dependency upgrade was applied. Browser map tiles require an internet connection.
+
+## PR #9 compatibility merge
+
+Merged main through 931b674, preserving ambulance tracking, staff triage feedback, explanation support, native Leaflet maps, and Android local-network HTTP configuration. Retained the redesigned shell and home route, focus-aware mascot, prototype limitations, and critical case resume handling. Removed obsolete dev/hub registrations, mock references, and the patient mascot preview to respect the upstream cleanup.

@@ -2,13 +2,11 @@ import type {
   CaseDetail, Language, CaseLocation, CaseSummary, ChatKind, ChatMessage,
   PatientEvent, PatientReport, Session, TrackingView, TurnResult,
 } from '@/lib/types';
-import { API_CONFIGURED, httpApi } from '@/lib/http-api';
-import { mockApi } from '@/mock/mock-api';
+import { httpApi } from '@/lib/http-api';
 
 /**
  * Everything the patient app needs from the backend.
- * Screens only use this interface, so switching from the mock to the real
- * Next.js API (Step 17) doesn't touch any screen.
+ * Screens only use this interface, so the transport can change without touching any screen.
  */
 export interface PatientApi {
   startSession(): Promise<Session>;
@@ -42,9 +40,5 @@ export interface PatientApi {
   subscribe(caseId: string, onEvent: (e: PatientEvent) => void): () => void;
 }
 
-/**
- * Production builds set EXPO_PUBLIC_API_URL (eas.json / .env.production) and talk to the backend.
- * Without it (local development only) the in-app mock is used, with its test modes in Settings.
- */
-export const USING_MOCK = !API_CONFIGURED;
-export const api: PatientApi = USING_MOCK ? mockApi : httpApi;
+/** The Sahhanito backend (EXPO_PUBLIC_API_URL; see lib/http-api.ts). */
+export const api: PatientApi = httpApi;

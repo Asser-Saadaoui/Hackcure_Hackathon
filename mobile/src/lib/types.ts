@@ -167,13 +167,13 @@ export interface TrackingView {
   hospital: LatLng & { name: string; edPhone: string | null };
   patient: (LatLng & { address?: string }) | null;
   ambulance: AmbulanceView | null;
-  /** Road route hospital → patient as a polyline (mock: interpolated). */
+  /** Road route hospital → patient as a polyline (interpolated by the backend). */
   route: LatLng[];
   distanceKm: number | null;
   etaMinutes: number | null;
 }
 
-/** Live events pushed to the patient (SSE / push later; an in-memory emitter in mock mode). */
+/** Live events pushed to the patient (SSE on web, polling on phones). */
 export type PatientEvent =
   | { type: 'referral.status'; caseId: string; referral: Referral }
   | { type: 'chat.message'; caseId: string; message: ChatMessage }

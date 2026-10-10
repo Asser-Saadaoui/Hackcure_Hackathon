@@ -49,7 +49,15 @@
           "locationWhenInUsePermission": "Sahhanito uses your location to find the nearest hospital that can treat you."
         }
       ],
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

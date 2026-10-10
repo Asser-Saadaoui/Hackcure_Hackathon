@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, ArrowRight, Ambulance, ClipboardList, Hospital, LocateFixed, Navigation, Phone, ShieldAlert } from 'lucide-react-native';
+import { ArrowLeft, ArrowRight, Ambulance, ClipboardList, Hospital, LocateFixed, MapPinned, Navigation, Phone, ShieldAlert } from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,8 +15,9 @@ import { NEIGHBORHOODS } from '@/constants/neighborhoods';
 import { useI18n } from '@/i18n';
 import type { StringKey } from '@/i18n/strings';
 import { api } from '@/lib/api';
+import { attention } from '@/lib/attention';
 import { locate } from '@/lib/location';
-import type { Referral } from '@/lib/types';
+import type { AmbulanceStatus, Referral } from '@/lib/types';
 
 /**
  * Emergency screen (Step 6). Shown the moment the backend says EMERGENCY.
@@ -43,6 +44,7 @@ export default function EmergencyScreen() {
   const [ed, setEd] = useState<EdState>({ kind: 'needLocation' });
   const [referenceCode, setReferenceCode] = useState<string | null>(null);
   const [ambulanceEta, setAmbulanceEta] = useState<number | null>(null);
+  const [ambulanceStatus, setAmbulanceStatus] = useState<AmbulanceStatus | null>(null);
 
   const sendLocation = useCallback(async (location: Parameters<typeof api.setLocation>[1]) => {
     if (!caseId) return;
@@ -67,7 +69,10 @@ export default function EmergencyScreen() {
     // Live updates: referral created by the backend, then accepted by the hospital.
     const unsubscribe = api.subscribe(caseId, (e) => {
       if (e.type === 'referral.status') setEd({ kind: 'referred', referral: e.referral });
-      if (e.type === 'tracking.position') setAmbulanceEta(e.ambulance.etaMinutes);
+      if (e.type === 'tracking.position') {
+        setAmbulanceEta(e.ambulance.etaMinutes);
+        setAmbulanceStatus((prev) => { if (prev && prev !== e.ambulance.status) attention(); return e.ambulance.status; });
+      }
     });
 
     api.getCase(caseId).then((c) => {
@@ -154,9 +159,17 @@ export default function EmergencyScreen() {
                     <Ambulance size={18} color={Colors.accentFg} strokeWidth={2.25} />
                     <View style={styles.flex}>
                       <AppText variant="label" style={styles.ambulanceTitle}>{t('ambulanceSimulated')}</AppText>
-                      {ed.referral.acceptNote && <AppText variant="small" style={styles.ambulanceText}>{ed.referral.acceptNote}</AppText>}
+                      {ambulanceStatus
+                        ? <AppText variant="small" style={styles.ambulanceText} accessibilityLiveRegion="polite">
+                            {t(`amb${ambulanceStatus}` as StringKey)}{ambulanceEta != null && ambulanceStatus !== 'ARRIVED' ? ` · ~${ambulanceEta} ${t('minutes')}` : ''}
+                          </AppText>
+                        : ed.referral.acceptNote && <AppText variant="small" style={styles.ambulanceText}>{ed.referral.acceptNote}</AppText>}
                     </View>
                   </View>
+                )}
+                {ed.referral.arrivalMode === 'AMBULANCE' && ed.referral.status === 'ACCEPTED' && (
+                  <Button label={t('followAmbulance')} size="lg" icon={MapPinned}
+                    onPress={() => router.push({ pathname: '/track', params: { caseId: ed.referral.caseId } })} />
                 )}
                 <AppText variant="small">{t('etaLabel')} · ~{ed.referral.etaMinutes} {t('minutes')}</AppText>
                 <View style={styles.actions}>

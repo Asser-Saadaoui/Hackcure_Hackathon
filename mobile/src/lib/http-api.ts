@@ -14,8 +14,8 @@ import type {
  */
 
 /** EXPO_PUBLIC_API_URL: the backend origin, or "same-origin" when the web app is served by the backend's domain. */
-const CONFIGURED = process.env.EXPO_PUBLIC_API_URL ?? '';
-export const API_CONFIGURED = CONFIGURED !== '';
+const CONFIGURED = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8100';   // not set: backend on this computer
+export const API_CONFIGURED = true;
 export const API_URL = CONFIGURED === 'same-origin' ? '' : CONFIGURED.replace(/\/$/, '');
 const TIMEOUT_MS = 20_000;
 const POLL_MS = 3_000;

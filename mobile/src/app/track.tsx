@@ -12,6 +12,7 @@ import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 import { useI18n } from '@/i18n';
 import type { StringKey } from '@/i18n/strings';
 import { api } from '@/lib/api';
+import { attention } from '@/lib/attention';
 import { getJSON, Keys } from '@/lib/storage';
 import type { AmbulanceStatus, TrackingView } from '@/lib/types';
 
@@ -49,7 +50,10 @@ export default function TrackScreen() {
     api.getTracking(caseId).then(data => { setView(data); setState('ready'); }).catch(() => setState('error'));
     return api.subscribe(caseId, (e) => {
       if (e.type === 'tracking.position') {
-        setView((v) => (v ? { ...v, ambulance: e.ambulance, etaMinutes: e.ambulance.etaMinutes } : v));
+        setView((v) => {
+          if (v?.ambulance && v.ambulance.status !== e.ambulance.status) attention();
+          return v ? { ...v, ambulance: e.ambulance, etaMinutes: e.ambulance.etaMinutes } : v;
+        });
       }
       if (e.type === 'referral.status') load();
     });

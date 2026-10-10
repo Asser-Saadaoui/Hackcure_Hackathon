@@ -78,7 +78,7 @@ def availability(key, override=None):
         doctorsAvailable=sim.get('doctorsAvailable'), doctorsTotal=sim.get('doctorsTotal'),
         nursesAvailable=sim.get('nursesAvailable'), nursesTotal=sim.get('nursesTotal'),
         staffShortage=sim.get('staffShortage'), waitingPatients=sim.get('waitingPatients'),
-        accepting=True, source='simulator' if sim else 'unknown', simulated=bool(sim), override=None,
+        accepting=sim.get('accepting', True), source='simulator' if sim else 'unknown', simulated=bool(sim), override=None,
         updatedAt=sim.get('updatedAt'),
         simulator=dict(bedsAvailable=sim.get('bedsAvailable'), icuAvailable=sim.get('icuAvailable'),
                        waitMinutes=sim.get('waitMinutes'), equipmentDown=list(sim.get('equipmentDown') or [])) if sim else None,
