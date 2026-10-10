@@ -1,5 +1,5 @@
 import { router, Stack } from 'expo-router';
-import { History, Phone, RotateCcw, Settings, ShieldAlert } from 'lucide-react-native';
+import { ArrowRight, ClipboardList, History, Phone, RotateCcw, Settings, ShieldAlert, Stethoscope } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -50,6 +50,8 @@ export default function ChatScreen() {
   const [degraded, setDegraded] = useState<string | null>(null);   // last patient message, to retry
   const [listening, setListening] = useState(false);
   const [mascotState, setMascotState] = useState<'idle' | 'guiding' | 'alert' | 'happy'>('idle');
+  // The decision is explained in the chat; the patient opens the decision page with a button.
+  const [outcome, setOutcome] = useState<{ kind: 'emergency' | 'result' | 'under_review'; caseId: string } | null>(null);
   const scrollRef = useRef<ScrollView>(null);
 
   // Resume the case in progress (if the backend still has it).
@@ -61,6 +63,10 @@ export default function ChatScreen() {
         setCaseId(c.id);
         setItems(c.turns.map((tr) => ({ id: tr.id, role: tr.role, text: tr.text, time: timeOf(tr.createdAt) })));
         setQuickReplies(c.turns.at(-1)?.quickReplies ?? []);
+        if (c.status !== 'TRIAGING' && c.status !== 'CLOSED') {
+          setOutcome({ caseId: c.id, kind: c.status === 'EMERGENCY' || c.level === 'EMERGENCY' ? 'emergency' : c.status === 'UNDER_REVIEW' ? 'under_review' : 'result' });
+          setMascotState(c.level === 'EMERGENCY' ? 'alert' : 'happy');
+        }
       } catch {
         await remove(Keys.currentCase); // unknown case on the server → start fresh
       }
@@ -74,8 +80,6 @@ export default function ChatScreen() {
     scrollToEnd();
   };
 
-  const systemLine = (text: string) => addItem({ id: localId(), role: 'SYSTEM', text, time: timeOf(new Date().toISOString()) });
-
   const handleResult = (r: TurnResult) => {
     switch (r.kind) {
       case 'question':
@@ -84,19 +88,12 @@ export default function ChatScreen() {
         setQuickReplies(r.turn.quickReplies ?? []);
         break;
       case 'emergency':
-        setMascotState('alert');
-        // Emergency wins: open the instructions right away, no extra tap.
-        systemLine(t('routingEmergency'));
-        router.push({ pathname: '/emergency', params: { caseId: r.caseId } });
-        break;
       case 'under_review':
-        systemLine(t('routingReview'));
-        router.push({ pathname: '/result', params: { caseId: r.caseId } });
-        break;
       case 'result':
-        setMascotState('happy');
-        systemLine(t('routingResult'));
-        router.push({ pathname: '/result', params: { caseId: r.caseId } });
+        // The assistant explains the decision here; the button below opens the decision page.
+        setMascotState(r.kind === 'emergency' ? 'alert' : r.kind === 'result' ? 'happy' : 'idle');
+        if (r.turn) addItem({ id: r.turn.id, role: 'ASSISTANT', text: r.turn.text, time: timeOf(r.turn.createdAt) });
+        setOutcome({ kind: r.kind, caseId: r.caseId });
         break;
       case 'degraded':
         // Shown as a clear alert with "try again" + 190 below, not as a grey chat line.
@@ -137,6 +134,7 @@ export default function ChatScreen() {
     setQuickReplies([]);
     setDegraded(null);
     setMascotState('idle');
+    setOutcome(null);
   };
 
   return (
@@ -203,9 +201,28 @@ export default function ChatScreen() {
               )}
             </ScrollView>
 
-            {quickReplies.length > 0 && !sending && <AnswerButtons options={quickReplies} onPick={(q) => send(q)} />}
+            {quickReplies.length > 0 && !sending && !outcome && <AnswerButtons options={quickReplies} onPick={(q) => send(q)} />}
 
-            <ChatInput onSend={(text) => send(text)} disabled={sending} onActivity={setListening} />
+            {outcome && !sending && (
+              <View style={styles.outcome}>
+                {outcome.kind === 'emergency' ? (
+                  <>
+                    <Button label={t('call190')} size="lg" variant="destructive" icon={Phone} onPress={() => Linking.openURL('tel:190')} />
+                    <Button label={t('openEmergency')} size="lg" variant="outline" icon={ShieldAlert} iconRight={ArrowRight}
+                      onPress={() => router.push({ pathname: '/emergency', params: { caseId: outcome.caseId } })} />
+                  </>
+                ) : (
+                  <Button label={outcome.kind === 'result' ? t('openResult') : t('openReview')} size="lg"
+                    icon={outcome.kind === 'result' ? ClipboardList : Stethoscope} iconRight={ArrowRight}
+                    onPress={() => router.push({ pathname: '/result', params: { caseId: outcome.caseId } })} />
+                )}
+              </View>
+            )}
+
+            {/* After a decision only a case under review can still receive information. */}
+            {(!outcome || outcome.kind === 'under_review') && (
+              <ChatInput onSend={(text) => send(text)} disabled={sending} onActivity={setListening} />
+            )}
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -219,6 +236,7 @@ const styles = StyleSheet.create({
   column: { flex: 1, width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center' },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, paddingHorizontal: Spacing.sm },
   degradedActions: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginTop: Spacing.sm },
+  outcome: { gap: Spacing.sm, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, borderTopWidth: 1, borderTopColor: Colors.border, backgroundColor: Colors.card },
   headerIcon: { padding: 10, borderRadius: 999 },   // ≥ 44 px touch target
   headerLink: { color: Colors.primary, fontFamily: Fonts.medium, fontSize: 14 },
   emergencyWrap: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.md },

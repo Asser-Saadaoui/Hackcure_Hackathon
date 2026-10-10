@@ -190,6 +190,9 @@ def triage(db, case, message):
     audit(db, 'ai', 'triage.turn', case.id, status=ai['status'], level=decision['level'], p_final=decision['pFinal'])
 
     status = ai['status']
+    explanation_turn = None
+    if status in ('emergency', 'under_review', 'result') and (ai.get('reply') or {}).get('text'):
+        explanation_turn = _add_turn(db, case, 'ASSISTANT', ai['reply']['text'])
     if status == 'question':
         tr = _add_turn(db, case, 'ASSISTANT', ai['reply']['text'], ai['reply'].get('quick_replies') or None)
         db.commit()
@@ -203,6 +206,9 @@ def triage(db, case, message):
     else:
         case.status = 'RESULT_READY'
         result = dict(kind='result', caseId=case.id, decision=decision)
+    if explanation_turn is not None:
+        db.flush()
+        result['turn'] = turn_view(explanation_turn)   # the assistant explains the decision in the chat
     db.commit()
     if case.status == 'UNDER_REVIEW':
         broker.publish('reviews', dict(type='review.new', caseId=case.id))

@@ -102,7 +102,7 @@ def triage_turn(state, message, previous_question_id=None, *, language='fr', mod
         status = 'monitor'
     elif decided['level'] == 'EMERGENCY':
         status = 'emergency'
-        reply = dict(text=EMERGENCY_MESSAGE[language], quick_replies=[], source='fixed')
+        reply = _decision_reply(st, rules, decided, language, interviewer)
     elif question and asked < MAX_QUESTIONS:
         status = 'question'
         repeats[str(question['field'])] = repeats.get(str(question['field']), 0) + 1
@@ -124,10 +124,10 @@ def triage_turn(state, message, previous_question_id=None, *, language='fr', mod
                      question_id=f'intake:{field}', field=field, source=asked_reply['source'])
     elif decided['level'] == 'UNCERTAIN':
         status = 'under_review'
-        reply = dict(text=REVIEW_MESSAGE[language], quick_replies=[], source='fixed')
+        reply = _decision_reply(st, rules, decided, language, interviewer)
     else:
         status = 'result'
-        reply = dict(text=RESULT_MESSAGE[language], quick_replies=[], source='fixed')
+        reply = _decision_reply(st, rules, decided, language, interviewer)
     if status != 'question':
         st.pop('pending_question', None)
 
@@ -152,6 +152,22 @@ def triage_turn(state, message, previous_question_id=None, *, language='fr', mod
                       decision=decision_policy.VERSION, interviewer=interviewer_module.VERSION,
                       nlp_model=r['ml'].get('model_version')),
     )
+
+
+def _decision_reply(state, rules, decided, language, interviewer):
+    """Chat message explaining the decided level (LLM wording, system reasons). The app shows a button to the
+    decision page under it; the level itself never comes from the LLM."""
+    lang = language if language in ('fr', 'en', 'ar', 'darija') else 'fr'
+    reasons = list(dict.fromkeys(r['rationale'].get(lang, r['rationale']['fr']).rstrip('.') for r in rules['triggered_rules']))
+    reasons = [x for x in reasons if not any(x != y and x in y for y in reasons)][:3]
+    if not reasons and decided.get('rationale_all'):
+        reasons = [decided['rationale_all'].get(lang, decided['rationale_all']['fr']).rstrip('.')]
+    if decided['level'] == 'EMERGENCY':
+        # Emergencies never wait for the LLM: the reviewed template is immediate and always says "call 190".
+        out = dict(text=interviewer_module.template_explanation('EMERGENCY', reasons, lang), source='template')
+    else:
+        out = interviewer_module.explain_decision(interviewer or default_interviewer(), decided['level'], reasons, _history(state), lang)
+    return dict(text=out['text'], quick_replies=[], source=out['source'], kind='decision', level=decided['level'])
 
 
 def _explain(state, ml, ml_bundle):

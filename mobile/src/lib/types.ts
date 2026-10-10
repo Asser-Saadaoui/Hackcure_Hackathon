@@ -47,9 +47,10 @@ export interface Decision {
 /** What the backend answers after each patient message in the triage chat. */
 export type TurnResult =
   | { kind: 'question'; caseId: string; turn: Turn }
-  | { kind: 'emergency'; caseId: string; decision: Decision }
-  | { kind: 'under_review'; caseId: string; decision: Decision }
-  | { kind: 'result'; caseId: string; decision: Decision }
+  /** turn = the assistant's message explaining the decision in the chat (the app then shows a button). */
+  | { kind: 'emergency'; caseId: string; decision: Decision; turn?: Turn }
+  | { kind: 'under_review'; caseId: string; decision: Decision; turn?: Turn }
+  | { kind: 'result'; caseId: string; decision: Decision; turn?: Turn }
   | { kind: 'degraded'; caseId: string; message: string };
 
 export interface CaseLocation {

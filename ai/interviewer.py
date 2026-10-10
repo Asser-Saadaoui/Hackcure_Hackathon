@@ -168,7 +168,7 @@ class Interviewer:
             result['llm_error'] = type(error).__name__
             return result
         phrased = (out.get('question') or '').strip()
-        if phrased and len(phrased) <= 300 and re.search(r'[?؟]', phrased) and not UNSAFE.search(phrased):
+        if phrased and len(phrased) <= 420 and re.search(r'[?؟]', phrased) and not UNSAFE.search(phrased):
             result.update(text=phrased, source='llm')
         else:
             result['llm_rejected'] = True
@@ -183,8 +183,9 @@ class Interviewer:
             "Strict rules:\n"
             "- Never assess urgency, never diagnose, never reassure, never give medical advice or medication. "
             "Urgency is decided by a separate validated system, not by you.\n"
-            "- Ask exactly ONE short question (max 25 words) with the SAME meaning as the base question. "
-            "You may start with a few words of empathy.\n"
+            "- Ask for the SAME information as the base question, but in your own natural words: adapt to what the "
+            "patient just said (you may reuse their words), and you may open with one short sentence of acknowledgement "
+            "or empathy. Exactly ONE question, max 45 words in total. Keep it simple and warm, like a calm nurse.\n"
             f"- Write in {LANG_NAMES.get(language, 'French')}.\n"
             "- Reply with JSON only: {\"question\": string, \"collected\": {\"age\": number|null, \"sex\": string|null, "
             "\"onset\": string|null, \"duration\": string|null, \"severity\": string|null, \"symptoms\": [string], "
@@ -340,7 +341,7 @@ def ask_intake(interviewer, field, history, language, message):
         result['llm_error'] = type(error).__name__
         return result
     phrased = (out.get('question') or '').strip()
-    if phrased and len(phrased) <= 300 and re.search(r'[?؟]', phrased) and not UNSAFE.search(phrased):
+    if phrased and len(phrased) <= 420 and re.search(r'[?؟]', phrased) and not UNSAFE.search(phrased):
         result.update(text=phrased, source='llm')
     if isinstance(out.get('collected'), dict):
         result['collected'] = {k: v for k, v in out['collected'].items() if v not in (None, '', [])}
@@ -396,8 +397,8 @@ def ask_adaptive_intake(interviewer, answered, history, language, message, purpo
         "You are the intake assistant of Sahhanito, a Tunisian emergency triage app. " + PURPOSE[purpose] +
         "Strict rules:\n"
         "- Never assess urgency, never mention a level or a hospital, never diagnose, never reassure, never give advice or medication.\n"
-        "- One short question (max 25 words), adapted to what the patient already said; never repeat a question "
-        "already asked.\n"
+        "- Talk naturally: you may acknowledge what the patient said in one short sentence, then ask ONE question "
+        "(max 45 words in total), adapted to their words; never repeat a question already asked.\n"
         "- Up to 4 short quick replies (max 4 words each) the patient can tap, in the same language.\n"
         f"- Write in {LANG_NAMES.get(language, 'French')}.\n"
         "- JSON only: {\"topic\": one of " + json.dumps((['clarify'] if purpose == 'uncertain' else []) + list(remaining)) + ", \"question\": string, "
@@ -415,7 +416,7 @@ def ask_adaptive_intake(interviewer, answered, history, language, message, purpo
     question = (out.get('question') or '').strip()
     topic = out.get('topic')
     quick = [q.strip() for q in (out.get('quick_replies') or []) if isinstance(q, str) and 0 < len(q.strip()) <= 40][:4]
-    if not question or len(question) > 300 or not re.search(r'[?؟]', question) or UNSAFE.search(question):
+    if not question or len(question) > 420 or not re.search(r'[?؟]', question) or UNSAFE.search(question):
         return fixed()
     if topic == 'clarify' and purpose == 'uncertain':
         field = f"intake.clarify.{sum(k.startswith('intake.clarify') for k in answered) + 1}"
@@ -426,3 +427,86 @@ def ask_adaptive_intake(interviewer, answered, history, language, message, purpo
     collected = out.get('collected') if isinstance(out.get('collected'), dict) else {}
     return dict(text=question, quick_replies=quick, field=field, source='llm',
                 collected={k: v for k, v in collected.items() if v not in (None, '', [])})
+
+
+
+# ---- Explaining the decision in the chat -----------------------------------------------------------
+# The level is decided by the NLP model + rules + fusion. The LLM only explains it to the patient, from the
+# reasons the system gives; a reviewed template is used if the LLM is off, fails or writes something unsafe.
+LEVEL_NAMES = {
+    'fr': {'EMERGENCY': 'urgence vitale', 'HIGH': 'urgent', 'LOW': 'peu urgent', 'UNCERTAIN': 'à vérifier par un médecin'},
+    'en': {'EMERGENCY': 'life-threatening emergency', 'HIGH': 'urgent', 'LOW': 'not urgent', 'UNCERTAIN': 'to be checked by a doctor'},
+    'ar': {'EMERGENCY': 'حالة طارئة خطيرة', 'HIGH': 'مستعجل', 'LOW': 'غير مستعجل', 'UNCERTAIN': 'تحتاج مراجعة طبيب'},
+    'darija': {'EMERGENCY': 'حالة مستعجلة برشة', 'HIGH': 'مستعجل', 'LOW': 'موش مستعجل', 'UNCERTAIN': 'لازمها طبيب يثبّت'},
+}
+NEXT_STEP = {
+    'fr': {'EMERGENCY': 'Appelez le 190 maintenant. Ouvrez les consignes d’urgence : nous prévenons l’hôpital le plus adapté.',
+           'HIGH': 'Il faut être vu aux urgences aujourd’hui. Ouvrez votre résultat pour trouver l’hôpital adapté.',
+           'LOW': 'Vous pouvez vous soigner à la maison et surveiller vos symptômes. Votre résultat explique quand revenir.',
+           'UNCERTAIN': 'Un médecin va vérifier votre situation. Restez près de votre téléphone.'},
+    'en': {'EMERGENCY': 'Call 190 now. Open the emergency instructions: we are alerting the most suitable hospital.',
+           'HIGH': 'You need to be seen in an emergency department today. Open your result to find the right hospital.',
+           'LOW': 'You can look after yourself at home and watch your symptoms. Your result explains when to come back.',
+           'UNCERTAIN': 'A doctor will check your situation. Stay close to your phone.'},
+    'ar': {'EMERGENCY': 'اتصل بالرقم 190 الآن. افتح تعليمات الطوارئ: نحن نُعلم المستشفى الأنسب.',
+           'HIGH': 'يجب أن تُفحص في قسم الاستعجالي اليوم. افتح نتيجتك لإيجاد المستشفى المناسب.',
+           'LOW': 'يمكنك الاعتناء بنفسك في المنزل ومراقبة الأعراض. نتيجتك تشرح متى تعود.',
+           'UNCERTAIN': 'سيراجع طبيب حالتك. ابق قريبًا من هاتفك.'},
+    'darija': {'EMERGENCY': 'عيّط للـ190 توا. حلّ تعليمات الاستعجالي: احنا نعلمو السبيطار المناسب.',
+               'HIGH': 'لازمك تتشاف في الاستعجالي اليوم. حلّ النتيجة باش تلقى السبيطار المناسب.',
+               'LOW': 'تنجم تداوي روحك في الدار وتراقب الأعراض. النتيجة تقلك وقتاش ترجع.',
+               'UNCERTAIN': 'طبيب باش يثبّت في حالتك. خلّي التليفون قريب منك.'},
+}
+INTRO = {'fr': 'D’après ce que vous m’avez dit, votre situation est évaluée : {level}.',
+         'en': 'From what you told me, your situation is assessed as: {level}.',
+         'ar': 'بناءً على ما أخبرتني به، تم تقييم حالتك: {level}.',
+         'darija': 'حسب اللي قلتهولي، الحالة متاعك: {level}.'}
+WHY = {'fr': 'Ce qui compte surtout : {why}.', 'en': 'What matters most: {why}.', 'ar': 'الأهم: {why}.', 'darija': 'أهم حاجة: {why}.'}
+
+
+def template_explanation(level, reasons, language):
+    lang = language if language in LEVEL_NAMES else 'fr'
+    parts = [INTRO[lang].format(level=LEVEL_NAMES[lang][level])]
+    if reasons:
+        sep = '، ' if lang in ('ar', 'darija') else ', '
+        parts.append(WHY[lang].format(why=sep.join(reasons[:3]).rstrip('.')))
+    parts.append(NEXT_STEP[lang][level])
+    return ' '.join(parts)
+
+
+def explain_decision(interviewer, level, reasons, history, language):
+    """Short chat message explaining the decided level. reasons: the system's own reasons, in the patient's language."""
+    fallback = dict(text=template_explanation(level, reasons, language), source='template')
+    if not interviewer.enabled:
+        return fallback
+    lang = language if language in LEVEL_NAMES else 'fr'
+    system = (
+        "You are the intake assistant of Sahhanito, a Tunisian emergency triage app. A separate validated system "
+        "has ALREADY decided the urgency level. Your ONLY job: explain this decision to the patient, kindly and simply.\n"
+        "Strict rules:\n"
+        f"- State the level exactly as given (\"{LEVEL_NAMES[lang][level]}\"). Never change it, soften it or question it.\n"
+        "- Explain why using ONLY the reasons provided (you may relate them to what the patient said). Do not add "
+        "diagnoses, causes, medicines or advice that are not in the next step.\n"
+        "- End with the next step provided, in your own words.\n"
+        + ("- This is an emergency: the message MUST tell them to call 190 now.\n" if level == 'EMERGENCY' else "") +
+        "- 2 to 4 short sentences, max 90 words, warm and calm. No questions.\n"
+        f"- Write in {LANG_NAMES.get(language, 'French')}.\n"
+        "- Reply with JSON only: {\"message\": string}"
+    )
+    transcript = '\n'.join(f"{'Patient' if h['role'] == 'patient' else 'Assistant'}: {h['text']}" for h in history[-12:])
+    user = (f"Conversation:\n{transcript}\n\nDecided level: {LEVEL_NAMES[lang][level]}\n"
+            f"Reasons from the system: {'; '.join(reasons) if reasons else '(no specific warning sign)'}\n"
+            f"Next step: {NEXT_STEP[lang][level]}")
+    try:
+        content = interviewer._complete(system, user)
+        msg = (json.loads(re.search(r'\{.*\}', content, re.S).group()).get('message') or '').strip()
+    except Exception:
+        return fallback
+    bad = (not msg or len(msg) > 700 or MED_ADVICE.search(msg)
+           or (level == 'EMERGENCY' and '190' not in msg)
+           or (level != 'LOW' and REASSURE.search(msg)))
+    return fallback if bad else dict(text=msg, source='llm')
+
+
+MED_ADVICE = re.compile(r"diagnos|take (?:paracetamol|ibuprofen|aspirin)|prenez (?:du|de l|un|une)|doliprane|paracétamol|ibuprof", re.I)
+REASSURE = re.compile(r"pas grave|rien de grave|not serious|nothing serious|don.t worry|ne vous inquiétez pas|ma tkhafch|ما تخافش", re.I)
