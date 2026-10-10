@@ -7,9 +7,28 @@ import copy
 import re
 import unicodedata
 
-VERSION = 'tn_clinical_phrases_1'
+VERSION = 'tn_clinical_hybrid_3'
 # Longest matching span wins; numbers inside Arabizi words are never transliterated.
 PHRASES = [
+    # Specific breathing complaints, not metaphorical "choking" or anxiety alone.
+    (r'(?:i\s*)?(?:cannot|can.t)\s*get\s*enough\s*air(?:\s*into\s*my\s*lungs)?|(?:i\s*)?(?:have\s*)?trouble\s*catching\s*my\s*breath', 'difficulty breathing'),
+    (r'(?:ma\s*n(?:aj[ae]m|ajem|ajjem)ch|manaj[ae]mch)\s*na[5kh]ou\s*(?:nef[ae]s|nf[ae]s)|ما\s*نجمش\s*ناخو\s*نفس', 'cannot breathe'),
+    (r'(?:ma\s*)?n(?:aj[ae]m|ajjem)ch\s*n(?:et|at)naf[f]?[ae]s|مانجمش\s*نتنفس', 'cannot breathe'),
+    (r'n(?:et|at)naf[f]?[ae]s\s*(?:b(?:e|i)?s3ouba|b\s*s3ouba)|نتنفس\s*(?:بصعوبة|بالصعوبة|بالصعيب)', 'difficulty breathing'),
+    (r'(?:nefsi|nfasi|nafas[iy]?)\s*(?:9sir|ma9tou3|m9at3|na9es)|(?:نفسي|نفاسي)\s*(?:قصير|مقطوع|ناقص)', 'difficulty breathing'),
+    (r'(?:el\s*)?(?:nef[ae]s|nf[ae]s)\s*ma\s*(?:y[eai]?kaf[iy]ch|y[eai]?kf[iy]ch)|النفس\s*ما\s*(?:يكفيش|يكفينيش)', 'difficulty breathing'),
+    (r'(?:i\s*)?(?:can|am able to)\s*breathe\s*normally|n(?:et|at)naf[f]?[ae]s\s*3adi|نتنفس\s*عادي|je\s*respire\s*normalement', 'I have no difficulty breathing'),
+    (r'tlahh[ae]th|نتلهث|نلهث', 'gasping'),
+    (r'(?:ma\s*naj[ae]mch\s*nkammel\s*(?:jomla|klem[iy])\s*(?:mel|men)\s*(?:tanaffos|nef[ae]s))|ما\s*نجمش\s*نكمل\s*(?:جملة|كلامي)\s*من\s*(?:التنفس|النفس)', 'unable to get words out'),
+    (r'ki\s*nemchi|كي\s*نمشي', 'when I walk'),
+    (r'(?:kan|ken)\s*ki|كان\s*كي', 'only when'),
+    (r'ma3adech|ما\s*عادش|ماعادش', 'no longer'),
+    (r'batni|بطني|ventre', 'abdomen'),
+    (r'chest\s*hurts', 'chest pain'),
+    (r'(?:the\s*)?room\s*is\s*spinning', 'dizziness'),
+    (r'oppression\s*thoracique', 'chest pressure'),
+    (r'\bena\b|\bانا\b|\bje\b', 'I'),
+    (r'\bparacetamol\b', 'paracetamol'),
     (r'وعندي', 'and I have'),
     (r'رقبتي\s*يابسة|ra9beti\s*yabsa', 'stiff neck'),
     (r'متخلط|met5[ae]l[ae]t|confus', 'confused'),
@@ -162,7 +181,7 @@ def remap_fact(f,text,alignment,language,changes):
     # Translation dictionaries have not been reviewed by Tunisian clinicians.
     if changes:f['extraction_confidence']=min(.85,f['extraction_confidence']);f['confidence_basis']+='; unreviewed_dialect_phrase_alignment'
 
-def extract(text,english_extractor,inherited='patient',turn_id=None):
+def extract(text,english_extractor,inherited='patient',turn_id=None,semantic=None):
     pivot,alignment,changes=align(text)
     info=english_extractor(pivot,inherited,turn_id);info=copy.deepcopy(info)
     lang=language_hint(text)
@@ -175,21 +194,27 @@ def extract(text,english_extractor,inherited='patient',turn_id=None):
     result.update(observations=info.get('observations',[]),extraction_history=info.get('extraction_history',[]),
                   original_text=text,language_hint=lang,normalization=changes,nlp_version=VERSION)
     # Unknown text is retained for clarification, never assigned a diagnosis.
-    result['uninterpreted_input']={'text':text,'reason':'No recognized clinical fact'} if not info['facts'] else None
+    meaningful=any(f['kind'] in ('symptom','condition','medication','vital') for f in info['facts'])
+    result['uninterpreted_input']={'text':text,'reason':'No recognized clinical complaint; location/context alone is insufficient'} if not meaningful else None
     result['normalization_scope']='Finite recognized clinical phrases; remaining text retained, not assumed understood.'
+    if semantic is not None:
+        result=merge_semantic(result,text,semantic,inherited,turn_id)
     return result
 
-def answer_text(text):
+def answer_text(text,field=None):
     """Canonicalize finite short answers; keep original answer separately in state."""
     folded,_=fold(text.strip())
-    if re.fullmatch(r'(?:ma na3rafch|مانعرفش|ما نعرفش|مش متاكد|موش متاكد|je ne sais pas)',folded):return 'Not sure'
-    if re.fullmatch(r'(?:le|la|لا|non)',folded):return 'No'
+    if re.fullmatch(r'(?:ma na3rafch|مانعرفش|ما نعرفش|مش متاكد|موش متاكد|je ne sais pas|i am not sure|i.m not sure|i cannot tell|i can.t tell)',folded):return 'Not sure'
+    if re.fullmatch(r'(?:le|la|لا|non)(?:\s*[,،]?\s*(?:taw|tawa|توا|maintenant))?',folded):return 'No'
+    if field and field.startswith('symptom.') and len(field.split('.'))==2:
+        if re.fullmatch(r'(?:not at all|pas du tout|لا ابدا)',folded):return 'No'
+        if field=='symptom.breath_functional_impairment' and re.fullmatch(r'(?:i can speak normally|i can finish a sentence|naj[ae]m na7ki 3adi|نجم نحكي عادي)',folded):return 'No'
     m=re.match(r'^(ey|اي|ايه|نعم|oui)(?=\W|$)',folded)
     if m:return 'Yes'+align(text[len(m.group()):])[0]
     return align(text)[0]
 
-def answer_alignment(text):
-    pivot,mapping,changes=align(text);canonical=answer_text(text)
+def answer_alignment(text,field=None):
+    pivot,mapping,changes=align(text);canonical=answer_text(text,field)
     if canonical==pivot:return canonical,mapping,changes
     folded,_=fold(text.strip());m=re.match(r'^(ey|اي|ايه|نعم|oui)(?=\W|$)',folded)
     if m:
@@ -197,3 +222,158 @@ def answer_alignment(text):
         _,tail_map,_=align(text[end:])
         return canonical,[(offset,end)]*3+[(a+end,b+end) for a,b in tail_map],changes
     return canonical,[(0,len(text))]*len(canonical),changes
+
+
+# Optional zero-shot span proposals. No model downloads occur during a patient
+# request. Dictionary assertions remain authoritative; unfamiliar model-only
+# interpretations are explicitly uncertain and require a linked confirmation.
+SEMANTIC_MODEL='onnx-community/gliner_multi-v2.1'
+SEMANTIC_REVISION='6ddaeb9413b0e71ad8457da1aab378a165b24058'
+SEMANTIC_FILES={'onnx/model.onnx':'57af7f3d8d72a3ca4e5619c247344b4b5ee362a5ebcf307c0634d67b65e721c0',
+                'tokenizer.json':'914bd3c8fb7b525af9e23b60d0ec7b1248ddb2b99014efd9c02ebeb022f8cab7'}
+SEMANTIC_LABELS={
+    'chest pain':('symptom','chest'), 'difficulty breathing':('symptom','breath'),
+    'headache':('symptom','headache'), 'dizziness':('symptom','dizziness'),
+    'fever':('symptom','fever'), 'cough':('symptom','cough'),
+    'vomiting':('symptom','vomiting'), 'nausea':('symptom','nausea'),
+    'abdominal pain':('symptom','abdominal_pain'), 'palpitations':('symptom','palpitations'),
+    'confusion':('symptom','confusion'), 'weakness':('symptom','weakness'),
+    'numbness':('symptom','numbness'), 'rash':('symptom','rash'),
+    'difficulty speaking':('symptom','speech'), 'seizure':('symptom','seizure'),
+    'diabetes':('condition','diabetes'), 'asthma':('condition','asthma'),
+    'hypertension':('condition','hypertension'), 'pneumonia':('condition','pneumonia'),
+    'stroke':('condition','stroke'), 'meningitis':('condition','meningitis'),
+}
+
+class SemanticExtractor:
+    """Pinned GLiNER span model, CPU ONNX; bounded inputs and no generative LLM.
+
+    Prompt, first-subtoken word masks and width-12 spans follow upstream GLiNER.
+    Label inventory is intentionally finite. Scores are uncalibrated NER scores.
+    """
+    def __init__(self,model_path,tokenizer_path):
+        import time
+        import onnxruntime as ort
+        from tokenizers import Tokenizer
+        started=time.perf_counter()
+        self.tokenizer=Tokenizer.from_file(str(tokenizer_path))
+        self.tokenizer.enable_truncation(max_length=384)
+        options=ort.SessionOptions();options.intra_op_num_threads=2;options.inter_op_num_threads=1
+        self.session=ort.InferenceSession(str(model_path),options,providers=['CPUExecutionProvider'])
+        from threading import RLock
+        self.lock=RLock()
+        from pathlib import Path
+        self.metadata=dict(model=SEMANTIC_MODEL,revision=SEMANTIC_REVISION,upstream='urchade/gliner_multi-v2.1',
+            artifact=Path(model_path).name,license='Apache-2.0 upstream',runtime='CPU FP32 ONNX' if Path(model_path).name=='model.onnx' else 'CPU int8 ONNX',load_seconds=time.perf_counter()-started,
+            medical_finetuning=False,tunisian_validation=False,threshold=.5,score_is_calibrated=False,
+            upstream_training='General NER; upstream reports synthetic Pile-Mistral teacher data')
+
+    @classmethod
+    def from_cache(cls,cache_dir):
+        from pathlib import Path
+        folder=Path(cache_dir)/('models--'+SEMANTIC_MODEL.replace('/','--'))/'snapshots'/SEMANTIC_REVISION
+        model=folder/'onnx/model.onnx';tokenizer=folder/'tokenizer.json'
+        if not model.is_file() or not tokenizer.is_file():
+            raise FileNotFoundError('Optional semantic model not installed. Run multilingual_nlp.py --download-semantic explicitly.')
+        for name,expected in SEMANTIC_FILES.items():
+            if artifact_hash(folder/name)!=expected:raise ValueError('Semantic artifact checksum mismatch: '+name)
+        return cls(model,tokenizer)
+
+    def propose(self,text):
+        import numpy as np
+        import time
+        started=time.perf_counter()
+        words=list(re.finditer(r'\w+(?:[-_]\w+)*|\S',text))
+        if not words:return []
+        labels=list(SEMANTIC_LABELS);prompt=[]
+        for label in labels:prompt.extend(['<<ENT>>',label])
+        prompt.append('<<SEP>>');skip=len(prompt)
+        encoded=self.tokenizer.encode(prompt+[m.group() for m in words],is_pretokenized=True)
+        mask=[];previous=None
+        for wid in encoded.word_ids:
+            mask.append(wid-skip+1 if wid is not None and wid>=skip and wid!=previous else 0)
+            previous=wid
+        count=max(mask)
+        if not count:return []
+        spans=[(start,start+width) for start in range(count) for width in range(12)]
+        feeds=dict(input_ids=np.array([encoded.ids],dtype=np.int64),attention_mask=np.array([encoded.attention_mask],dtype=np.int64),
+            words_mask=np.array([mask],dtype=np.int64),text_lengths=np.array([[count]],dtype=np.int64),
+            span_idx=np.array([spans],dtype=np.int64),span_mask=np.array([[b<count for a,b in spans]],dtype=bool))
+        logits=self.session.run(['logits'],feeds)[0][0]
+        scores=1/(1+np.exp(-np.clip(logits,-50,50)))
+        found=[]
+        for start,width,label in np.argwhere(scores>=.5):
+            end=start+width
+            if end>=count:continue
+            label=labels[label];kind,name=SEMANTIC_LABELS[label]
+            a,b=words[start].start(),words[end].end()
+            found.append(dict(kind=kind,name=name,start=a,end=b,text=text[a:b],score=float(scores[start,width,labels.index(label)])))
+        # Greedy non-overlap follows upstream flat-NER decoding. Retain rejected
+        # overlaps in merge metadata rather than silently counting duplicates.
+        chosen=[]
+        for f in sorted(found,key=lambda f:-f['score']):
+            if any(f['start']<p['end'] and p['start']<f['end'] for p in chosen):continue
+            chosen.append(f)
+        self.last_metadata=dict(inference_ms=(time.perf_counter()-started)*1000,
+                                truncated=count<len(words),input_words=len(words),processed_words=count)
+        return sorted(chosen,key=lambda f:f['start'])
+
+def merge_semantic(info,text,semantic,inherited='patient',turn_id=None,candidate_only=True,aligned=True):
+    """Merge model spans through the same clinical context, without rule inputs.
+
+    Default model-only additions remain uncertain; they cannot supersede an
+    existing literal interpretation. Negated/historical/hypothetical context
+    remains explicit. Model confidence never establishes a clinical assertion.
+    """
+    from clinical_state import context,evidence,facts_to_info
+    pivot,mapping,changes=align(text) if aligned else (text,[(i,i+1) for i in range(len(text))],[])
+    result=copy.deepcopy(info);facts=result['facts'];rejected=[]
+    from contextlib import nullcontext
+    with getattr(semantic,'lock',nullcontext()):
+        proposals=semantic.propose(pivot)
+        request_metadata=copy.deepcopy(semantic.last_metadata)
+    for proposal in proposals:
+        f=copy.deepcopy(proposal);score=f.pop('score')
+        ctx=context(pivot,f['start'],f['end'],f['kind'],inherited);ctx.pop('cues')
+        f.update(ctx,concept=f['name'],concept_aliases=[f['name']],evidence=[evidence(pivot,f['start'],f['end'],turn_id=turn_id)],
+                 extraction_confidence=score,confidence_basis='uncalibrated_general_NER_score; model_only_requires_patient_confirmation',
+                 semantic_candidate=True,contextual_status=ctx['status'])
+        for attr in ['severity','duration','onset','resolution_time','event_time']:
+            if f.get(attr):f['evidence'].append(evidence(pivot,f[attr]['start'],f[attr]['end'],turn_id=turn_id,kind=attr))
+        f['evidence'].append(evidence(pivot,f['context_start'],f['context_end'],turn_id=turn_id,kind='context'))
+        remap_fact(f,text,mapping,language_hint(text),changes)
+        f['extraction_provenance']=SEMANTIC_MODEL+'@'+SEMANTIC_REVISION
+        overlap=[p for p in facts if min(f['end'],p['end'])>max(f['start'],p['start']) and p['kind'] in ('symptom','condition','medication','vital')]
+        if overlap:
+            rejected.append(dict(candidate=f,reason='Existing literal fact owns this span',conflicting=any(p['name']!=f['name'] for p in overlap)));continue
+        if candidate_only and f['status']=='confirmed':f['status']='uncertain'
+        facts.append(f);result.setdefault('observations',[]).append(copy.deepcopy(f))
+    projected=facts_to_info(facts,result.get('patient_experiencer',inherited))
+    result.update({k:v for k,v in projected.items() if k!='facts'})
+    result['semantic_metadata']=dict(**semantic.metadata,**request_metadata,
+                                   candidate_assertions_require_confirmation=candidate_only,rejected=rejected)
+    return result
+
+def download_semantic(cache_dir):
+    """Explicit setup only, pinned immutable revision; one cache, no Git weights."""
+    from huggingface_hub import hf_hub_download
+    paths={name:hf_hub_download(SEMANTIC_MODEL,name,revision=SEMANTIC_REVISION,cache_dir=str(cache_dir)) for name in SEMANTIC_FILES}
+    for name,path in paths.items():
+        if artifact_hash(path)!=SEMANTIC_FILES[name]:raise ValueError('Downloaded semantic checksum mismatch: '+name)
+    return paths
+
+def artifact_hash(path):
+    import hashlib
+    digest=hashlib.sha256()
+    with open(path,'rb') as stream:
+        for block in iter(lambda:stream.read(1048576),b''):digest.update(block)
+    return digest.hexdigest()
+
+if __name__=='__main__':
+    import argparse
+    from pathlib import Path
+    parser=argparse.ArgumentParser();parser.add_argument('--download-semantic',action='store_true')
+    parser.add_argument('--cache-dir',type=Path,default=Path(__file__).resolve().parent/'semantic_cache')
+    args=parser.parse_args()
+    if args.download_semantic:
+        for name in download_semantic(args.cache_dir):print('Installed '+name+' at pinned revision '+SEMANTIC_REVISION)

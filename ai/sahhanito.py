@@ -90,6 +90,12 @@ def triage_turn(state, message, previous_question_id=None, *, language='fr', mod
     if question and question['field'] is None and rules['triggered_rules']:
         question = None   # generic "describe your problem": pointless once a rule identified it
         st.pop('pending_question', None)
+    # The pipeline re-asks a question whose answer was unclear. Allow one repeat of a specific question, and ask
+    # the open "describe your problem" only once: after that the adaptive intake (LLM) rephrases instead.
+    repeats = meta.setdefault('pipeline_asked', {})
+    if question and repeats.get(str(question['field']), 0) >= (1 if question['field'] is None else 2):
+        question = None
+        st.pop('pending_question', None)
     reply = None
     if mode == 'monitor':
         status = 'monitor'
@@ -98,6 +104,7 @@ def triage_turn(state, message, previous_question_id=None, *, language='fr', mod
         reply = dict(text=EMERGENCY_MESSAGE[language], quick_replies=[], source='fixed')
     elif question and asked < MAX_QUESTIONS:
         status = 'question'
+        repeats[str(question['field'])] = repeats.get(str(question['field']), 0) + 1
         history = _history(st)
         asked_reply = (interviewer or default_interviewer()).ask(question, history, language, message)
         meta['asked'][question['id']] = asked_reply['text']

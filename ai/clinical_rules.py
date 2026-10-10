@@ -19,7 +19,7 @@ RULES = {
     'stroke_signs': ('critical', STROKE, 'Sudden focal weakness, face droop or speech difficulty; recent resolved signs also matter.'),
     'unresponsive': ('critical', WHO_ADULT, 'Currently unconscious or unresponsive, not a recovered faint.'),
     'heavy_bleeding': ('critical', WHO_ADULT, 'Current heavy/uncontrolled bleeding.'),
-    'neurologic_infection_cluster': ('critical', WHO_ADULT, 'Age >=12: two of altered mental state, stiff neck, fever/hypothermia or headache.'),
+    'neurologic_infection_cluster': ('critical', WHO_ADULT, 'Selected subset, age >=12: two of altered mental state, stiff neck, fever or headache. Hypothermia is not included in this prototype cluster.'),
     'extreme_heart_rate': ('critical', WHO_ADULT, 'Age >=12: current heart rate <50 or >150 beats/minute.'),
     'high_risk_vitals': ('urgent_review', WHO_ADULT, 'Age >=12: HR <60/>130; RR <10/>30; temperature <36/>39 C; SpO2 <92%. Prompt clinician review, not automatically a red criterion.'),
 }
