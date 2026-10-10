@@ -41,7 +41,7 @@ const directions = (lat: number, lng: number) => Linking.openURL(`https://www.go
 export default function EmergencyScreen() {
   const { t, rtl } = useI18n();
   const { caseId } = useLocalSearchParams<{ caseId?: string }>();
-  const [ed, setEd] = useState<EdState>({ kind: 'locating' });
+  const [ed, setEd] = useState<EdState>({ kind: 'needLocation' });
   const [referenceCode, setReferenceCode] = useState<string | null>(null);
   const [ambulanceEta, setAmbulanceEta] = useState<number | null>(null);
   const [ambulanceStatus, setAmbulanceStatus] = useState<AmbulanceStatus | null>(null);
@@ -64,7 +64,7 @@ export default function EmergencyScreen() {
   }, [sendLocation]);
 
   useEffect(() => {
-    if (!caseId) { setEd({ kind: 'needLocation' }); return; }
+    if (!caseId) return;
 
     // Live updates: referral created by the backend, then accepted by the hospital.
     const unsubscribe = api.subscribe(caseId, (e) => {
@@ -79,11 +79,11 @@ export default function EmergencyScreen() {
       setReferenceCode(c.referenceCode);
       if (c.referral) setEd({ kind: 'referred', referral: c.referral });
       else if (c.location) setEd({ kind: 'alerting' });
-      else findMe();
+      else setEd({ kind: 'needLocation' });
     }).catch(() => setEd({ kind: 'needLocation' }));
 
     return unsubscribe;
-  }, [caseId, findMe]);
+  }, [caseId]);
 
   // One line of live status under the title: what is happening right now.
   const status = ed.kind === 'referred'

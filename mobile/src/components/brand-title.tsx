@@ -1,24 +1,34 @@
 import { Image, StyleSheet, Text, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 
-import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
+import { Colors, Fonts } from '@/constants/theme';
 
-/** Header brand (Mourad's design): Hassanito on a teal tile + "Sahhanito · صحة نيتو" + "· section". */
-export function BrandTitle({ section }: { section?: string }) {
+/** Lightweight, bilingual wordmark inspired by the supplied mascot pack. */
+export function BrandTitle({ section, inverse = false }: { section?: string; inverse?: boolean }) {
   return (
     <View style={styles.row}>
       <View style={styles.tile}>
         <Image source={require('../../assets/images/hassanito.png')} style={styles.image} accessibilityIgnoresInvertColors />
       </View>
-      <Text style={styles.name}>Sahhanito · صحة نيتو</Text>
-      {section ? <Text style={styles.section} numberOfLines={1}>· {section}</Text> : null}
+      <View style={styles.wordmark} accessible accessibilityLabel="Sahhanito — صحة نيتو">
+        <Text style={[styles.name, inverse && { color: '#FFFFFF' }]} numberOfLines={1}>Sahha<Text style={styles.coral}>nito</Text></Text>
+        <View style={styles.signature}><Text style={[styles.arabic, inverse && { color: '#B8CCE5' }]}>صحة نيتو</Text>
+          <Svg width={56} height={13} viewBox="0 0 56 13" aria-hidden={true}><Path d="M1 7H18L22 3L26 11L30 1L34 7H55" stroke={inverse ? '#80BAFA' : '#4D94DA'} strokeWidth={1.8} fill="none" strokeLinecap="round" strokeLinejoin="round" /></Svg>
+        </View>
+      </View>
+      {section ? <Text style={styles.section} numberOfLines={1}>{section}</Text> : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm + 2 },
-  tile: { width: 28, height: 28, borderRadius: Radius.md, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  image: { width: 28, height: 28 },
-  name: { fontSize: 15, fontFamily: Fonts.semibold, letterSpacing: -0.2, color: Colors.foreground },
-  section: { fontSize: 14, fontFamily: Fonts.regular, color: Colors.mutedFg, flexShrink: 1 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 10, minWidth: 0 },
+  tile: { width: 43, height: 43, borderRadius: 15, backgroundColor: '#E5F1FF', alignItems: 'center', justifyContent: 'center' },
+  image: { width: 39, height: 39 },
+  wordmark: { flexShrink: 1, gap: 1 },
+  name: { fontSize: 24, fontFamily: Fonts.bold, letterSpacing: -1.2, color: Colors.navy },
+  coral: { color: Colors.coral },
+  signature: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  arabic: { fontSize: 11, color: Colors.mutedFg },
+  section: { fontSize: 12, fontFamily: Fonts.medium, color: Colors.mutedFg, flexShrink: 1 },
 });

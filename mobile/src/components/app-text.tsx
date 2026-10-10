@@ -1,4 +1,4 @@
-import { StyleSheet, Text, type TextProps } from 'react-native';
+import { Platform, StyleSheet, Text, type TextProps } from 'react-native';
 
 import { Colors, Fonts } from '@/constants/theme';
 import { useI18n } from '@/i18n';
@@ -17,13 +17,18 @@ export function AppText({ variant = 'body', autoDirection, style, ...rest }: Pro
   const direction = autoDirection ? undefined : { writingDirection: rtl ? ('rtl' as const) : ('ltr' as const) };
   // Titles are announced as headings; system text size is honoured up to 1.8x so layouts stay usable.
   const role = variant === 'title' || variant === 'subtitle' ? 'header' : undefined;
-  return <Text accessibilityRole={role} maxFontSizeMultiplier={1.8} style={[styles.base, styles[variant], direction, style]} {...rest} />;
+  // Inter has no Arabic glyphs; avoid the browser's tiny serif fallback.
+  const arabicFont = rtl && variant !== 'mono' ? {
+    fontFamily: Platform.OS === 'web' ? 'Arial' : undefined,
+    letterSpacing: 0,
+  } : undefined;
+  return <Text accessibilityRole={role} maxFontSizeMultiplier={1.8} style={[styles.base, styles[variant], direction, style, arabicFont]} {...rest} />;
 }
 
 const styles = StyleSheet.create({
   base: { color: Colors.foreground, fontFamily: Fonts.regular },
   // text-2xl font-semibold tracking-tight
-  title: { fontSize: 24, lineHeight: 30, fontFamily: Fonts.semibold, letterSpacing: -0.4 },
+  title: { fontSize: 27, lineHeight: 34, fontFamily: Fonts.bold, letterSpacing: -0.6 },
   subtitle: { fontSize: 17, lineHeight: 24, fontFamily: Fonts.semibold, letterSpacing: -0.2 },
   body: { fontSize: 15, lineHeight: 23 },
   label: { fontSize: 14, lineHeight: 20, fontFamily: Fonts.medium },

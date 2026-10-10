@@ -1,9 +1,15 @@
 export const MASCOT_STATES = ['idle', 'listening', 'thinking', 'alert', 'guiding', 'happy'] as const;
 export type MascotState = typeof MASCOT_STATES[number];
-export type MascotProps = { state?: MascotState; compact?: boolean };
+export type MascotProps = { state?: MascotState; compact?: boolean; message?: string; presentation?: 'inline' | 'hero' };
 
 export function resolveMascotState(state: MascotState, preview?: MascotState): MascotState {
   return state === 'alert' ? 'alert' : preview ?? state;
+}
+
+/** Row-major atlas cells. Alert always uses the neutral direction, never a playful reaction. */
+export function mascotFrame(state: MascotState): { sheet: 'directions' | 'reactions'; index: number } {
+  if (state === 'happy') return { sheet: 'reactions', index: 0 };
+  return { sheet: 'directions', index: state === 'thinking' ? 1 : state === 'guiding' ? 7 : 4 };
 }
 
 const EN = {
