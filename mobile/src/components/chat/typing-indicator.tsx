@@ -24,7 +24,7 @@ export function TypingIndicator({ label }: { label: string }) {
 
   return (
     <View style={styles.row} accessibilityLabel={label}>
-      <AssistantAvatar />
+      <AssistantAvatar pose="thinking" />
       <View style={styles.bubble}>
         {[d1, d2, d3].map((d, i) => <Animated.View key={i} style={[styles.dot, { opacity: d }]} />)}
       </View>
