@@ -31,7 +31,7 @@ Exact top-level response fields:
 | `ml` | On `status='ok'`: binary emergency_label 0/1, prediction `non_emergency`/`emergency`, emergency_score, non_emergency_score, raw_score_emergency/non_emergency, threshold 0.15, model_version `experimental_v3`, clinically_calibrated false, calibration_metadata and compatibility metadata. Scores are numbers in [0,1]. Legacy model_score aliases are retained. On `insufficient_input`: prediction, label and scores are null, with reason. On `unavailable`: reason and clinically_calibrated false; prediction/score fields are absent. |
 | `rules` | rule_version, critical_flags_detected, triggered_rules, rule_results, missing_information, no_trigger_does_not_establish_safety, validation_status, emergency_guidance. Each finding has rule_id, status (`triggered`/`not_triggered`/`insufficient_information`), priority, evidence, supporting_facts, source and justification. |
 | `relevant_missing_information` | Array of relevant question fields. |
-| `next_question` | Null or object: id, field (nullable for free clarification), text, language, answer_options, patient_experiencer, priority, source, template_version, validation_status. |
+| `next_question` | Null or object: id, field (nullable for free clarification), text, templates, language, answer_options, allow_free_text, patient_experiencer, priority, reason, source_guidance, template_version, validation_status, question_priority_is_clinically_validated. |
 | `questioning_interrupted` | Boolean; true when a critical rule stops routine questioning. |
 | `final_decision_policy_implemented` | Always false. ML and rules remain independent. |
 
