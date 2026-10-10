@@ -16,11 +16,51 @@ Provider (SAHHANITO_LLM_PROVIDER, default: gemini when GEMINI_API_KEY is set):
 No key, SAHHANITO_LLM=off, any error or an unsafe reply -> the reviewed question templates.
 """
 import json
+import logging
 import os
 import re
+import threading
+import time
+
+log = logging.getLogger('sahhanito.llm')
 
 VERSION = 'interviewer-0.2'
 DEFAULT_MODELS = {'gemini': 'gemini-3.8-flash', 'anthropic': 'claude-sonnet-5-5'}
+# Tried in order when the main model is out of quota (each Gemini model has its own free-tier quota).
+GEMINI_FALLBACKS = 'gemini-3.7-flash,gemini-3.5-flash,gemini-2.5-flash,gemini-3.5-flash-lite,gemini-2.5-flash-lite'
+
+
+class LLMUnavailable(Exception):
+    pass
+
+
+# Process-wide: model -> unix time when it may be used again; plus the last error for /health.
+_cooldown = {}
+_status = {'last_error': None, 'last_error_at': None, 'last_model': None}
+_lock = threading.Lock()
+
+
+def _retry_seconds(response):
+    """How long Google asks us to wait: Retry-After header, RetryInfo.retryDelay, or 'retry in 5h18m38s'."""
+    header = response.headers.get('retry-after', '')
+    if header.replace('.', '', 1).isdigit():
+        return float(header)
+    text = response.text
+    m = re.search(r'"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"', text)
+    if m:
+        return float(m.group(1))
+    m = re.search(r'retry in ((?:\d+h)?(?:\d+m)?(?:\d+(?:\.\d+)?s)?)', text)
+    if m and m.group(1):
+        parts = dict(re.findall(r'(\d+(?:\.\d+)?)([hms])', m.group(1)))
+        return float(parts.get('h', 0)) * 3600 + float(parts.get('m', 0)) * 60 + float(parts.get('s', 0))
+    return 60.0
+
+
+def llm_status():
+    now = time.time()
+    with _lock:
+        cooling = {m: round(t - now) for m, t in _cooldown.items() if t > now}
+        return dict(_status, cooling_down_seconds=cooling)
 GEMINI_OPENAI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/'
 TIMEOUT_S = 8.0
 LANG_NAMES = {'fr': 'French', 'en': 'English', 'ar': 'Modern Standard Arabic',
@@ -105,9 +145,12 @@ class Interviewer:
         if self.provider == 'gemini':
             self.api_key = api_key if api_key is not None else env.get('GEMINI_API_KEY')
             self.model = model or env.get('SAHHANITO_GEMINI_MODEL') or env.get('CP_GEMINI_MODEL') or DEFAULT_MODELS['gemini']
+            fallbacks = [m.strip() for m in env.get('SAHHANITO_GEMINI_FALLBACKS', GEMINI_FALLBACKS).split(',') if m.strip()]
+            self.models = [self.model] + [m for m in fallbacks if m != self.model]
         else:
             self.api_key = api_key if api_key is not None else env.get('ANTHROPIC_API_KEY')
             self.model = model or env.get('SAHHANITO_ANTHROPIC_MODEL') or DEFAULT_MODELS['anthropic']
+            self.models = [self.model]
         flag = env.get('SAHHANITO_LLM', 'auto').lower()
         self.enabled = enabled if enabled is not None else bool(self.api_key) and flag != 'off'
 
@@ -155,25 +198,55 @@ class Interviewer:
         return json.loads(match.group())
 
     def _complete(self, system, user):
-        """Retries rate limits (free-tier 429) and overloads twice, briefly: the template is a fine fallback."""
-        import time
+        """Try each model in order, skipping models in cooldown. A quota error (429) puts that model in
+        cooldown for as long as the provider asks and moves on at once; no retry delays for the patient."""
         import httpx
-        for attempt in range(3):
+        now = time.time()
+        with _lock:
+            candidates = [m for m in self.models if _cooldown.get(m, 0) <= now]
+        if not candidates:
+            raise LLMUnavailable('every model is out of quota')
+        last = None
+        for model in candidates:
             try:
-                return self._complete_once(system, user)
+                out = self._complete_once(system, user, model)
+                with _lock:
+                    _status['last_model'] = model
+                return out
             except httpx.HTTPStatusError as error:
-                if error.response.status_code not in (429, 500, 503) or attempt == 2:
-                    raise
-                retry_after = error.response.headers.get('retry-after', '')
-                time.sleep(min(float(retry_after) if retry_after.replace('.', '', 1).isdigit() else 1.0 + attempt, 2.5))
+                code = error.response.status_code
+                last = error
+                if code == 429:
+                    wait = _retry_seconds(error.response)
+                    with _lock:
+                        _cooldown[model] = time.time() + wait
+                    self._record(f'{model}: quota exceeded, cooling down {int(wait)} s')
+                    continue
+                if code in (404, 500, 502, 503, 504):
+                    self._record(f'{model}: HTTP {code}')
+                    continue
+                self._record(f'{model}: HTTP {code} {error.response.text[:200]}')
+                raise
+            except httpx.TransportError as error:
+                last = error
+                self._record(f'{model}: {type(error).__name__}')
+                continue
+        raise LLMUnavailable(str(last))
 
-    def _complete_once(self, system, user):
+    @staticmethod
+    def _record(message):
+        log.warning('LLM %s', message)
+        with _lock:
+            _status.update(last_error=message, last_error_at=time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()))
+
+    def _complete_once(self, system, user, model=None):
         import httpx
+        model = model or self.model
         if self.provider == 'gemini':
             response = httpx.post(
                 GEMINI_OPENAI_BASE_URL + 'chat/completions',
                 headers={'authorization': f'Bearer {self.api_key}', 'content-type': 'application/json'},
-                json={'model': self.model, 'response_format': {'type': 'json_object'},
+                json={'model': model, 'response_format': {'type': 'json_object'},
                       'messages': [{'role': 'system', 'content': system}, {'role': 'user', 'content': user}]},
                 timeout=TIMEOUT_S)
             response.raise_for_status()
@@ -181,7 +254,7 @@ class Interviewer:
         response = httpx.post(
             'https://api.anthropic.com/v1/messages',
             headers={'x-api-key': self.api_key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json'},
-            json={'model': self.model, 'max_tokens': 400, 'system': system,
+            json={'model': model, 'max_tokens': 400, 'system': system,
                   'messages': [{'role': 'user', 'content': user}]},
             timeout=TIMEOUT_S)
         response.raise_for_status()

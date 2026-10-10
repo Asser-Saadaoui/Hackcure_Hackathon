@@ -29,6 +29,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+import logging
+
 import decision
 import fusion
 import interviewer
@@ -36,6 +38,7 @@ import sahhanito
 from rule_engine.engine import default_engine
 from triage_pipeline import _cached_state_model
 
+logging.basicConfig(level=logging.INFO)
 app = FastAPI(title='Sahhanito AI', version=sahhanito.VERSION)
 app.add_middleware(
     CORSMiddleware,
@@ -84,5 +87,6 @@ def health():
     llm = interviewer.Interviewer()
     return dict(ok=True, nlp_model=nlp, llm='on' if llm.enabled else 'off (templates)',
                 llm_provider=llm.provider if llm.enabled else None, llm_model=llm.model if llm.enabled else None,
+                llm_models=llm.models if llm.enabled else [], llm_status=interviewer.llm_status() if llm.enabled else None,
                 versions=dict(turn=sahhanito.VERSION, rules=default_engine().version, fusion=fusion.VERSION,
                               decision=decision.VERSION, interviewer=interviewer.VERSION))
