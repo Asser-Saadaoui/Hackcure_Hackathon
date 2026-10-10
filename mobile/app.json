@@ -19,11 +19,20 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "tn.sahhanito.app"
+      "package": "tn.sahhanito.app",
+      "versionCode": 1,
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "output": "single",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "name": "Sahhanito",
+      "shortName": "Sahhanito",
+      "themeColor": "#177082",
+      "backgroundColor": "#E6F3F5"
     },
     "plugins": [
       "expo-router",

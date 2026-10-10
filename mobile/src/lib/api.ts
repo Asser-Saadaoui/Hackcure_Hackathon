@@ -2,6 +2,7 @@ import type {
   CaseDetail, Language, CaseLocation, CaseSummary, ChatKind, ChatMessage,
   PatientEvent, PatientReport, Session, TrackingView, TurnResult,
 } from '@/lib/types';
+import { API_CONFIGURED, httpApi } from '@/lib/http-api';
 import { mockApi } from '@/mock/mock-api';
 
 /**
@@ -41,8 +42,9 @@ export interface PatientApi {
   subscribe(caseId: string, onEvent: (e: PatientEvent) => void): () => void;
 }
 
-const MODE = process.env.EXPO_PUBLIC_API_MODE ?? 'mock';
-
-export const api: PatientApi = MODE === 'mock'
-  ? mockApi
-  : mockApi; // Step 17: replace with httpApi (Next.js backend)
+/**
+ * Production builds set EXPO_PUBLIC_API_URL (eas.json / .env.production) and talk to the backend.
+ * Without it (local development only) the in-app mock is used, with its test modes in Settings.
+ */
+export const USING_MOCK = !API_CONFIGURED;
+export const api: PatientApi = USING_MOCK ? mockApi : httpApi;

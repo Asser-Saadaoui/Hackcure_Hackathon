@@ -47,11 +47,12 @@
   },
   "scripts": {
     "start": "expo start",
-    "reset-project": "node ./scripts/reset-project.js",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "web:build": "EXPO_PUBLIC_API_URL=same-origin expo export --platform web --output-dir dist",
+    "android:apk": "eas build --platform android --profile apk"
   },
   "private": true
 }

@@ -1,4 +1,4 @@
-import { Link, router, type Href } from 'expo-router';
+import { Link, router, type Href, Redirect } from 'expo-router';
 import { Pressable, StyleSheet } from 'react-native';
 
 import { AppText } from '@/components/app-text';
@@ -22,7 +22,7 @@ const SCREENS: { href: Href; label: string; step: number }[] = [
   { href: '/settings', label: 'Settings', step: 14 },
 ];
 
-export default function DevHub() {
+function DevHub() {
   const resetOnboarding = async () => {
     await remove(Keys.onboarding, Keys.session, Keys.language);
     router.replace('/welcome');
@@ -66,3 +66,8 @@ const styles = StyleSheet.create({
   devRow: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   devText: { color: '#FFFFFF' },
 });
+
+/** Developer tools: not reachable in production builds. */
+export default function GuardedDevHub() {
+  return __DEV__ ? <DevHub /> : <Redirect href="/" />;
+}

@@ -13,6 +13,7 @@ import { useI18n } from '@/i18n';
 import { LANGUAGES } from '@/i18n/strings';
 import { getNotificationStatus, requestNotifications, type NotificationStatus } from '@/lib/notifications';
 import { Keys, remove } from '@/lib/storage';
+import { USING_MOCK } from '@/lib/api';
 import { getTestMode, setTestMode, TEST_SCENARIOS, type TestMode } from '@/lib/test-mode';
 import { resetMockData } from '@/mock/mock-api';
 
@@ -64,7 +65,7 @@ export default function SettingsScreen() {
         )}
       </Section>
 
-      <Section title={t('testSection')}>
+      {USING_MOCK && <Section title={t('testSection')}>
         <ModeOption selected={mode === 'demo'} title={t('testDemo')} hint={t('testDemoHint')} onPress={() => chooseMode('demo')} />
         <ModeOption selected={mode === 'triage'} title={t('testTriage')} hint={t('testTriageHint')} onPress={() => chooseMode('triage')} />
         <ModeOption selected={mode === 'ai'} title={t('testAi')} hint={t('testAiHint')} onPress={() => chooseMode('ai')} />
@@ -84,7 +85,7 @@ export default function SettingsScreen() {
             {s.then && <AppText variant="small">{s.then}</AppText>}
           </View>
         ))}
-      </Section>
+      </Section>}
 
       <Section>
         <View style={[styles.row, styles.disabled]}>
@@ -96,7 +97,7 @@ export default function SettingsScreen() {
       {__DEV__ && <Button label={t('devTools')} variant="ghost" icon={Wrench} onPress={() => router.push('/hub')} />}
       <Button label={t('resetApp')} variant="destructive" icon={RotateCcw} onPress={resetApp} />
 
-      <AppText variant="small" style={styles.footer}>Sahhanito · patient · v1.0 (mock backend)</AppText>
+      <AppText variant="small" style={styles.footer}>Sahhanito · v1.0{USING_MOCK ? ' · mode démo local' : ''}</AppText>
     </Screen>
   );
 }
