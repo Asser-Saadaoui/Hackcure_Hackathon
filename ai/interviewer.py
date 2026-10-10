@@ -186,3 +186,77 @@ class Interviewer:
             timeout=TIMEOUT_S)
         response.raise_for_status()
         return ''.join(block.get('text', '') for block in response.json().get('content', []))
+
+
+# ---- Intake before human review --------------------------------------------------------------
+# When the NLP and the rules cannot decide (UNCERTAIN), the clinician needs facts, not a single
+# unclear sentence. These general questions are asked before the case goes to review. Answers are
+# still parsed by the NLP extractor (an answer like "difficulty breathing" resumes normal triage)
+# and are stored verbatim in state['sahhanito']['intake'] for the clinician and the report.
+# Quick replies use words the extractor knows, so tapping them feeds the decision.
+INTAKE = [
+    ('intake.onset', {
+        'fr': ('Depuis quand avez-vous ce problème ?', ['Moins d’une heure', 'Quelques heures', '1 à 3 jours', 'Plus longtemps']),
+        'en': ('Since when have you had this problem?', ['Less than an hour', 'A few hours', '1–3 days', 'Longer']),
+        'ar': ('منذ متى تعاني من هذه المشكلة؟', ['أقل من ساعة', 'بضع ساعات', 'من يوم إلى 3 أيام', 'أكثر']),
+        'darija_arabic': ('من وقتاش عندك المشكلة هذي؟', ['أقل من ساعة', 'شوية سوايع', 'من نهار لـ3 أيام', 'أكثر']),
+        'darija_latin': ('Men wa9tech 3andek el mochkla hedhi?', ['A9al men sa3a', 'Chwaya swaye3', 'Men nhar l 3 iyem', 'Akther']),
+    }),
+    ('intake.severity', {
+        'fr': ('Sur 10, quelle est l’intensité de la gêne ou de la douleur ?', ['1–3 (faible)', '4–6 (moyenne)', '7–10 (forte)']),
+        'en': ('Out of 10, how strong is the discomfort or pain?', ['1–3 (mild)', '4–6 (moderate)', '7–10 (severe)']),
+        'ar': ('من 10، ما مدى شدة الألم أو الانزعاج؟', ['1–3 (خفيف)', '4–6 (متوسط)', '7–10 (شديد)']),
+        'darija_arabic': ('من 10، قداش الوجيعة قوية؟', ['1–3 (شوية)', '4–6 (متوسطة)', '7–10 (برشة)']),
+        'darija_latin': ('Men 10, 9addech el wji3a 9wiya?', ['1–3 (chwaya)', '4–6 (moutawassta)', '7–10 (barcha)']),
+    }),
+    ('intake.warning_signs', {
+        'fr': ('Avez-vous aussi l’un de ces signes ?', ['Fièvre', 'Vomissements', 'Difficulté à respirer', 'Aucun']),
+        'en': ('Do you also have any of these?', ['Fever', 'Vomiting', 'Difficulty breathing', 'None']),
+        'ar': ('هل لديك أيضًا أحد هذه الأعراض؟', ['حمى', 'نتقيأ', 'ضيق في التنفس', 'لا شيء']),
+        'darija_arabic': ('عندك زادة واحد من هذوما؟', ['سخانة', 'نتقيأ', 'صعوبة في التنفس', 'حتى شي']),
+        'darija_latin': ('3andek zeda wa7ed men hadhouma?', ['S5ana', 'Nrajja3', 'S3ouba fel tanaffos', '7atta chay']),
+    }),
+    ('intake.age', {
+        'fr': ('Quel âge a la personne malade ?', ['Moins de 2 ans', '2 à 17 ans', '18 à 64 ans', '65 ans ou plus']),
+        'en': ('How old is the sick person?', ['Under 2', '2–17', '18–64', '65 or older']),
+        'ar': ('كم عمر الشخص المريض؟', ['أقل من سنتين', 'من 2 إلى 17 سنة', 'من 18 إلى 64 سنة', '65 سنة أو أكثر']),
+        'darija_arabic': ('قداش عمر المريض؟', ['أقل من عامين', 'من 2 لـ17 عام', 'من 18 لـ64 عام', '65 عام ولا أكثر']),
+        'darija_latin': ('9addech 3omr el maridh?', ['A9al men 3amin', 'Men 2 l 17 3am', 'Men 18 l 64 3am', '65 3am wala akther']),
+    }),
+    ('intake.history', {
+        'fr': ('Maladie connue, grossesse ou médicament en cours ? Écrivez-le, ou choisissez.', ['Aucun', 'Je ne sais pas']),
+        'en': ('Any known illness, pregnancy or current medicine? Type it, or choose.', ['None', 'Not sure']),
+        'ar': ('هل لديك مرض معروف أو حمل أو دواء حالي؟ اكتبه أو اختر.', ['لا شيء', 'مانعرفش']),
+        'darija_arabic': ('عندك مرض، حمل ولا دواء تاخو فيه؟ اكتبو ولا اختار.', ['حتى شي', 'مانعرفش']),
+        'darija_latin': ('3andek mardh, 7aml wala dwa takhou fih? Ektbou wala e5tar.', ['7atta chay', 'Ma na3rafch']),
+    }),
+]
+
+
+def next_intake(answered):
+    return next((field for field, _ in INTAKE if field not in answered), None)
+
+
+def intake_question(field, language, message):
+    texts = dict(INTAKE)[field]
+    text, quick = texts[reply_key(language, message)]
+    return text, quick
+
+
+def ask_intake(interviewer, field, history, language, message):
+    """Deterministic intake question; the LLM may only rephrase it (same safety checks)."""
+    text, quick = intake_question(field, language, message)
+    result = dict(text=text, quick_replies=quick, collected={}, source='template')
+    if not interviewer.enabled:
+        return result
+    try:
+        out = interviewer._call_llm({'field': field}, text, history, language)
+    except Exception as error:
+        result['llm_error'] = type(error).__name__
+        return result
+    phrased = (out.get('question') or '').strip()
+    if phrased and len(phrased) <= 300 and re.search(r'[?؟]', phrased) and not UNSAFE.search(phrased):
+        result.update(text=phrased, source='llm')
+    if isinstance(out.get('collected'), dict):
+        result['collected'] = {k: v for k, v in out['collected'].items() if v not in (None, '', [])}
+    return result

@@ -60,6 +60,10 @@ def triage_turn(state, message, previous_question_id=None, *, language='fr', mod
     if language not in EMERGENCY_MESSAGE:
         language = 'fr'
     plang = interviewer_module.pipeline_language(language, message)
+    # Answers to intake questions (asked before human review) are not linked to an NLP field.
+    intake_field = None
+    if previous_question_id and previous_question_id.startswith('intake:'):
+        intake_field, previous_question_id = previous_question_id[len('intake:'):], None
     try:
         r = process_turn(state, message, previous_question_id, language=plang, ml_bundle=ml_bundle)
     except ValueError:
@@ -69,6 +73,12 @@ def triage_turn(state, message, previous_question_id=None, *, language='fr', mod
         r = process_turn(state, message, None, language=plang, ml_bundle=ml_bundle)
     st = r['patient_state']
     meta = st.setdefault('sahhanito', {'asked': {}, 'llm_notes': {}})
+    meta.setdefault('intake', {})
+    meta.setdefault('intake_turns', {})
+    pending = meta.get('pending_intake')
+    if pending and intake_field in (None, pending):
+        meta['intake'][pending] = message   # also when the client did not send the id: never ask twice
+    meta.pop('pending_intake', None)
 
     rules = evaluate_rules(st, r['rules'])
     assessment = fusion.fuse(r['ml'], rules)
@@ -90,6 +100,16 @@ def triage_turn(state, message, previous_question_id=None, *, language='fr', mod
         meta['llm_notes'].update(asked_reply.get('collected') or {})
         reply = dict(text=asked_reply['text'], quick_replies=asked_reply['quick_replies'],
                      question_id=question['id'], field=question['field'], source=asked_reply['source'])
+    elif decided['level'] == 'UNCERTAIN' and mode == 'interview' and interviewer_module.next_intake(meta['intake']):
+        # Not enough to decide: collect the basics before a clinician reviews the case.
+        status = 'question'
+        field = interviewer_module.next_intake(meta['intake'])
+        asked_reply = interviewer_module.ask_intake(interviewer or default_interviewer(), field, _history(st), language, message)
+        meta['pending_intake'] = field
+        meta['intake_turns'][str(len(st['turns']))] = asked_reply['text']
+        meta['llm_notes'].update(asked_reply.get('collected') or {})
+        reply = dict(text=asked_reply['text'], quick_replies=asked_reply['quick_replies'],
+                     question_id=f'intake:{field}', field=field, source=asked_reply['source'])
     elif decided['level'] == 'UNCERTAIN':
         status = 'under_review'
         reply = dict(text=REVIEW_MESSAGE[language], quick_replies=[], source='fixed')
@@ -115,6 +135,7 @@ def triage_turn(state, message, previous_question_id=None, *, language='fr', mod
         ),
         decision=decided,
         llm_notes=copy.deepcopy(meta['llm_notes']),
+        intake=copy.deepcopy(meta['intake']),
         versions=dict(turn=VERSION, rules=rules['rule_version'], fusion=fusion.VERSION,
                       decision=decision_policy.VERSION, interviewer=interviewer_module.VERSION,
                       nlp_model=r['ml'].get('model_version')),
@@ -123,8 +144,11 @@ def triage_turn(state, message, previous_question_id=None, *, language='fr', mod
 
 def _history(state):
     asked = state.get('sahhanito', {}).get('asked', {})
+    intake_turns = state.get('sahhanito', {}).get('intake_turns', {})
     history = []
-    for t in state['turns']:
+    for i, t in enumerate(state['turns']):
+        if str(i) in intake_turns:
+            history.append(dict(role='assistant', text=intake_turns[str(i)]))
         if t.get('question'):
             qid = next((a['id'] for a in state.get('asked_questions', []) if a['field'] == t.get('field')), None)
             history.append(dict(role='assistant', text=asked.get(qid, t['question'])))

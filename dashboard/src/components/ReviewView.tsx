@@ -37,6 +37,14 @@ export function ReviewView({ items, onDone }: { items: ReviewItem[]; onDone: () 
           </CardHeader>
           <CardContent className="space-y-3">
             {it.assessment?.uncertainty_reasons?.length ? <p className="text-sm text-muted-foreground">Pourquoi : {it.assessment.uncertainty_reasons.join(" ; ")}</p> : null}
+            {(it.report.history.length > 0 || it.report.positives.length > 0) && (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div><p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">Informations recueillies</p>
+                  <ul className="list-disc space-y-0.5 pl-5 text-sm">{it.report.history.map((x, i) => <li key={i} dir="auto">{x}</li>)}</ul></div>
+                <div><p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">Symptômes reconnus</p>
+                  <ul className="list-disc space-y-0.5 pl-5 text-sm">{it.report.positives.map((x, i) => <li key={i} dir="auto">{x}</li>)}</ul></div>
+              </div>
+            )}
             <div className="space-y-1 rounded-lg bg-secondary/50 p-3">
               {it.transcript.map((t) => <p key={t.id} className="text-sm" dir="auto"><span className="font-medium">{t.role === "PATIENT" ? "Patient" : "Assistant"} :</span> {t.text}</p>)}
             </div>

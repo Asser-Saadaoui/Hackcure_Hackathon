@@ -114,9 +114,14 @@ class TurnTests(unittest.TestCase):
         r = self.conversation('darija', 'عندي سخانة و راسي يوجعني')
         self.assertEqual(r['reply']['quick_replies'], ['إي', 'لا', 'مانعرفش'])
 
-    def test_unclear_complaint_goes_to_review(self):
+    def test_unclear_complaint_collects_intake_then_review(self):
         r = self.conversation('fr', 'je me sens bizarre', 'je sais pas')
+        self.assertEqual(r['status'], 'question')
+        self.assertTrue(r['reply']['question_id'].startswith('intake:'))
+        r = self.conversation('fr', 'je me sens bizarre', 'je sais pas', 'Quelques heures', '4–6 (moyenne)', 'Aucun', '18 à 64 ans', 'Aucun')
         self.assertEqual((r['status'], r['decision']['level']), ('under_review', 'UNCERTAIN'))
+        self.assertEqual(r['intake']['intake.onset'], 'Quelques heures')
+        self.assertEqual(len(r['intake']), 5)
 
     def test_stale_question_id_is_tolerated(self):
         r = triage_turn(None, "j'ai de la fièvre", 'someone-else:0:symptom.breath', language='fr', interviewer=Interviewer(enabled=False))

@@ -504,6 +504,8 @@ ACTIONS = {
     'UNCERTAIN': ['Un médecin vérifie la situation.', 'Appeler le 190 en cas d’aggravation.'],
 }
 FIELD_LABELS = {'age': 'Âge', 'duration': 'Durée', 'onset': 'Début', 'severity': 'Intensité'}
+INTAKE_LABELS = {'intake.onset': 'Depuis', 'intake.severity': 'Intensité (/10)', 'intake.warning_signs': 'Autres signes',
+                 'intake.age': 'Âge', 'intake.history': 'Antécédents / grossesse / traitements'}
 
 
 def structured_report(case):
@@ -529,6 +531,8 @@ def structured_report(case):
     if r:
         timeline.append(dict(at=iso(r.created_at), event=f"Dossier envoyé à {hospitals.FACILITIES[r.facility_key]['name']}"))
     reported = [f"{FIELD_LABELS.get(k, k)} : {v}" for k, v in notes.items() if k in FIELD_LABELS and v]
+    intake = (state.get('sahhanito') or {}).get('intake') or {}
+    reported += [f"{INTAKE_LABELS.get(k, k)} : {v}" for k, v in intake.items() if v]
     missing = (state.get('sahhanito') or {}).get('missing') or []
     summary = f"Motif : « {said[0] if said else '—'} ». Niveau : {level}"
     if d.get('pFinal') is not None:
