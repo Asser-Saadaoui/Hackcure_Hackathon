@@ -40,3 +40,25 @@ Missing is different from negative; uncertain-only/unrecognized complaints do no
 The single artifact `candidate_model.joblib` is 15,263,160 bytes (15.3 MB), below GitHub's regular-file size warning/limit. It is included once in ordinary Git; no large transformer weights, data, caches or notebooks are included. SHA-256: `fee288298d6fafe63d053cc8fa4047442bb7949abb77022058067a27375eec5e`. Hashes and projection guards are in `compatibility.json`. `triage_tuning.py` preserves the original serialized class names and inference behavior, with search/training omitted. The ensemble is CatBoost + HistGradientBoosting + ExtraTrees; existing sigmoid mapping and threshold are retained without retraining/promotion.
 
 Limits: finite Tunisian vocabulary, unreviewed language templates and extraction-confidence heuristics; no native-speaker/clinician validation. Current English selection-validation weak-label macro F1 0.9108 (FP 132/FN 26); original local benchmark 0.9494. The context-feature regression is unresolved. The original benchmark and deployed model stay preserved locally; they are not required for this explicit experimental interface. Scores are not validated medical probabilities, and absence of rule flags does not establish safety.
+
+## Rule engine (`rule_engine/`, Sahhanito)
+
+Decision strategy: **NLP model + rule engine → fusion score → decision**. The LLM only chats with the patient and collects information; it never decides the level. This section covers the rule engine (step 1); fusion and the decision policy come next.
+
+```python
+from triage_pipeline import process_turn
+from rule_engine import evaluate
+r = process_turn(None, "3andi wja3 fi sadri w ma najamch netnaffes")
+rules = evaluate(r["patient_state"], r["rules"])   # reuses the clinical screens already computed
+rules["s_rule"], rules["level_floor"], rules["suggested_specialty"], rules["required_equipment"]
+# 1.0, 'EMERGENCY', 'CARDIO', ['CATH_LAB', 'ICU']
+```
+
+- Rules are data: `rule_engine/rules.v1.json` (31 rules, 21 lexicon entries in French, Darija Arabizi, Darija/Arabic script and English).
+- Inputs: extracted facts, the clinical screens of `clinical_rules.py`, and the raw patient messages. **Never the ML score**, so the two signals stay independent for fusion.
+- Severity: `critical` → `s_rule = 1.0`, level floor `EMERGENCY`; `high` → floor `HIGH` + weight; `moderate` → weight only. Non-critical weights combine as noisy-OR `1 − Π(1 − w)`.
+- Negation (`pas de`, `ma 3andich`, `ما عنديش`, `no`…) and context (`last year`, `ken`, `زمان`, `j'ai peur`…) are checked in the same clause; extracted facts are cross-checked the same way.
+- `suggested_specialty` / `required_equipment` use the codes of the Grand Tunis hospitals dataset (`CARDIO`, `NEURO`, `OBGYN`, `CT`, `CATH_LAB`, `ICU`…), from the most severe triggered group only.
+- Tests: `python -m unittest -q test_rule_engine test_integration`.
+
+Unvalidated prototype: rules, weights and translations need clinician and native-speaker review. No triggered rule does not mean safe.

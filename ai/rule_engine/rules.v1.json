@@ -1,0 +1,371 @@
+{
+  "version": "sahhanito-rules-1",
+  "validation_status": "unvalidated_prototype: wording, thresholds and weights must be reviewed by a clinician before any real use",
+  "severity_policy": {
+    "critical": { "level_floor": "EMERGENCY", "score": 1.0 },
+    "high": { "level_floor": "HIGH" },
+    "moderate": { "level_floor": null }
+  },
+  "negation_cues": [
+    "\\b(?:no|not|without|never|denies|denied|don.?t|doesn.?t|didn.?t|isn.?t)\\b",
+    "\\b(?:pas|sans|aucune?|jamais|ni)\\b",
+    "\\b(?:ma\\s*\\S+ch|mouch|moch|mich|mch|mafamm?ech|ma\\s*fammech|bla|blech)\\b",
+    "(?:^|\\s)(?:ما\\s*\\S+ش|ماعنديش|معنديش|موش|مش|لا|بلا|بلاش)(?=\\s|$)"
+  ],
+  "context_cues": [
+    "\\b(?:if|what if|last year|years ago|in the past|used to|afraid of|worried about)\\b",
+    "\\b(?:si|l.?annee derniere|il y a (?:des|plusieurs) ans|autrefois|peur de|j.?ai peur)\\b",
+    "\\b(?:ken|kenou|3am elli fet|3am lfet|zman|5ayef|nkhaf|n5af)\\b",
+    "(?:^|\\s)(?:اذا|العام\\s*الفات|زمان|خايف|نخاف)(?=\\s|$)"
+  ],
+  "clause_breaks": "[.;!?\\n,]|\\b(?:but|however|mais|cependant|ama|amma|ema)\\b|(?:^|\\s)(?:لكن|اما|أما)(?=\\s|$)",
+  "lexicon": {
+    "cannot_breathe": [
+      "can.?t breathe|cannot breathe|unable to breathe|struggling to breathe|choking",
+      "je n.?arrive (?:pas|plus) a respirer|j.?etouffe|il etouffe|elle etouffe|etouffement",
+      "ma\\s*n[ae]?j[ae]?m(?:e)?ch\\s*n[ae]?tn[ae]f+[ae]s|n7[ae]s+\\s*rou7i\\s*m[kh5]+nou9|m[kh5]nou9|m5an9a|nefsi\\s*ma9tou3",
+      "ما\\s*نجمش\\s*نتنفس|مخنوق|مخنوقة|نختنق|نفسي\\s*مقطوع"
+    ],
+    "chest_pain": [
+      "chest (?:pain|pressure|tightness)|pain in (?:my|his|her) chest",
+      "douleur (?:thoracique|a la poitrine|dans la poitrine)|mal (?:a|dans) la poitrine|serrement (?:a|dans) la poitrine",
+      "sadr(?:i|ou|ha)\\s*y?o?[jg][ae3]+(?:ni|ou|ha)|w[jg]a3\\s*(?:fi|f|fel)\\s*sadr(?:i|ou|ha)|wji3a\\s*(?:fi|f)\\s*sadr",
+      "وجع\\s*في\\s*(?:صدري|الصدر)|صدري\\s*يوجعني|وجيعة\\s*في\\s*صدري"
+    ],
+    "unconscious": [
+      "unconscious|unresponsive|passed out|not waking up|won.?t wake up",
+      "inconscient|perdu connaissance|ne se reveille pas|ne repond (?:pas|plus)|evanoui",
+      "m?ghchi\\s*3lih|m?ghchi\\s*3liha|ghchaw?\\s*3lih|fa9ed\\s*el\\s*wa3[iy]|ma\\s*y?fi9ch|ma\\s*t?fi9ch",
+      "مغشي\\s*عليه|مغشي\\s*عليها|فاقد\\s*الوعي|ما\\s*يفيقش|ما\\s*تفيقش"
+    ],
+    "seizure": [
+      "seizure|convulsing|convulsions?|fitting",
+      "convuls\\w*|crise d.?epilepsie|crise epileptique",
+      "y?t?chan[jg]a|tchanj|kriz[ae]\\s*(?:sar3|epilep)",
+      "يتشنج|تتشنج|تشنج|نوبة\\s*صرع"
+    ],
+    "stroke_signs": [
+      "face (?:is )?droop\\w*|one side of (?:my|his|her) (?:body|face)|can.?t move (?:my|his|her) (?:arm|leg)|slurred speech",
+      "visage (?:paralyse|tordu)|bouche (?:tordue|de travers)|bras (?:paralyse|qui ne bouge plus)|paralysie|parole pateuse|ne peut plus parler",
+      "wejh(?:i|ou|a|ha)\\s*mayel|fomm(?:i|ou|a|ha)\\s*mayel|ma\\s*(?:y|t|n)?(?:n[ae]j[ae]?m(?:e)?ch|9d[ae]rch)\\s*(?:y|t|n)?(?:[ae]?7ki|ahki|hki)|nos+\\s*bdan(?:i|ou|ha)|ma\\s*y?n[ae]jemch\\s*y?7ar+ek|kl[ae]m(?:ou|ha)\\s*met5alet",
+      "وجه[هوي]?\\s*مايل|فم[هوي]?\\s*مايل|نص\\s*بدن|شلل|كلامو\\s*متخلط"
+    ],
+    "heavy_bleeding": [
+      "bleeding (?:heavily|a lot|won.?t stop|that won.?t stop)|heavy bleeding|hemorrhag\\w*|losing a lot of blood",
+      "saign\\w* (?:abondant\\w*|beaucoup|sans arret)|hemorragie|perd beaucoup de sang",
+      "dam\\s*barcha|dam\\s*ma\\s*7abech\\s*yo9of|nzif\\s*9wi",
+      "دم\\s*برشة|نزيف\\s*قوي|الدم\\s*ما\\s*حبش\\s*يوقف"
+    ],
+    "blood_loss_gi": [
+      "vomiting blood|vomited blood|coughing (?:up )?blood|black (?:tarry )?stools?",
+      "vomi\\w* (?:du )?sang|crache\\w* du sang|selles noires",
+      "y?[tn]9ay+a\\s*dam|y?raj+a3\\s*dam|y?ko7\\s*dam",
+      "يتقيا\\s*دم|يرجع\\s*دم|يكح\\s*دم|نرجع\\s*دم"
+    ],
+    "anaphylaxis": [
+      "throat (?:is )?(?:swelling|swollen|closing)|tongue (?:is )?swell\\w*|lips? (?:are )?swell\\w*|anaphyla\\w*",
+      "gorge (?:gonflee|qui gonfle|serree)|levres gonflees|langue gonflee|choc anaphylactique|oedeme de quincke",
+      "7al9(?:i|ou|ha)\\s*manfou5|lsan(?:i|ou|ha)\\s*manfou5|fomm(?:i|ou|ha)\\s*manfou5",
+      "حلق[هيو]?\\s*منفوخ|لسان[هيو]?\\s*منفوخ|فم[هيو]?\\s*منفوخ"
+    ],
+    "suicidal": [
+      "kill myself|suicid\\w*|want to die|end my life|take my own life",
+      "envie de mourir|(?:veux|vais) (?:mourir|me tuer|me suicider)|en finir avec (?:la|ma) vie",
+      "n7[ae]b+\\s*nmout|b[ae]ch\\s*n[9q]t[ae]l\\s*rou7i|n[9q]at[ae]l\\s*rou7i|nentar\\w*",
+      "نحب\\s*نموت|باش\\s*نقتل\\s*روحي|ننتحر|انتحار"
+    ],
+    "poisoning": [
+      "poison\\w*|overdos\\w*|swallowed (?:pills|bleach|medicine)|carbon monoxide|took too many pills",
+      "intoxi\\w*|empoisonn\\w*|surdose|avale (?:des|trop de) (?:medicaments|comprimes)|eau de javel|monoxyde",
+      "chr[ae]b\\s*(?:jafel|javel|jefel)|k?la\\s*dwe?a?\\s*barcha|ts[ae]m+[ae]m|ms[ae]m+[ae]m",
+      "شرب\\s*جافال|تسمم|مسموم|بلع\\s*دواء\\s*برشة|حبوب\\s*برشة"
+    ],
+    "major_trauma": [
+      "car accident|hit by a (?:car|truck|bus)|fell from (?:a height|the roof|the stairs|a ladder)|stab(?:bed|bing)?|gunshot|got shot|been shot",
+      "accident (?:de (?:la )?(?:route|voiture|moto|circulation))|renverse par|chute (?:de|d.?un) (?:haut|etage|toit|echelle|escalier)|coup de couteau|poignarde",
+      "acci?dent(?!\\s*vasculaire)|kar7ba\\s*dh?rbet(?:ou|ha)|tay7\\s*m(?:en|el)\\s*(?:fo9|sta7|etage|sellom)|dh?rbou\\s*b\\s*(?:mous|sekkina)",
+      "حادث|كرهبة\\s*ضربت|طاح\\s*من\\s*(?:الفوق|السطح)|ضربو\\s*بموس|بسكينة"
+    ],
+    "head_injury": [
+      "hit (?:my|his|her) head|head injury|banged (?:my|his|her) head",
+      "(?:coup|choc|traumatisme) (?:a|sur) la tete|traumatisme cranien",
+      "dh?rab\\s*ras(?:ou|i|ha)|tay7\\s*3la\\s*ras(?:ou|i|ha)",
+      "ضرب\\s*راس|طاح\\s*على\\s*راس"
+    ],
+    "severe_burn": [
+      "severe burn|badly burn\\w*|burns? (?:on|all over) (?:my|his|her) (?:face|body)",
+      "brulure (?:grave|etendue|au visage)|grand brule|brule (?:gravement|partout|au visage)",
+      "t7ra9|ma7rou9|ma7rou9a|7ar9a\\s*kbira",
+      "تحرق|محروق|محروقة|حرقة\\s*كبيرة"
+    ],
+    "pregnancy": [
+      "pregnant|pregnancy",
+      "enceinte|grossesse",
+      "7am[ae]l|7amla",
+      "حامل|حاملة"
+    ],
+    "pregnancy_bleeding": [
+      "vaginal bleeding|bleeding from (?:the )?vagina",
+      "saignement\\w* vaginal\\w*|pertes de sang|saigne",
+      "dam\\s*m(?:en|el)\\s*ta7t|nzif",
+      "دم\\s*من\\s*التحت|نزيف"
+    ],
+    "labour": [
+      "water broke|waters broke|in labou?r|contractions",
+      "perte des eaux|contractions|accouch\\w*",
+      "el\\s*ma\\s*habet|b[ae]ch\\s*tool?ed|tal9",
+      "نزل\\s*الماء|باش\\s*تولد|الطلق"
+    ],
+    "vision_loss": [
+      "can.?t see|cannot see|lost (?:my )?vision|sudden(?:ly)? blind\\w*",
+      "ne vois? (?:plus|rien)|perte (?:brutale )?de (?:la )?vue",
+      "ma\\s*nchoufch|ma\\s*walit(?:ch)?\\s*nchouf",
+      "ما\\s*نشوفش|ما\\s*وليتش\\s*نشوف"
+    ],
+    "worst_headache": [
+      "worst headache|thunderclap|sudden severe headache",
+      "pire mal de tete|mal de tete (?:brutal|violent|soudain)|coup de tonnerre",
+      "a9wa\\s*wja3\\s*ras|wja3\\s*ras\\s*faj2a",
+      "اقوى\\s*وجع\\s*راس|وجع\\s*راس\\s*فجاة"
+    ],
+    "infant": [
+      "\\bbaby\\b|newborn|infant",
+      "bebe|nourrisson|nouveau.ne",
+      "bebe|rdhi3|sghir\\s*3omr(?:ou|ha)\\s*\\d+\\s*(?:ch[h7]ar|chhour|nhar|jour)",
+      "رضيع|بيبي"
+    ],
+    "unbearable_pain": [
+      "unbearable|excruciating|worst pain",
+      "insupportable|atroce|douleur tres forte|douleur terrible",
+      "ma\\s*y?t7[ae]mlch|wja3\\s*kbir\\s*barcha",
+      "ما\\s*يتحملش"
+    ],
+    "anticoagulant": [
+      "warfarin|coumadin|apixaban|eliquis|rivaroxaban|xarelto|heparin|blood thinners?",
+      "sintrom|previscan|anticoagulant\\w*|kardegic|aspegic",
+      "dwa\\s*mta3\\s*e?dam|ymaye3\\s*e?dam",
+      "سنتروم|دواء\\s*يميع\\s*الدم"
+    ]
+  },
+  "rules": [
+    {
+      "id": "R-CARD-01", "name": "Chest pain with breathing difficulty", "severity": "critical",
+      "when": { "any": [
+        { "screen": "chest_dyspnea" },
+        { "all": [ { "any": [ { "fact": { "kind": "symptom", "name": ["chest"] } }, { "text": "chest_pain" } ] },
+                   { "any": [ { "fact": { "kind": "symptom", "name": ["breath", "breath_severe", "cannot_breathe"] } }, { "text": "cannot_breathe" } ] } ] }
+      ] },
+      "specialty": "CARDIO", "equipment": ["CATH_LAB"],
+      "rationale": { "fr": "Douleur thoracique avec difficulté à respirer.", "en": "Chest pain with breathing difficulty.", "ar": "ألم في الصدر مع صعوبة في التنفس.", "darija": "وجيعة في الصدر مع صعوبة في التنفس." }
+    },
+    {
+      "id": "R-RESP-01", "name": "Severe breathing difficulty", "severity": "critical",
+      "when": { "any": [ { "screen": "severe_breathing" }, { "text": "cannot_breathe" } ] },
+      "specialty": "PNEUMO", "equipment": ["ICU"],
+      "rationale": { "fr": "Difficulté respiratoire sévère.", "en": "Severe breathing difficulty.", "ar": "صعوبة شديدة في التنفس.", "darija": "صعوبة كبيرة في التنفس." }
+    },
+    {
+      "id": "R-NEURO-01", "name": "Stroke signs", "severity": "critical",
+      "when": { "any": [ { "screen": "stroke_signs" }, { "text": "stroke_signs" } ] },
+      "specialty": "NEURO", "equipment": ["CT"],
+      "rationale": { "fr": "Signes possibles d'AVC (visage, bras, parole).", "en": "Possible stroke signs (face, arm, speech).", "ar": "علامات محتملة لجلطة دماغية (الوجه، الذراع، الكلام).", "darija": "علامات تنجم تكون جلطة (الوجه، اليد، الكلام)." }
+    },
+    {
+      "id": "R-NEURO-02", "name": "Unconscious or unresponsive", "severity": "critical",
+      "when": { "any": [ { "screen": "unresponsive" }, { "text": "unconscious" } ] },
+      "specialty": "EMERG", "equipment": ["ICU"],
+      "rationale": { "fr": "Personne inconsciente ou qui ne répond pas.", "en": "Person unconscious or unresponsive.", "ar": "شخص فاقد للوعي أو لا يستجيب.", "darija": "شخص فاقد الوعي ولا ما يجاوبش." }
+    },
+    {
+      "id": "R-NEURO-03", "name": "Seizure", "severity": "critical",
+      "when": { "any": [ { "fact": { "kind": "symptom", "name": ["seizure"] } }, { "text": "seizure" } ] },
+      "specialty": "NEURO", "equipment": ["CT"],
+      "rationale": { "fr": "Crise convulsive.", "en": "Seizure.", "ar": "نوبة تشنج.", "darija": "نوبة تشنج." }
+    },
+    {
+      "id": "R-BLEED-01", "name": "Heavy or uncontrolled bleeding", "severity": "critical",
+      "when": { "any": [ { "screen": "heavy_bleeding" }, { "text": "heavy_bleeding" } ] },
+      "specialty": "SURG", "equipment": ["ICU"],
+      "rationale": { "fr": "Saignement abondant ou qui ne s'arrête pas.", "en": "Heavy or uncontrolled bleeding.", "ar": "نزيف قوي أو لا يتوقف.", "darija": "نزيف قوي ولا ما حبش يوقف." }
+    },
+    {
+      "id": "R-INF-01", "name": "Possible meningitis cluster", "severity": "critical",
+      "when": { "screen": "neurologic_infection_cluster" },
+      "specialty": "NEURO", "equipment": ["CT"],
+      "rationale": { "fr": "Association fièvre, maux de tête, raideur de nuque ou confusion.", "en": "Combination of fever, headache, stiff neck or confusion.", "ar": "اجتماع حمى وصداع وتصلب الرقبة أو تشوش.", "darija": "سخانة مع وجيعة راس، رقبة يابسة ولا تخلويض." }
+    },
+    {
+      "id": "R-VITAL-01", "name": "Extreme heart rate", "severity": "critical",
+      "when": { "screen": "extreme_heart_rate" },
+      "specialty": "CARDIO", "equipment": ["ICU"],
+      "rationale": { "fr": "Fréquence cardiaque extrême (<50 ou >150).", "en": "Extreme heart rate (<50 or >150).", "ar": "نبض قلب شديد الانحراف (<50 أو >150).", "darija": "نبض القلب برشة ولا شوية برشة (<50 ولا >150)." }
+    },
+    {
+      "id": "R-VITAL-02", "name": "Very low oxygen saturation", "severity": "critical",
+      "when": { "vital": "oxygen_saturation", "lt": 90 },
+      "specialty": "PNEUMO", "equipment": ["ICU"],
+      "rationale": { "fr": "Saturation en oxygène inférieure à 90 %.", "en": "Oxygen saturation below 90%.", "ar": "نسبة الأكسجين أقل من 90٪.", "darija": "نسبة الأكسجين تحت 90٪." }
+    },
+    {
+      "id": "R-ALLERGY-01", "name": "Possible anaphylaxis", "severity": "critical",
+      "when": { "any": [
+        { "text": "anaphylaxis" },
+        { "fact": { "kind": "condition", "name": ["anaphylaxis"] } },
+        { "all": [ { "fact": { "kind": "symptom", "name": ["rash"] } }, { "fact": { "kind": "symptom", "name": ["breath", "breath_severe", "wheeze"] } } ] }
+      ] },
+      "specialty": "EMERG", "equipment": ["ICU"],
+      "rationale": { "fr": "Réaction allergique grave possible (gonflement de la gorge, gêne respiratoire).", "en": "Possible severe allergic reaction (throat swelling, breathing trouble).", "ar": "حساسية شديدة محتملة (انتفاخ الحلق، صعوبة التنفس).", "darija": "حساسية قوية تنجم تكون (حلق منفوخ، صعوبة في التنفس)." }
+    },
+    {
+      "id": "R-OBST-01", "name": "Pregnancy with bleeding or severe abdominal pain", "severity": "critical",
+      "when": { "all": [
+        { "any": [ { "fact": { "kind": "condition", "name": ["pregnancy"] } }, { "text": "pregnancy" } ] },
+        { "any": [ { "text": "pregnancy_bleeding" }, { "text": "heavy_bleeding" },
+                   { "fact": { "kind": "symptom", "name": ["abdominal_pain"], "severity": ["severe", "extreme", "unbearable", "excruciating", "worst", "intense"] } } ] }
+      ] },
+      "specialty": "OBGYN", "equipment": [],
+      "rationale": { "fr": "Grossesse avec saignement ou douleur abdominale forte.", "en": "Pregnancy with bleeding or severe abdominal pain.", "ar": "حمل مع نزيف أو ألم شديد في البطن.", "darija": "حمل مع دم ولا وجيعة قوية في الكرش." }
+    },
+    {
+      "id": "R-PSY-01", "name": "Suicidal thoughts", "severity": "critical",
+      "when": { "text": "suicidal" },
+      "specialty": "PSY", "equipment": [],
+      "rationale": { "fr": "Idées suicidaires exprimées.", "en": "Suicidal thoughts expressed.", "ar": "التعبير عن أفكار انتحارية.", "darija": "عبّر على أفكار انتحار." }
+    },
+    {
+      "id": "R-TOX-01", "name": "Poisoning or overdose", "severity": "critical",
+      "when": { "text": "poisoning" },
+      "specialty": "EMERG", "equipment": ["ICU"],
+      "rationale": { "fr": "Intoxication ou surdose possible.", "en": "Possible poisoning or overdose.", "ar": "تسمم أو جرعة زائدة محتملة.", "darija": "تسمم ولا دواء برشة." }
+    },
+    {
+      "id": "R-TRAUMA-01", "name": "Major trauma", "severity": "critical",
+      "when": { "text": "major_trauma" },
+      "specialty": "TRAUMA", "equipment": ["CT"],
+      "rationale": { "fr": "Traumatisme important (accident, chute de hauteur, plaie par arme).", "en": "Major trauma (accident, fall from height, weapon injury).", "ar": "إصابة خطيرة (حادث، سقوط من علو، جرح بسلاح).", "darija": "ضربة كبيرة (حادث، طيحة من الفوق، ضربة بموس)." }
+    },
+    {
+      "id": "R-CARD-02", "name": "Chest pain", "severity": "high", "weight": 0.7,
+      "when": { "any": [ { "fact": { "kind": "symptom", "name": ["chest"] } }, { "text": "chest_pain" } ] },
+      "specialty": "CARDIO", "equipment": ["CATH_LAB"],
+      "rationale": { "fr": "Douleur thoracique.", "en": "Chest pain.", "ar": "ألم في الصدر.", "darija": "وجيعة في الصدر." }
+    },
+    {
+      "id": "R-RESP-02", "name": "Breathing difficulty", "severity": "high", "weight": 0.6,
+      "when": { "fact": { "kind": "symptom", "name": ["breath", "breath_severe", "wheeze"] } },
+      "specialty": "PNEUMO", "equipment": [],
+      "rationale": { "fr": "Gêne respiratoire.", "en": "Breathing difficulty.", "ar": "صعوبة في التنفس.", "darija": "صعوبة في التنفس." }
+    },
+    {
+      "id": "R-NEURO-04", "name": "Sudden severe headache", "severity": "high", "weight": 0.7,
+      "when": { "any": [
+        { "text": "worst_headache" },
+        { "fact": { "kind": "symptom", "name": ["headache"], "severity": ["severe", "extreme", "unbearable", "excruciating", "worst"], "onset": ["sudden"] } }
+      ] },
+      "specialty": "NEURO", "equipment": ["CT"],
+      "rationale": { "fr": "Mal de tête brutal et intense.", "en": "Sudden, severe headache.", "ar": "صداع مفاجئ وشديد.", "darija": "وجيعة راس قوية جات فجأة." }
+    },
+    {
+      "id": "R-NEURO-05", "name": "Fainting", "severity": "high", "weight": 0.55,
+      "when": { "fact": { "kind": "symptom", "name": ["syncope"] } },
+      "specialty": "INTMED", "equipment": [],
+      "rationale": { "fr": "Perte de connaissance brève.", "en": "Fainting episode.", "ar": "إغماء.", "darija": "طاح مغشي عليه شوية." }
+    },
+    {
+      "id": "R-NEURO-06", "name": "Head injury", "severity": "high", "weight": 0.6,
+      "when": { "text": "head_injury" },
+      "specialty": "NEUROSURG", "equipment": ["CT"],
+      "rationale": { "fr": "Choc à la tête.", "en": "Head injury.", "ar": "إصابة في الرأس.", "darija": "ضربة في الراس." }
+    },
+    {
+      "id": "R-NEURO-07", "name": "Head injury on blood thinners", "severity": "critical",
+      "when": { "all": [ { "text": "head_injury" },
+                         { "any": [ { "text": "anticoagulant" }, { "fact": { "kind": "medication", "name": ["warfarin", "apixaban", "rivaroxaban", "heparin", "clopidogrel"] } } ] } ] },
+      "specialty": "NEUROSURG", "equipment": ["CT"],
+      "rationale": { "fr": "Choc à la tête sous anticoagulant.", "en": "Head injury while on blood thinners.", "ar": "إصابة في الرأس مع دواء مميع للدم.", "darija": "ضربة في الراس وهو ياخو دواء يميّع الدم." }
+    },
+    {
+      "id": "R-VITAL-03", "name": "High-risk vital signs", "severity": "high", "weight": 0.65,
+      "when": { "screen": "high_risk_vitals" },
+      "specialty": "INTMED", "equipment": [],
+      "rationale": { "fr": "Signes vitaux anormaux.", "en": "Abnormal vital signs.", "ar": "علامات حيوية غير طبيعية.", "darija": "العلامات الحيوية موش عادية." }
+    },
+    {
+      "id": "R-GI-01", "name": "Vomiting or coughing blood, black stools", "severity": "high", "weight": 0.7,
+      "when": { "any": [ { "text": "blood_loss_gi" }, { "fact": { "kind": "symptom", "name": ["hemoptysis", "melena"] } } ] },
+      "specialty": "SURG", "equipment": [],
+      "rationale": { "fr": "Sang dans les vomissements, la toux ou les selles.", "en": "Blood in vomit, cough or stools.", "ar": "دم في القيء أو السعال أو البراز.", "darija": "دم في الترجيع ولا الكحة ولا الخروج." }
+    },
+    {
+      "id": "R-ABD-01", "name": "Severe abdominal pain", "severity": "high", "weight": 0.6,
+      "when": { "any": [
+        { "fact": { "kind": "symptom", "name": ["abdominal_pain"], "severity": ["severe", "extreme", "unbearable", "excruciating", "worst", "intense"] } },
+        { "all": [ { "fact": { "kind": "symptom", "name": ["abdominal_pain"] } }, { "text": "unbearable_pain" } ] }
+      ] },
+      "specialty": "SURG", "equipment": ["CT"],
+      "rationale": { "fr": "Douleur abdominale intense.", "en": "Severe abdominal pain.", "ar": "ألم شديد في البطن.", "darija": "وجيعة قوية في الكرش." }
+    },
+    {
+      "id": "R-OBST-02", "name": "Pregnancy with symptoms or labour", "severity": "high", "weight": 0.6,
+      "when": { "any": [
+        { "text": "labour" },
+        { "all": [ { "any": [ { "fact": { "kind": "condition", "name": ["pregnancy"] } }, { "text": "pregnancy" } ] },
+                   { "fact": { "kind": "symptom", "name": ["abdominal_pain", "headache", "fever", "vomiting", "vision_loss", "edema", "dizziness"] } } ] }
+      ] },
+      "specialty": "OBGYN", "equipment": [],
+      "rationale": { "fr": "Grossesse avec symptômes, ou travail en cours.", "en": "Pregnancy with symptoms, or labour.", "ar": "حمل مع أعراض، أو بداية الولادة.", "darija": "حمل مع أعراض، ولا الطلق بدا." }
+    },
+    {
+      "id": "R-OPH-01", "name": "Sudden vision loss", "severity": "high", "weight": 0.7,
+      "when": { "any": [ { "text": "vision_loss" }, { "fact": { "kind": "symptom", "name": ["vision_loss"] } } ] },
+      "specialty": "OPHTA", "equipment": [],
+      "rationale": { "fr": "Perte brutale de la vue.", "en": "Sudden vision loss.", "ar": "فقدان مفاجئ للبصر.", "darija": "ولّى ما يشوفش فجأة." }
+    },
+    {
+      "id": "R-BURN-01", "name": "Serious burn", "severity": "high", "weight": 0.75,
+      "when": { "text": "severe_burn" },
+      "specialty": "BURNS", "equipment": [],
+      "rationale": { "fr": "Brûlure importante.", "en": "Serious burn.", "ar": "حرق خطير.", "darija": "حرقة كبيرة." }
+    },
+    {
+      "id": "R-PED-01", "name": "Infant with fever", "severity": "high", "weight": 0.7,
+      "when": { "all": [
+        { "any": [ { "age": { "lt": 1 } }, { "text": "infant" } ] },
+        { "fact": { "kind": "symptom", "name": ["fever"] } }
+      ] },
+      "specialty": "PEDIA", "equipment": [],
+      "rationale": { "fr": "Nourrisson avec de la fièvre.", "en": "Infant with fever.", "ar": "رضيع مصاب بالحمى.", "darija": "بيبي عندو سخانة." }
+    },
+    {
+      "id": "R-CARD-03", "name": "Palpitations with dizziness", "severity": "high", "weight": 0.6,
+      "when": { "all": [
+        { "fact": { "kind": "symptom", "name": ["palpitations"] } },
+        { "fact": { "kind": "symptom", "name": ["dizziness", "syncope", "chest"] } }
+      ] },
+      "specialty": "CARDIO", "equipment": [],
+      "rationale": { "fr": "Palpitations avec vertiges.", "en": "Palpitations with dizziness.", "ar": "خفقان مع دوخة.", "darija": "قلبو يضرب بالزربة مع دوخة." }
+    },
+    {
+      "id": "R-INF-02", "name": "High fever", "severity": "moderate", "weight": 0.35,
+      "when": { "vital": "temperature", "gte": 39.5 },
+      "specialty": "INTMED", "equipment": [],
+      "rationale": { "fr": "Fièvre élevée (≥ 39,5 °C).", "en": "High fever (≥ 39.5 °C).", "ar": "حمى مرتفعة (≥ 39.5 درجة).", "darija": "سخانة قوية (≥ 39.5)." }
+    },
+    {
+      "id": "R-AGE-01", "name": "Older patient with fever, confusion or chest symptoms", "severity": "moderate", "weight": 0.35,
+      "when": { "all": [
+        { "age": { "gte": 65 } },
+        { "fact": { "kind": "symptom", "name": ["fever", "confusion", "chest", "breath", "dizziness", "abdominal_pain"] } }
+      ] },
+      "specialty": "INTMED", "equipment": [],
+      "rationale": { "fr": "Patient de 65 ans ou plus avec un symptôme à risque.", "en": "Patient aged 65 or over with a risk symptom.", "ar": "مريض عمره 65 سنة أو أكثر مع عرض خطير.", "darija": "مريض عمرو 65 ولا أكثر وعندو عرض خطير." }
+    },
+    {
+      "id": "R-GEN-01", "name": "Unbearable pain", "severity": "moderate", "weight": 0.3,
+      "when": { "any": [ { "text": "unbearable_pain" },
+                         { "fact": { "kind": "symptom", "severity": ["unbearable", "excruciating", "worst", "extreme"] } } ] },
+      "specialty": null, "equipment": [],
+      "rationale": { "fr": "Douleur insupportable.", "en": "Unbearable pain.", "ar": "ألم لا يحتمل.", "darija": "وجيعة ما تتحملش." }
+    }
+  ]
+}
