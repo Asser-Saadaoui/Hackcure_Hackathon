@@ -33,6 +33,32 @@ function Bar({ label, value, hint }: { label: string; value: number | null; hint
   );
 }
 
+/** Diverging bars: how much each element moved the NLP score (right = towards emergency). */
+function ModelFactors({ factors }: { factors: { label: string; contribution: number; direction: "up" | "down" }[] }) {
+  const max = Math.max(...factors.map((f) => Math.abs(f.contribution)), 0.05);
+  return (
+    <div className="space-y-1.5 rounded-lg border p-3">
+      <p className="text-xs font-semibold uppercase text-muted-foreground">Ce qui a pesé sur le modèle de langage</p>
+      {factors.map((f) => {
+        const width = `${Math.round((Math.abs(f.contribution) / max) * 50)}%`;
+        return (
+          <div key={f.label} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_3.5rem] items-center gap-2 text-sm">
+            <span className="truncate" title={f.label}>{f.label}</span>
+            <div className="relative h-2.5 rounded-full bg-secondary">
+              <span className="absolute left-1/2 top-[-3px] h-[16px] w-px bg-border" />
+              <span className={cn("absolute top-0 h-2.5 rounded-full", f.direction === "up" ? "left-1/2 bg-red-500" : "right-1/2 bg-emerald-500")} style={{ width }} />
+            </div>
+            <span className={cn("text-right text-xs tabular-nums", f.direction === "up" ? "text-red-700" : "text-emerald-700")}>
+              {f.contribution > 0 ? "+" : ""}{Math.round(f.contribution * 100)} pts
+            </span>
+          </div>
+        );
+      })}
+      <p className="text-[11px] text-muted-foreground">Variation du score du modèle quand l'élément est retiré du dossier. → vers l'urgence · ← vers « non urgent ». Indicatif, non calibré cliniquement.</p>
+    </div>
+  );
+}
+
 function Fact({ icon: Icon, children }: { icon: typeof Clock; children: React.ReactNode }) {
   return <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-xs font-medium"><Icon className="h-3.5 w-3.5 text-muted-foreground" />{children}</span>;
 }
@@ -175,6 +201,7 @@ export function CaseView({ detail, onBack, onChanged }: { detail: CaseDetail; on
               <CardContent className="space-y-3">
                 <p className="text-sm font-medium" dir="auto">{why.headline}</p>
                 <List items={why.points} />
+                {why.modelFactors && why.modelFactors.length > 0 && <ModelFactors factors={why.modelFactors} />}
                 <p className="text-xs">
                   <span className={cn("rounded-full px-2 py-0.5 font-medium",
                     why.confidence === "élevée" ? "bg-emerald-100 text-emerald-800" : why.confidence === "moyenne" ? "bg-amber-100 text-amber-900" : "bg-red-100 text-red-800")}>

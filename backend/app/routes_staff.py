@@ -349,6 +349,41 @@ def all_hospitals(user: StaffUser = Depends(staff), db: Session = Depends(get_db
     return dict(simulator=hospitals.sim_status(), hospitals=[hospital_view(db, k) for k in hospitals.FACILITIES])
 
 
+# ---- simulation scenario (clinicians / admins drive the hospital simulator) ----------------
+
+def _audit_sim(email, method, path, body):
+    from app.db import SessionLocal
+    db = SessionLocal()
+    try:
+        services.audit(db, email, 'simulation.change', None, method=method, path=path, body=body)
+        db.commit()
+    finally:
+        db.close()
+
+
+@router.api_route('/sim/{path:path}', methods=['GET', 'POST', 'PUT', 'DELETE'])
+async def simulator_proxy(path: str, request: Request, user: StaffUser = Depends(clinician)):
+    """Forwards /staff/sim/<path> to the hospital simulator, then refreshes the availability cache at once."""
+    import asyncio
+    import httpx
+    if not (path == 'scenario' or path.startswith('scenario/') or (path.startswith('hospitals/') and path.endswith('/settings'))):
+        raise HTTPException(404, 'Not found')
+    body = await request.body()
+    try:
+        async with httpx.AsyncClient(timeout=60) as client:
+            resp = await client.request(request.method, f'{config.SIM_URL}/{path}', params=dict(request.query_params),
+                                        content=body or None, headers={'content-type': 'application/json'})
+    except httpx.HTTPError:
+        raise HTTPException(503, 'Simulateur injoignable.')
+    if request.method != 'GET':
+        await asyncio.to_thread(hospitals.refresh_sim)
+        await asyncio.to_thread(_audit_sim, user.email, request.method, path, body.decode('utf-8', 'replace')[:500])
+    if resp.status_code >= 400:
+        detail = resp.json().get('detail') if resp.headers.get('content-type', '').startswith('application/json') else resp.text
+        raise HTTPException(resp.status_code, detail if isinstance(detail, str) else str(detail))
+    return resp.json()
+
+
 # ---- clinician review queue --------------------------------------------------------
 
 @router.get('/reviews')

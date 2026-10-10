@@ -6,7 +6,6 @@ export const Keys = {
   language: 'sahhanito.language',
   session: 'sahhanito.session',
   currentCase: 'sahhanito.currentCase',  // id of the case in progress
-  testMode: 'sahhanito.testMode',        // mock answers: 'demo' | 'triage' (testing only)
 } as const;
 
 export async function getJSON<T>(key: string): Promise<T | null> {

@@ -158,6 +158,10 @@ def build(case, report, referral, audience='patient', staff_view=None, fhir_summ
         decided = [Paragraph(f"Modèle NLP : {pct(a.get('pNlp'))}{'' if a.get('pNlp') is not None else ' (' + txt(a.get('nlpStatus')) + ')'} · "
                              f"règles : {pct(a.get('sRule'))} · score fusionné : {pct(a.get('pFinal'))} · incertitude : {txt(a.get('uncertainty'))}", base),
                    *bullets(rules, 'Aucune règle déclenchée.')]
+        factors = (staff_view.get('explanation') or {}).get('modelFactors') or []
+        if factors:
+            decided.append(Paragraph('<b>Éléments qui ont pesé sur le modèle de langage</b> (variation du score si l\'élément est retiré) :', base))
+            decided += [Paragraph(f"{'↑' if f['direction'] == 'up' else '↓'} {txt(f['label'])} : {f['contribution'] * 100:+.0f} points", base) for f in factors]
         if a.get('uncertaintyReasons'):
             decided.append(Paragraph('Incertitude : ' + txt(' ; '.join(a['uncertaintyReasons'])), small))
         if staff_view['case'].get('review'):
