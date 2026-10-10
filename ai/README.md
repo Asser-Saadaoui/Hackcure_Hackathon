@@ -40,7 +40,7 @@ Missing is different from negative; uncertain-only/unrecognized complaints do no
 
 The single artifact `candidate_model.joblib` is 15,263,160 bytes (15.3 MB), below GitHub's regular-file size warning/limit. It is included once in ordinary Git; no large transformer weights, data, caches or notebooks are included. SHA-256: `fee288298d6fafe63d053cc8fa4047442bb7949abb77022058067a27375eec5e`. Hashes and projection guards are in `compatibility.json`. `triage_tuning.py` preserves the original serialized class names and inference behavior, with search/training omitted. The ensemble is CatBoost + HistGradientBoosting + ExtraTrees; existing sigmoid mapping and threshold are retained without retraining/promotion.
 
-Limits: finite Tunisian vocabulary, unreviewed language templates and extraction-confidence heuristics; no native-speaker/clinician validation. Current English selection-validation weak-label macro F1 0.9113 (FP 131/FN 26); original local benchmark 0.9494. The context-feature regression is unresolved. The original benchmark and deployed model stay preserved locally; they are not required for this explicit experimental interface. Scores are not validated medical probabilities, and absence of rule flags does not establish safety.
+Limits: finite Tunisian vocabulary, unreviewed language templates and extraction-confidence heuristics; no native-speaker/clinician validation. Previously measured English selection-validation weak-label macro F1 0.9113 (FP 131/FN 26); original local benchmark 0.9494. The context-feature regression is unresolved. The original benchmark and deployed model stay preserved locally; they are not required for this explicit experimental interface. Scores are not validated medical probabilities, and absence of rule flags does not establish safety.
 
 Optional semantic research (disabled by default):
 
@@ -59,6 +59,35 @@ result = process_turn(None, "patient complaint", semantic=semantic)
 
 Pinned multilingual GLiNER uses a non-generative FP32 ONNX span model. The 1.157 GB artifact is downloaded explicitly from Hugging Face, with immutable revision and SHA-256 checks. No network/download occurs in process_turn. Tested quantized weights missed basic clinical phrases; FP32 works but did not improve complete facts on the reference challenge. The default dictionaries remain the strongest tested configuration. Default dictionary context errors still affected 3/29 returned challenge facts (10.3%); zero unmatched entity spans is not zero clinical errors. Optional model-only additions stay uncertain, cannot overwrite literal facts, and are excluded from ML features until a linked patient answer confirms them. Rules never receive ML scores. Raw and sigmoid-mapped ML scores remain separate and are not medical probabilities.
 
-Run `python example.py` for an actual two-turn Tunisian trace, immediate rules, and separately obtained ML scores. `evaluation_summary.json` records comparable full-fact results: 24 synthetic challenge messages/31 entities, entity F1 0.933, complete-fact F1 0.867. Confirmed critical-symptom recall was only 1/3: two unfamiliar breathing descriptions were missed. No native/clinical validation is claimed. ArSyra medical dialect data is gated and not clinical span/context gold; the reviewed TunBERT, XLM-R and Arabic medical encoders do not provide the required clinical head. No justified fine-tuning corpus was found. These are concrete remaining blockers to reliable general Tunisian clinical extraction.
+Run `python example.py` for an actual two-turn Tunisian trace, immediate rules, and separately obtained ML scores. `evaluation_summary.json` records comparable full-fact results: 24 synthetic challenge messages/31 entities, entity F1 0.933, complete-fact F1 0.867. Before this targeted patch, confirmed critical-symptom recall was only 1/3: two unfamiliar breathing descriptions were missed. Those exact phrases now pass regression checks; this does not establish generalization. No native/clinical validation is claimed. ArSyra medical dialect data is gated and not clinical span/context gold; the reviewed TunBERT, XLM-R and Arabic medical encoders do not provide the required clinical head. No justified fine-tuning corpus was found. These are concrete remaining blockers to reliable general Tunisian clinical extraction.
 
 Phase 1 is preserved in PR #1 / commit 45933cb. GitHub now shows PR #1 merged into main (merge 7e3cfbb). Phase 2 is proposed separately against main; it is not merged or deployed by this task. Local research notebooks/data/caches and original benchmark artifacts are excluded from this team runtime.
+
+## Targeted integration finalization
+
+`process_turn()` and model artifacts remain unchanged in contract: no retraining,
+retuning, rule changes or threshold changes. 104 root language/state tests and
+29 portable integration tests pass. Complete seven-turn English, Arabizi and
+Arabic-script Darija conversations verify negative free-text answers, spoken/numeric
+duration, gradual onset, severity, age and a new breathing complaint that replaces
+the old denial and interrupts questions. These are synthetic software checks.
+
+Specific breathing phrases now include `nefsi 9sir`, `nfasi ma9tou3`,
+`netnaffes bes3ouba`, `el nefes ma ykafich`, `نتنفس بالصعيب`,
+`نفسي ناقص`, and the previously missed English air/catching-breath phrases.
+`netnaffes 3adi` / `نتنفس عادي` / "I can breathe normally" explicitly negate
+breathing difficulty. A linked "only when I walk" / `ki nemchi` stays episodic.
+Ambiguous `makhnou9` alone is clarified rather than asserted as respiratory distress.
+
+Uninterpreted linked replies return `insufficient_input` and retry the same field
+with a fresh question ID. Explicit unresolved additional complaints preserve spans
+in `patient_state.turns[-1].unresolved_complaint_spans` and pause ML; understood facts
+remain available to the independent rules. Known critical findings still return
+immediately and interrupt questioning. Store the complete returned state and always
+send the current pending question ID with its answer.
+
+Vocabulary and uncertainty scopes remain finite; not all unrecognized clauses can
+be detected. Existing ML context-feature regression is unresolved. Historical F1
+and challenge metrics above were not recomputed for this patch; no clinical
+validation or new generalization score is claimed. Model features/schema, original
+benchmark preprocessing, continuous scores and calibration metadata are preserved.

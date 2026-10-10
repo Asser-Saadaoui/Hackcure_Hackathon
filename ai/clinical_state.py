@@ -419,6 +419,15 @@ def _update_patient_state_english(state, answer, question=None, field=None):
         if template:f['evidence'].append(evidence(question,template['start'],template['end'],source='question',turn_id=turn_id))
         elif question:f['evidence'].append(evidence(question,0,len(question),source='question',turn_id=turn_id))
         incoming=[f]+[x for x in incoming if (x['kind'],x['name'])!=(kind,name)]
+    elif not incoming and not attribute and len(targets)==1 and re.fullmatch(r'\s*(?:only\s+)?when I (?:walk|run|exercise)[.! ]*',answer,re.I):
+        (kind,name),template=next(iter(targets.items()))
+        if kind=='symptom':
+            previous=next((old for old in reversed(updated['facts']) if (old['kind'],old['name'],old['experiencer'])==(kind,name,target)),None)
+            f=copy.deepcopy(previous or template) if previous or template else dict(kind=kind,name=name,concept=name,acute=False,recent=False,severity=None,duration=None,onset=None)
+            f.update(status='confirmed',temporality='episodic',experiencer=target,text=answer,start=0,end=len(answer),context_start=0,context_end=len(answer),extraction_confidence=.8,confidence_basis='linked_symptom_and_explicit_activity_answer')
+            f['evidence']=[evidence(answer,0,len(answer),turn_id=turn_id,kind='answer')]
+            if question:f['evidence'].append(evidence(question,0,len(question),source='question',turn_id=turn_id))
+            incoming=[f]
     elif not incoming and not polar and len(targets)==1:
         (kind,name),template=next(iter(targets.items()))
         previous=next((old for old in reversed(updated['facts']) if (old['kind'],old['name'],old['experiencer'])==(kind,name,target)),None)
@@ -474,7 +483,7 @@ def update_patient_state(state, answer, question=None, field=None):
     Clinical facts from different experiencers keep different keys.
     """
     from multilingual_nlp import align,answer_alignment,remap_span,language_hint,VERSION as NLP_VERSION
-    canonical,answer_map,changes=answer_alignment(answer)
+    canonical,answer_map,changes=answer_alignment(answer,field)
     q_pivot,q_map,_=align(question) if question else (None,[],[])
     # An explicitly linked generic duration question can target the only current
     # symptom, but never guess among multiple symptoms or different people.
@@ -510,9 +519,31 @@ def update_patient_state(state, answer, question=None, field=None):
     # Explicit ambiguous complaints cannot be explained by a known condition or
     # a routine context from another turn. This recognizes ambiguity, not pain.
     from multilingual_nlp import fold
-    folded,_=fold(answer)
-    ambiguous=bool(re.search(r'\b(?:7aja\s*ghriba|something\s*(?:strange|weird|wrong))\b|حاجة\s*غريبة',folded,re.I))
-    updated['nlp_requires_clarification']=field is None and (ambiguous or not primary and not routine)
+    folded,fold_map=fold(answer)
+    def unresolved_span(a,b):
+        return evidence(answer,fold_map[a][0],fold_map[b-1][1],turn_id=turn_id,kind='unresolved_complaint')
+    ambiguity=r'\b(?:7aja\s*ghriba|something\s*(?:strange|weird|wrong)|makhnou9|m5nou9)\b|حاجة\s*غريبة|مخنوق'
+    unresolved=[unresolved_span(m.start(),m.end()) for m in re.finditer(ambiguity,folded,re.I)]
+    # Detect an explicit additional complaint without assuming all unfamiliar
+    # words are symptoms. Recognized clinical facts in that clause resolve it.
+    markers=r'\b(?:and\s+(?:also\s+)?I\s+(?:have|feel)|also\s+I\s+(?:have|feel)|w\s+zeda\s+3andi)\b|وزادة\s*عندي|اما\s*زادة\s*عندي'
+    for m in re.finditer(markers,folded,re.I):
+        end=m.end()+len(re.split(r'[.;!?،]',folded[m.end():],maxsplit=1)[0])
+        raw_start=fold_map[m.end()-1][1];raw_end=fold_map[end-1][1]
+        if not any(f['kind'] in ('symptom','condition','medication','vital') and any(e.get('turn_id')==turn_id and e.get('source')=='answer' and raw_start<=e['start']<raw_end for e in f['evidence']) for f in updated['facts']):
+            unresolved.append(unresolved_span(m.start(),end))
+    updated['turns'][-1]['unresolved_complaint_spans']=unresolved
+    linked_understood=None
+    if field:
+        pieces=field.split('.')
+        matching=[f for f in updated['facts'] if (f['kind'],f['name'])==tuple(pieces[:2])]
+        linked_understood=any(
+            any(e.get('turn_id')==turn_id and e.get('source')=='answer'
+                and (len(pieces)==2 or e.get('kind') in (pieces[2],'answer')) for e in f['evidence'])
+            and (len(pieces)==2 or f.get(pieces[2]) is not None or f.get('attribute_status',{}).get(pieces[2])=='uncertain')
+            for f in matching)
+    updated['turns'][-1]['linked_answer_understood']=linked_understood
+    updated['nlp_requires_clarification']=bool(unresolved) or linked_understood is False or (field is None and not primary and not routine)
     for item in updated['unresolved_answers']:
         if item['turn_id']==turn_id:item.update(answer=answer,question=question)
     from clinical_state import facts_to_info

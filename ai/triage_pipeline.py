@@ -191,6 +191,10 @@ def process_turn(patient_state,patient_message,previous_question_id=None,*,model
         state.pop('pending_question',None)
     # Without a question ID, a bare Yes/No cannot answer an unlinked prompt.
     state=update_patient_state(state,patient_message,question=question,field=field)
+    state.pop('clarification_target',None)
+    if previous_question_id is not None and (state['turns'][-1].get('linked_answer_understood') is False or field is None and state.get('nlp_requires_clarification')):
+        state['asked_questions'][-1]['answered']=False
+        if field is not None:state['clarification_target']=pending
     rules=evaluate_rules(state)
     semantic_status='not_requested'
     # Literal critical facts return before any transformer/model load. The caller

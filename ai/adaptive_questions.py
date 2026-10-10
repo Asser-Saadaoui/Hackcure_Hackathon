@@ -33,7 +33,11 @@ def candidates(state):
     current=[f for f in state.get('facts',[]) if f['experiencer']==target and f['kind']=='symptom' and f['status'] in ('confirmed','uncertain') and f['temporality']=='current']
     complaints={f['name'] for f in current}
     known={(f['kind'],f['name']):f for f in state.get('facts',[]) if f['experiencer']==target}
-    asked={q['field'] for q in state.get('asked_questions',[])};result=[]
+    asked={q['field'] for q in state.get('asked_questions',[]) if q.get('answered',True)};result=[]
+    retry=state.get('clarification_target')
+    if retry:
+        result.append(dict(field=retry['field'],priority=111,templates=retry['templates'],
+                           reason='Previous answer did not establish the requested fact; clarify without guessing.'))
     for f in current:
         field='symptom.'+f['name']
         if f['status']!='uncertain' or field in asked:continue

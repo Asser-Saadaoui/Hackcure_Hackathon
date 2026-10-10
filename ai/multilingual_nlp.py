@@ -7,9 +7,22 @@ import copy
 import re
 import unicodedata
 
-VERSION = 'tn_clinical_hybrid_2'
+VERSION = 'tn_clinical_hybrid_3'
 # Longest matching span wins; numbers inside Arabizi words are never transliterated.
 PHRASES = [
+    # Specific breathing complaints, not metaphorical "choking" or anxiety alone.
+    (r'(?:i\s*)?(?:cannot|can.t)\s*get\s*enough\s*air(?:\s*into\s*my\s*lungs)?|(?:i\s*)?(?:have\s*)?trouble\s*catching\s*my\s*breath', 'difficulty breathing'),
+    (r'(?:ma\s*n(?:aj[ae]m|ajem|ajjem)ch|manaj[ae]mch)\s*na[5kh]ou\s*(?:nef[ae]s|nf[ae]s)|ما\s*نجمش\s*ناخو\s*نفس', 'cannot breathe'),
+    (r'(?:ma\s*)?n(?:aj[ae]m|ajjem)ch\s*n(?:et|at)naf[f]?[ae]s|مانجمش\s*نتنفس', 'cannot breathe'),
+    (r'n(?:et|at)naf[f]?[ae]s\s*(?:b(?:e|i)?s3ouba|b\s*s3ouba)|نتنفس\s*(?:بصعوبة|بالصعوبة|بالصعيب)', 'difficulty breathing'),
+    (r'(?:nefsi|nfasi|nafas[iy]?)\s*(?:9sir|ma9tou3|m9at3|na9es)|(?:نفسي|نفاسي)\s*(?:قصير|مقطوع|ناقص)', 'difficulty breathing'),
+    (r'(?:el\s*)?(?:nef[ae]s|nf[ae]s)\s*ma\s*(?:y[eai]?kaf[iy]ch|y[eai]?kf[iy]ch)|النفس\s*ما\s*(?:يكفيش|يكفينيش)', 'difficulty breathing'),
+    (r'(?:i\s*)?(?:can|am able to)\s*breathe\s*normally|n(?:et|at)naf[f]?[ae]s\s*3adi|نتنفس\s*عادي|je\s*respire\s*normalement', 'I have no difficulty breathing'),
+    (r'tlahh[ae]th|نتلهث|نلهث', 'gasping'),
+    (r'(?:ma\s*naj[ae]mch\s*nkammel\s*(?:jomla|klem[iy])\s*(?:mel|men)\s*(?:tanaffos|nef[ae]s))|ما\s*نجمش\s*نكمل\s*(?:جملة|كلامي)\s*من\s*(?:التنفس|النفس)', 'unable to get words out'),
+    (r'ki\s*nemchi|كي\s*نمشي', 'when I walk'),
+    (r'(?:kan|ken)\s*ki|كان\s*كي', 'only when'),
+    (r'ma3adech|ما\s*عادش|ماعادش', 'no longer'),
     (r'batni|بطني|ventre', 'abdomen'),
     (r'chest\s*hurts', 'chest pain'),
     (r'(?:the\s*)?room\s*is\s*spinning', 'dizziness'),
@@ -188,17 +201,20 @@ def extract(text,english_extractor,inherited='patient',turn_id=None,semantic=Non
         result=merge_semantic(result,text,semantic,inherited,turn_id)
     return result
 
-def answer_text(text):
+def answer_text(text,field=None):
     """Canonicalize finite short answers; keep original answer separately in state."""
     folded,_=fold(text.strip())
-    if re.fullmatch(r'(?:ma na3rafch|مانعرفش|ما نعرفش|مش متاكد|موش متاكد|je ne sais pas)',folded):return 'Not sure'
-    if re.fullmatch(r'(?:le|la|لا|non)',folded):return 'No'
+    if re.fullmatch(r'(?:ma na3rafch|مانعرفش|ما نعرفش|مش متاكد|موش متاكد|je ne sais pas|i am not sure|i.m not sure|i cannot tell|i can.t tell)',folded):return 'Not sure'
+    if re.fullmatch(r'(?:le|la|لا|non)(?:\s*[,،]?\s*(?:taw|tawa|توا|maintenant))?',folded):return 'No'
+    if field and field.startswith('symptom.') and len(field.split('.'))==2:
+        if re.fullmatch(r'(?:not at all|pas du tout|لا ابدا)',folded):return 'No'
+        if field=='symptom.breath_functional_impairment' and re.fullmatch(r'(?:i can speak normally|i can finish a sentence|naj[ae]m na7ki 3adi|نجم نحكي عادي)',folded):return 'No'
     m=re.match(r'^(ey|اي|ايه|نعم|oui)(?=\W|$)',folded)
     if m:return 'Yes'+align(text[len(m.group()):])[0]
     return align(text)[0]
 
-def answer_alignment(text):
-    pivot,mapping,changes=align(text);canonical=answer_text(text)
+def answer_alignment(text,field=None):
+    pivot,mapping,changes=align(text);canonical=answer_text(text,field)
     if canonical==pivot:return canonical,mapping,changes
     folded,_=fold(text.strip());m=re.match(r'^(ey|اي|ايه|نعم|oui)(?=\W|$)',folded)
     if m:
