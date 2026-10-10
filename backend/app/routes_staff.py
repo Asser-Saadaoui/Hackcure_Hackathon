@@ -30,7 +30,14 @@ class Accept(BaseModel):
 
 
 class Reject(BaseModel):
-    reason: str = Field(min_length=2, max_length=500)
+    reason: str = Field(min_length=2, max_length=120)            # category chosen in the dashboard
+    explanation: str = Field(min_length=10, max_length=1000)     # required free text: why, for the next team and the audit
+
+
+class Reroute(BaseModel):
+    facilityKey: str | None = Field(default=None, max_length=64)   # None = best remaining hospital
+    reason: str = Field(min_length=2, max_length=120)
+    explanation: str = Field(min_length=10, max_length=1000)
 
 
 class ChatIn(BaseModel):
@@ -126,8 +133,34 @@ def accept(referral_id: str, body: Accept, user: StaffUser = Depends(hospital_st
 @router.post('/referrals/{referral_id}/reject')
 def reject(referral_id: str, body: Reject, user: StaffUser = Depends(hospital_staff), db: Session = Depends(get_db)):
     r = my_referral(db, user, referral_id)
-    services.reject(db, r, user, body.reason)
+    services.reject(db, r, user, f'{body.reason.strip()} — {body.explanation.strip()}')
     return dict(ok=True)
+
+
+@router.get('/referrals/{referral_id}/report.pdf')
+def report_pdf(referral_id: str, user: StaffUser = Depends(hospital_staff), db: Session = Depends(get_db)):
+    r = my_referral(db, user, referral_id)
+    return services.report_pdf(db, db.get(Case, r.case_id), 'staff', referral=r)
+
+
+@router.get('/referrals/{referral_id}/alternatives')
+def alternatives(referral_id: str, user: StaffUser = Depends(hospital_staff), db: Session = Depends(get_db)):
+    r = my_referral(db, user, referral_id)
+    case = db.get(Case, r.case_id)
+    if not case.location:
+        return []
+    tried = {x.facility_key for x in case.referrals}
+    d = case.decision or {}
+    rows = hospitals.rank(case.location, case.level, d.get('suggestedSpecialty'), d.get('requiredEquipment'),
+                          services.overrides(db), exclude=tried, relax=True)
+    return sorted(rows, key=lambda x: (not x['capable'], x['score']))[:10]
+
+
+@router.post('/referrals/{referral_id}/reroute')
+def reroute(referral_id: str, body: Reroute, user: StaffUser = Depends(hospital_staff), db: Session = Depends(get_db)):
+    r = my_referral(db, user, referral_id)
+    new = services.reroute(db, r, user, body.facilityKey, f'{body.reason.strip()} — {body.explanation.strip()}')
+    return dict(ok=True, facilityName=hospitals.FACILITIES[new.facility_key]['name'] if new else None)
 
 
 @router.post('/referrals/{referral_id}/arrived')

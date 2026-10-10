@@ -41,6 +41,8 @@ export interface CaseDetail {
     actions: string[];
   };
   transcript: Turn[];
+  journey: { referralId: string; facilityName: string; status: ReferralStatus; statusLabel: string; reason: string | null;
+    decidedBy: string | null; sentAt: string; decidedAt: string | null }[];
   report: Report;
   chat: ChatMessage[];
   ambulance: Ambulance | null;
@@ -52,6 +54,11 @@ export interface Availability {
   staffShortage: boolean | null; waitingPatients: number | null; accepting: boolean; source: "simulator" | "staff" | "unknown"; simulated: boolean;
   override: { updatedBy: string; updatedAt: string; expiresAt: string; note: string | null } | null; updatedAt: string | null;
   simulator: { bedsAvailable: number | null; icuAvailable: number | null; waitMinutes: number | null; equipmentDown: string[] } | null;
+}
+
+export interface Alternative {
+  key: string; name: string; km: number; eta: number; reason: string; capable: boolean;
+  bedsAvailable: number | null; waitMinutes: number | null; source: "simulator" | "staff" | "unknown";
 }
 
 export interface Hospital { key: string; name: string; nameAr?: string; type: string; lat: number; lng: number; specialties: string[]; equipment: string[]; availability: Availability }

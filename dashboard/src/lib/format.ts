@@ -9,7 +9,7 @@ export const LEVEL: Record<Level, { label: string; className: string; dot: strin
 
 export const STATUS: Record<string, string> = {
   SENT: "Nouveau", INFO_REQUESTED: "Question posée", ACCEPTED: "Accepté", REJECTED: "Refusé", TIMED_OUT: "Sans réponse",
-  CANCELLED: "Annulé", ARRIVED: "Arrivé", COMPLETED: "Terminé", REROUTED: "Réorienté",
+  CANCELLED: "Annulé", ARRIVED: "Arrivé", COMPLETED: "Terminé", REROUTED: "Réorienté par vous",
 };
 
 export const AMBULANCE: Record<string, string> = {

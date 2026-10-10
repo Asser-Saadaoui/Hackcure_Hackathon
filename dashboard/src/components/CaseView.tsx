@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Ambulance, ArrowLeft, Check, Footprints, Hospital, MapPin, ShieldAlert, TriangleAlert, X } from "lucide-react";
+import { Ambulance, ArrowLeft, ArrowRightLeft, Check, FileText, Footprints, Hospital, MapPin, ShieldAlert, TriangleAlert, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { ChatPanel } from "@/components/ChatPanel";
 import { LevelBadge } from "@/components/LevelBadge";
-import { api } from "@/api";
+import { ReroutePanel } from "@/components/ReroutePanel";
+import { api, openReportPdf } from "@/api";
 import { AMBULANCE, ago, EQUIPMENT, LANG, pct, STATUS, time } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { CaseDetail } from "@/types";
@@ -33,7 +34,10 @@ export function CaseView({ detail, onBack, onChanged }: { detail: CaseDetail; on
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState(false);
+  const [rerouting, setRerouting] = useState(false);
+  const [moved, setMoved] = useState<string | null>(null);
   const [reason, setReason] = useState(REJECT_REASONS[0]);
+  const [explanation, setExplanation] = useState("");
   const pending = r.status === "SENT" || r.status === "INFO_REQUESTED";
   const open = pending || r.status === "ACCEPTED";
 
@@ -52,7 +56,12 @@ export function CaseView({ detail, onBack, onChanged }: { detail: CaseDetail; on
 
   return (
     <div className="space-y-4">
-      <button onClick={onBack} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /> Patients</button>
+      <div className="flex items-center justify-between">
+        <button onClick={onBack} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /> Patients</button>
+        <Button variant="outline" size="sm" onClick={() => openReportPdf(r.id).catch((err) => setError((err as Error).message))}>
+          <FileText className="mr-1.5 h-4 w-4" />Rapport PDF
+        </Button>
+      </div>
 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
@@ -68,16 +77,18 @@ export function CaseView({ detail, onBack, onChanged }: { detail: CaseDetail; on
               href={`https://www.openstreetmap.org/?mlat=${c.location.lat}&mlon=${c.location.lng}#map=16/${c.location.lat}/${c.location.lng}`}><MapPin className="h-3.5 w-3.5" />position</a></>}
           </p>
         </div>
-        {pending && !rejecting && (
+        {pending && !rejecting && !rerouting && (
           <div className="flex flex-wrap gap-2">
             <Button disabled={busy} onClick={() => run(() => api.accept(r.id, "AMBULANCE"))}><Ambulance className="mr-2 h-4 w-4" />Accepter · ambulance</Button>
             <Button disabled={busy} variant="outline" onClick={() => run(() => api.accept(r.id, "SELF"))}><Footprints className="mr-2 h-4 w-4" />Accepter · vient seul</Button>
+            <Button disabled={busy} variant="ghost" onClick={() => setRerouting(true)}><ArrowRightLeft className="mr-2 h-4 w-4" />Réorienter</Button>
             <Button disabled={busy} variant="ghost" onClick={() => setRejecting(true)}><X className="mr-2 h-4 w-4" />Ne peut pas recevoir</Button>
           </div>
         )}
-        {r.status === "ACCEPTED" && (
+        {r.status === "ACCEPTED" && !rerouting && (
           <div className="flex flex-wrap gap-2">
             <Button disabled={busy} onClick={() => run(() => api.arrived(r.id))}><Check className="mr-2 h-4 w-4" />Patient arrivé</Button>
+            <Button disabled={busy} variant="outline" onClick={() => setRerouting(true)}><ArrowRightLeft className="mr-2 h-4 w-4" />Réorienter</Button>
             {c.level !== "EMERGENCY" && (
               <Button disabled={busy} variant="destructive" onClick={() => run(() => api.escalate(r.id, "EMERGENCY", "Appelez le 190 maintenant et ne conduisez pas."))}>
                 <TriangleAlert className="mr-2 h-4 w-4" />Passer en urgence vitale
@@ -86,6 +97,14 @@ export function CaseView({ detail, onBack, onChanged }: { detail: CaseDetail; on
           </div>
         )}
       </div>
+
+      {moved && (
+        <p className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">Patient réorienté vers {moved}. Le dossier reste consultable dans l'historique.</p>
+      )}
+      {rerouting && (
+        <ReroutePanel referralId={r.id} accepted={r.status === "ACCEPTED"} onCancel={() => setRerouting(false)}
+          onDone={(name) => { setRerouting(false); setMoved(name ?? "un autre hôpital"); onChanged(); }} />
+      )}
 
       {rejecting && (
         <Card className="border-amber-300">
@@ -96,9 +115,13 @@ export function CaseView({ detail, onBack, onChanged }: { detail: CaseDetail; on
                 <button key={x} onClick={() => setReason(x)} className={cn("rounded-full border px-3 py-1 text-sm", reason === x && "border-primary bg-accent text-accent-foreground")}>{x}</button>
               ))}
             </div>
-            <Input value={reason} onChange={(e) => setReason(e.target.value)} />
+            <Textarea value={explanation} onChange={(e) => setExplanation(e.target.value)} maxLength={1000} rows={3}
+              placeholder="Expliquez pourquoi vous ne pouvez pas recevoir ce patient (obligatoire)." />
+            <p className="text-xs text-muted-foreground">
+              {explanation.trim().length < 10 ? "Au moins 10 caractères." : "Journalisé et transmis à l'hôpital suivant. Le patient reçoit seulement un message neutre."}
+            </p>
             <div className="flex gap-2">
-              <Button variant="destructive" disabled={busy || reason.trim().length < 2} onClick={() => run(() => api.reject(r.id, reason.trim()))}>Confirmer le refus</Button>
+              <Button variant="destructive" disabled={busy || explanation.trim().length < 10} onClick={() => run(() => api.reject(r.id, reason, explanation.trim()))}>Confirmer le refus</Button>
               <Button variant="ghost" onClick={() => setRejecting(false)}>Annuler</Button>
             </div>
           </CardContent>
@@ -163,6 +186,27 @@ export function CaseView({ detail, onBack, onChanged }: { detail: CaseDetail; on
               <p className="text-xs text-muted-foreground">{report.disclaimer}</p>
             </CardContent>
           </Card>
+
+          {detail.journey.length > 1 && (
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-base">Parcours du dossier</CardTitle></CardHeader>
+              <CardContent>
+                <ol className="space-y-3">
+                  {detail.journey.map((j, i) => (
+                    <li key={j.referralId} className="flex gap-3 text-sm">
+                      <span className={cn("mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold",
+                        j.referralId === r.id ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground")}>{i + 1}</span>
+                      <div className="min-w-0">
+                        <p><span className="font-medium">{j.facilityName}</span> · {j.statusLabel}
+                          <span className="text-muted-foreground"> · {time(j.sentAt)}{j.decidedBy ? ` · ${j.decidedBy}` : ""}</span></p>
+                        {j.reason && <p className="text-muted-foreground" dir="auto">{j.reason}</p>}
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader className="pb-2"><CardTitle className="text-base">Conversation de triage</CardTitle></CardHeader>

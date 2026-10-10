@@ -14,6 +14,14 @@ router = APIRouter()
 COLORS = {'EMERGENCY': '#DC2626', 'HIGH': '#EA580C', 'LOW': '#16A34A', 'UNCERTAIN': '#64748B'}
 
 
+@router.get('/p/{token}.pdf')
+def public_case_pdf(token: str, db: Session = Depends(get_db)):
+    case = db.scalar(select(Case).where(Case.public_token == token))
+    if not case:
+        raise HTTPException(404, 'Not found')
+    return services.report_pdf(db, case, 'patient')
+
+
 @router.get('/p/{token}', response_class=HTMLResponse)
 def public_case(token: str, db: Session = Depends(get_db)):
     case = db.scalar(select(Case).where(Case.public_token == token))
@@ -38,4 +46,5 @@ h2{{font-size:13px;text-transform:uppercase;color:#6B7280;margin:0 0 8px}}small{
 <div class="card"><h2>Symptômes signalés</h2><ul>{items(r['positives'])}</ul><h2>Absents</h2><ul>{items(r['negatives'])}</ul></div>
 <div class="card"><h2>Antécédents · traitements</h2><ul>{items(r['history'] + r['medications'])}</ul></div>
 <div class="card"><h2>Conduite à tenir</h2><ul>{items(r['recommendedActions'])}</ul></div>
+<p><a href="/p/{escape(token)}.pdf" style="color:#177082;font-weight:600">Télécharger le rapport PDF</a></p>
 <small>{escape(r['disclaimer'])}</small></main></body></html>"""

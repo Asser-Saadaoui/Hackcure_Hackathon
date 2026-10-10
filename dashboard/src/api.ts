@@ -1,4 +1,4 @@
-import type { CaseDetail, ChatMessage, Hospital, ReferralRow, ReviewItem, StaffUser } from "@/types";
+import type { Alternative, CaseDetail, ChatMessage, Hospital, ReferralRow, ReviewItem, StaffUser } from "@/types";
 
 const BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "";
 const TOKEN_KEY = "sahhanito.staff.token";
@@ -44,7 +44,10 @@ export const api = {
   referrals: (scope: "active" | "history") => call<ReferralRow[]>("GET", `/staff/referrals?scope=${scope}`),
   referral: (id: string) => call<CaseDetail>("GET", `/staff/referrals/${id}`),
   accept: (id: string, arrivalMode: "SELF" | "AMBULANCE", note?: string) => call<CaseDetail>("POST", `/staff/referrals/${id}/accept`, { arrivalMode, note }),
-  reject: (id: string, reason: string) => call<{ ok: boolean }>("POST", `/staff/referrals/${id}/reject`, { reason }),
+  reject: (id: string, reason: string, explanation: string) => call<{ ok: boolean }>("POST", `/staff/referrals/${id}/reject`, { reason, explanation }),
+  alternatives: (id: string) => call<Alternative[]>("GET", `/staff/referrals/${id}/alternatives`),
+  reroute: (id: string, facilityKey: string | null, reason: string, explanation: string) =>
+    call<{ ok: boolean; facilityName: string | null }>("POST", `/staff/referrals/${id}/reroute`, { facilityKey, reason, explanation }),
   arrived: (id: string) => call<CaseDetail>("POST", `/staff/referrals/${id}/arrived`),
   escalate: (id: string, level: "EMERGENCY" | "HIGH", instruction?: string) => call<CaseDetail>("POST", `/staff/referrals/${id}/escalate`, { level, instruction }),
   chat: (id: string, text: string, kind: "TEXT" | "QUESTION" | "INSTRUCTION", options?: string[]) =>
@@ -56,6 +59,16 @@ export const api = {
   reviews: () => call<ReviewItem[]>("GET", "/staff/reviews"),
   review: (caseId: string, level: "EMERGENCY" | "HIGH" | "LOW", note?: string) => call<{ ok: boolean }>("POST", `/staff/reviews/${caseId}`, { level, note }),
 };
+
+/** Staff PDF report: fetched with the session header (never a token in the URL), opened in a new tab. */
+export async function openReportPdf(referralId: string): Promise<void> {
+  const tab = window.open("", "_blank");
+  const resp = await fetch(`${BASE}/api/v1/staff/referrals/${referralId}/report.pdf`, { headers: { Authorization: `Bearer ${session.get() ?? ""}` } });
+  if (!resp.ok) { tab?.close(); throw new ApiError(`Erreur ${resp.status}`, resp.status); }
+  const url = URL.createObjectURL(await resp.blob());
+  if (tab) tab.location.href = url; else window.location.href = url;
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
 
 /** Live events (SSE). EventSource reconnects by itself; the token goes in the query string. */
 export function subscribe(onEvent: (e: { type: string; [k: string]: unknown }) => void): () => void {

@@ -96,7 +96,7 @@ def availability(key, override=None):
     return view
 
 
-def rank(location, level, specialty, equipment, overrides, exclude=()):
+def rank(location, level, specialty, equipment, overrides, exclude=(), relax=False):
     """Hard exclusions, then EMERGENCY by ETA only, others by ETA + wait + specialty.
     Never returns an empty list while a hospital is open: equipment, then specialty, are relaxed."""
     specialty = specialty or 'EMERG'
@@ -120,7 +120,8 @@ def rank(location, level, specialty, equipment, overrides, exclude=()):
             return False
         return True
 
-    pool = ([r for r in rows if capable(*r, True, True)] or [r for r in rows if capable(*r, False, True)] or rows)
+    # relax=True: every open ED (staff choosing a target themselves); otherwise relax only if nothing fits.
+    pool = rows if relax else ([r for r in rows if capable(*r, True, True)] or [r for r in rows if capable(*r, False, True)] or rows)
     out = []
     for f, a in pool:
         km = distance_km(location, f)
@@ -134,5 +135,6 @@ def rank(location, level, specialty, equipment, overrides, exclude=()):
         reason = f"{label} · {'?' if beds is None else beds} lit(s) libre(s) · {km:.1f} km · ~{eta} min"
         if a['simulated'] and a['source'] == 'simulator':
             reason += ' · disponibilité simulée'
-        out.append(dict(key=f['key'], name=f['name'], km=round(km, 1), eta=eta, score=score, reason=reason))
+        out.append(dict(key=f['key'], name=f['name'], km=round(km, 1), eta=eta, score=score, reason=reason,
+                        capable=capable(f, a, True, True), bedsAvailable=beds, waitMinutes=a['waitMinutes'], source=a['source']))
     return sorted(out, key=lambda r: r['score'])

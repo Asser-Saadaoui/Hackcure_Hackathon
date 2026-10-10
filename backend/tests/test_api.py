@@ -124,7 +124,7 @@ def test_reject_reroutes_and_override_excludes(client):
     client.put(f'/api/v1/cases/{case_id}/location', json=BAB_SAADOUN, headers=p)
     first = client.get(f'/api/v1/cases/{case_id}', headers=p).json()['referral']
     assert first['facilityId'] == 'charles-nicolle'
-    client.post(f"/api/v1/staff/referrals/{first['id']}/reject", json={'reason': 'Salle de cathé occupée'}, headers=s_chn).raise_for_status()
+    client.post(f"/api/v1/staff/referrals/{first['id']}/reject", json={'reason': 'Plateau technique indisponible', 'explanation': 'Salle de cathé occupée jusqu’à 18 h'}, headers=s_chn).raise_for_status()
     second = client.get(f'/api/v1/cases/{case_id}', headers=p).json()['referral']
     assert second['id'] != first['id'] and second['facilityId'] not in ('charles-nicolle', 'la-rabta')
     chat = client.get(f"/api/v1/referrals/{first['id']}/chat", headers=p).json()

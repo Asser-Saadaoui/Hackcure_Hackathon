@@ -7,6 +7,7 @@ Every state change is committed, audited and published as a live event:
   reviews         -> clinician review queue
 """
 import math
+import re
 import secrets
 from datetime import datetime, timedelta, timezone
 
@@ -27,6 +28,8 @@ TEXT = {
     'accepted': {'fr': 'Accepté par {h}', 'en': 'Accepted by {h}', 'ar': 'تم القبول من {h}', 'darija': 'قبلوك في {h}'},
     'rerouted': {'fr': '{h} ne peut pas vous recevoir. Nous cherchons un autre hôpital.', 'en': '{h} cannot receive you. We are finding another hospital.',
                  'ar': '{h} لا يستطيع استقبالك. نبحث عن مستشفى آخر.', 'darija': '{h} ما ينجمش يستقبلك. قاعدين نلوجو على سبيطار آخر.'},
+    'moved': {'fr': 'Votre dossier est transféré à {h}.', 'en': 'Your case is transferred to {h}.',
+              'ar': 'تم تحويل ملفك إلى {h}.', 'darija': 'الملف متاعك تحوّل لـ {h}.'},
     'none': {'fr': 'Aucun hôpital disponible pour le moment. Appelez le 190.', 'en': 'No hospital is available right now. Call 190.',
              'ar': 'لا يوجد مستشفى متاح حاليًا. اتصل بالرقم 190.', 'darija': 'ما فماش سبيطار متاح توا. عيّط للـ190.'},
     'arrived': {'fr': 'Arrivé à {h}', 'en': 'Arrived at {h}', 'ar': 'الوصول إلى {h}', 'darija': 'وصلت لـ {h}'},
@@ -225,10 +228,23 @@ def assign_if_needed(db, case):
     return route_case(db, case)
 
 
-def route_case(db, case):
+def alternatives(db, case):
+    """Hospitals the case could go to now (best first), excluding every hospital already tried."""
     tried = {r.facility_key for r in case.referrals}
     d = case.decision or {}
-    ranked = hospitals.rank(case.location, case.level, d.get('suggestedSpecialty'), d.get('requiredEquipment'), overrides(db), exclude=tried)
+    return hospitals.rank(case.location, case.level, d.get('suggestedSpecialty'), d.get('requiredEquipment'), overrides(db), exclude=tried)
+
+
+def route_case(db, case, target=None, actor='system'):
+    """Send the case to `target` (chosen by ED staff) or to the best remaining hospital."""
+    if target:
+        ranked = [x for x in hospitals.rank(case.location, case.level, (case.decision or {}).get('suggestedSpecialty'),
+                                            (case.decision or {}).get('requiredEquipment'), overrides(db), relax=True)
+                  if x['key'] == target]
+        if not ranked:
+            raise HTTPException(409, 'This hospital cannot receive patients right now.')
+    else:
+        ranked = alternatives(db, case)
     if not ranked:
         last = case.referrals[-1] if case.referrals else None
         if last:
@@ -243,7 +259,7 @@ def route_case(db, case):
     case.status = 'REFERRED'
     db.flush()
     add_chat(db, case, r, 'SYSTEM', 'SYSTEM', t('sent', case.language, h=best['name']))
-    audit(db, 'system', 'referral.sent', case.id, hospital=best['key'], score=best['score'])
+    audit(db, getattr(actor, 'email', actor), 'referral.sent', case.id, hospital=best['key'], score=best['score'], chosen_by_staff=bool(target))
     db.commit()
     hospitals.notify_incoming(best['key'])
     publish_case(case, dict(type='referral.status', referral=referral_view(r)))
@@ -285,6 +301,36 @@ def reject(db, r, actor, reason, status='REJECTED'):
     case.status = 'EMERGENCY' if case.level == 'EMERGENCY' else 'RESULT_READY'
     db.commit()
     route_case(db, case)
+
+
+def reroute(db, r, user, target, reason):
+    """ED staff move a case (pending or already accepted) to another hospital, chosen or automatic."""
+    case = db.get(Case, r.case_id)
+    if r.status not in ('SENT', 'INFO_REQUESTED', 'ACCEPTED'):
+        raise HTTPException(409, f'Referral is {r.status}.')
+    if target == r.facility_key or target in {x.facility_key for x in case.referrals}:
+        raise HTTPException(409, 'This hospital already had this case.')
+    if not case.location:
+        raise HTTPException(409, 'No patient location: cannot reroute.')
+    if not target and not alternatives(db, case):
+        raise HTTPException(409, 'No other hospital can receive this patient right now. Keep the case or call the SAMU (190).')
+    r.status, r.reason, r.decided_by, r.decided_at = 'REROUTED', reason, user.name, utcnow()
+    amb = db.get(Ambulance, r.id)
+    if amb and amb.status != 'ARRIVED':
+        amb.status = 'CANCELLED'
+    audit(db, user.email, 'referral.rerouted', case.id, reason=reason, target=target or 'auto')
+    db.flush()
+    try:
+        new = route_case(db, case, target=target, actor=user)
+    except HTTPException:
+        db.rollback()
+        raise
+    if new:
+        name = hospitals.FACILITIES[new.facility_key]['name']
+        add_chat(db, case, r, 'SYSTEM', 'SYSTEM', t('moved', case.language, h=name))
+        db.commit()
+    publish_hospital(r.facility_key, dict(type='referral.updated', referralId=r.id, status=r.status))
+    return new
 
 
 def expire_referrals(db):
@@ -466,7 +512,7 @@ def ambulance_view(amb, r):
 
 
 def tick_ambulances(db):
-    for amb in db.scalars(select(Ambulance).where(Ambulance.status != 'ARRIVED')):
+    for amb in db.scalars(select(Ambulance).where(Ambulance.status.not_in(['ARRIVED', 'CANCELLED']))):
         r = db.get(Referral, amb.referral_id)
         case = db.get(Case, amb.case_id)
         view = ambulance_view(amb, r)
@@ -504,6 +550,29 @@ ACTIONS = {
     'UNCERTAIN': ['Un médecin vérifie la situation.', 'Appeler le 190 en cas d’aggravation.'],
 }
 FIELD_LABELS = {'age': 'Âge', 'duration': 'Durée', 'onset': 'Début', 'severity': 'Intensité'}
+# French labels for the extractor's concepts, so reports never show a bare "Yes" from a linked answer.
+FR_CONCEPTS = {
+    'chest': 'Douleur thoracique', 'breath': 'Difficulté à respirer', 'breath_functional_impairment': 'Essoufflement empêchant de parler',
+    'headache': 'Maux de tête', 'confusion': 'Confusion', 'fever': 'Fièvre', 'cough': 'Toux', 'nausea': 'Nausées', 'vomiting': 'Vomissements',
+    'diarrhea': 'Diarrhée', 'dizziness': 'Vertiges', 'weakness': 'Faiblesse', 'numbness': 'Engourdissement', 'palpitations': 'Palpitations',
+    'rash': 'Éruption cutanée', 'wheeze': 'Sifflement respiratoire', 'seizure': 'Convulsions', 'fatigue': 'Fatigue', 'syncope': 'Malaise / perte de connaissance',
+    'dysuria': 'Brûlures urinaires', 'hematuria': 'Sang dans les urines', 'hemoptysis': 'Crachats de sang', 'edema': 'Œdème / gonflement',
+    'vision_loss': 'Perte de vision', 'neck_stiffness': 'Raideur de la nuque', 'melena': 'Selles noires', 'abdominal_pain': 'Douleur abdominale',
+    'photophobia': 'Gêne à la lumière', 'speech': 'Difficulté à parler', 'dysphagia': 'Difficulté à avaler', 'itching': 'Démangeaisons',
+    'asthma': 'Asthme', 'copd': 'BPCO', 'diabetes': 'Diabète', 'hypertension': 'Hypertension', 'stroke': 'AVC', 'heart_attack': 'Infarctus',
+    'pregnancy': 'Grossesse', 'epilepsy': 'Épilepsie', 'cancer': 'Cancer', 'kidney_disease': 'Maladie rénale', 'heart_failure': 'Insuffisance cardiaque',
+    'atrial_fibrillation': 'Fibrillation atriale', 'anxiety': 'Anxiété', 'migraine': 'Migraine',
+}
+YES_NO = re.compile(r'^\s*(yes|no|not sure|oui|non|ey|le|إي|لا|نعم)\b', re.I)
+
+
+def concept_label(f):
+    text = (f.get('text') or '').strip()
+    if f['name'] in FR_CONCEPTS:
+        return FR_CONCEPTS[f['name']] + ('' if not text or YES_NO.match(text) or len(text) > 60 else f' (« {text} »)')
+    return text if text and not YES_NO.match(text) else f['name'].replace('_', ' ')
+
+
 INTAKE_LABELS = {'intake.onset': 'Depuis', 'intake.severity': 'Intensité (/10)', 'intake.warning_signs': 'Autres signes',
                  'intake.age': 'Âge', 'intake.history': 'Antécédents / grossesse / traitements'}
 
@@ -516,9 +585,9 @@ def structured_report(case):
     a = case.assessment or {}
     state = case.ai_state or {}
     facts = [f for f in state.get('facts', []) if f.get('experiencer', 'patient') == state.get('patient_experiencer', 'patient')]
-    positives = sorted({f.get('text') or f['name'] for f in facts if f.get('kind') == 'symptom' and f.get('status') == 'confirmed'})
-    negatives = sorted({f.get('text') or f['name'] for f in facts if f.get('kind') == 'symptom' and f.get('status') == 'negated'})
-    history = sorted({f.get('text') or f['name'] for f in facts if f.get('kind') == 'condition' and f.get('status') == 'confirmed'})
+    positives = sorted({concept_label(f) for f in facts if f.get('kind') == 'symptom' and f.get('status') == 'confirmed'})
+    negatives = sorted({concept_label(f) for f in facts if f.get('kind') == 'symptom' and f.get('status') == 'negated'})
+    history = sorted({concept_label(f) for f in facts if f.get('kind') == 'condition' and f.get('status') == 'confirmed'})
     meds = sorted({f.get('text') or f['name'] for f in facts if f.get('kind') == 'medication' and f.get('status') == 'confirmed'})
     notes = (state.get('sahhanito') or {}).get('llm_notes') or {}
     meds = sorted(set(meds) | {str(m) for m in notes.get('medications', []) or []})
@@ -537,7 +606,9 @@ def structured_report(case):
     summary = f"Motif : « {said[0] if said else '—'} ». Niveau : {level}"
     if d.get('pFinal') is not None:
         summary += f" (p={d['pFinal']:.2f})"
-    summary += f". {d.get('rationale') or ''}".rstrip()
+    # Reports are in French for every reader; the AI keeps the rationale in all four languages.
+    rationale_fr = ((case.ai_decision or {}).get('rationale_all') or {}).get('fr') or d.get('rationale') or ''
+    summary += f". {rationale_fr}".rstrip()
     if case.review:
         summary += f" Vérifié par {case.review['by']}."
     return dict(summary=summary, chiefComplaint=said[0] if said else '—', timeline=timeline,
@@ -553,7 +624,20 @@ def report_view(case):
                 facilityName=hospitals.FACILITIES.get(r.facility_key, {}).get('name') if r else None,
                 version=1 + len([x for x in case.turns if x.role == 'PATIENT']), author='CLINICIAN' if case.review else 'AI',
                 reviewedByClinician=bool(case.review), generatedAt=iso(utcnow()),
-                caseLink=f'{config.PUBLIC_BASE_URL}/p/{case.public_token}', pdfUrl=None, report=structured_report(case))
+                caseLink=f'{config.PUBLIC_BASE_URL}/p/{case.public_token}', pdfUrl=f'{config.PUBLIC_BASE_URL}/p/{case.public_token}.pdf',
+                report=structured_report(case))
+
+
+def report_pdf(db, case, audience='patient', referral=None):
+    """French PDF: patient version, or staff version (decision details, journey, transcript, ED chat)."""
+    from fastapi.responses import Response
+    from app import pdf
+    report = report_view(case)
+    r = referral or current_referral(case)
+    staff_view = staff_case_view(db, r) if audience == 'staff' and r else None
+    content = pdf.build(case_view(case), report, referral_view(r) if r else None, audience, staff_view)
+    return Response(content, media_type='application/pdf', headers={
+        'Content-Disposition': f'inline; filename="{pdf.filename(report, audience)}"', 'Cache-Control': 'no-store'})
 
 
 def staff_case_view(db, r):
@@ -570,10 +654,23 @@ def staff_case_view(db, r):
                                   contributions=a.get('contributions'), triggeredRules=a.get('triggered_rules', [])),
                   actions=(case.ai_decision or {}).get('actions', [])),
         transcript=[turn_view(x) for x in case.turns],
+        journey=journey(case),
         report=structured_report(case),
         chat=[chat_view(m) for m in chat],
         ambulance=ambulance_view(amb, r) if amb else None,
     )
+
+
+JOURNEY_STATUS = {'SENT': 'Envoyé', 'INFO_REQUESTED': 'Question posée', 'ACCEPTED': 'Accepté', 'REJECTED': 'Refusé',
+                  'TIMED_OUT': 'Sans réponse dans le délai', 'REROUTED': 'Réorienté', 'CANCELLED': 'Annulé', 'ARRIVED': 'Arrivé',
+                  'COMPLETED': 'Terminé'}
+
+
+def journey(case):
+    """Every hospital that had the case, in order, with who decided what and why."""
+    return [dict(referralId=r.id, facilityName=hospitals.FACILITIES.get(r.facility_key, {}).get('name', r.facility_key),
+                 status=r.status, statusLabel=JOURNEY_STATUS.get(r.status, r.status), reason=r.reason, decidedBy=r.decided_by,
+                 sentAt=iso(r.created_at), decidedAt=iso(r.decided_at)) for r in case.referrals]
 
 
 def referral_row(db, r):
