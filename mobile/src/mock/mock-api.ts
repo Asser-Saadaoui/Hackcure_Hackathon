@@ -7,6 +7,7 @@ import type {
 } from '@/lib/types';
 import { Emitter } from '@/mock/emitter';
 import { HOSPITALS } from '@/mock/hospitals';
+import { aiTurn, toDecision } from '@/lib/ai-client';
 import { assess, isCritical, isDegradedTrigger } from '@/mock/triage';
 
 /**
@@ -31,8 +32,10 @@ const referenceCode = () => 'HC-' + Array.from({ length: 6 }, () => CODE_ALPHABE
  * - 'demo'   → every message gets a simple demo reply, EXCEPT critical red flags, which the
  *              rules engine (independent of the NLP model) always turns into an emergency
  * - 'triage' → full keyword triage from triage.ts (emergency / result / follow-up questions)
+ * - 'ai'     → the real Sahhanito AI service (ai/service.py): NLP model + rule engine + fusion decide,
+ *              the LLM only phrases the questions. Hospitals, ED chat and ambulance stay simulated.
  */
-export const MOCK_CHAT: { mode: 'demo' | 'triage' } = { mode: 'demo' };
+export const MOCK_CHAT: { mode: 'demo' | 'triage' | 'ai' } = { mode: 'demo' };
 
 const DEMO_REPLY: Record<Language, (text: string) => string> = {
   fr: (t) => `Message reçu : « ${t} ». Ceci est une démo — l'assistant médical répondra ici.`,
@@ -58,6 +61,8 @@ const STAFF = 'Urgences · Amira (infirmière)';
 
 const cases = new Map<string, CaseDetail>();
 const chats = new Map<string, ChatMessage[]>();     // referralId → messages
+/** Real-AI mode: the AI service is stateless, so the mock keeps its state per case (like the backend will). */
+const aiSessions = new Map<string, { state: unknown; questionId: string | null }>();
 const emitter = new Emitter<PatientEvent>();
 /** Every live event also persists the database (all mutations emit or are followed by save()). */
 const events = { emit: (e: PatientEvent) => { emitter.emit(e); save(); }, on: emitter.on.bind(emitter) };
@@ -71,7 +76,7 @@ let saveTimer: ReturnType<typeof setTimeout> | null = null;
 function save() {
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
-    const db = { session, cases: [...cases.values()], chats: [...chats.entries()] };
+    const db = { session, cases: [...cases.values()], chats: [...chats.entries()], ai: [...aiSessions.entries()] };
     AsyncStorage.setItem(DB_KEY, JSON.stringify(db)).catch(() => {});
   }, 300);
 }
@@ -81,10 +86,14 @@ const ready: Promise<void> = (async () => {
   try {
     const raw = await AsyncStorage.getItem(DB_KEY);
     if (!raw) return;
-    const db = JSON.parse(raw) as { session: Session | null; cases: CaseDetail[]; chats: [string, ChatMessage[]][] };
+    const db = JSON.parse(raw) as {
+      session: Session | null; cases: CaseDetail[]; chats: [string, ChatMessage[]][];
+      ai?: [string, { state: unknown; questionId: string | null }][];
+    };
     session = db.session;
     db.cases.forEach((c) => cases.set(c.id, c));
     db.chats.forEach(([k, v]) => chats.set(k, v));
+    db.ai?.forEach(([k, v]) => aiSessions.set(k, v));
     setTimeout(() => {
       for (const c of cases.values()) {
         if (c.status === 'UNDER_REVIEW') simulateClinicianReview(c);
@@ -101,7 +110,7 @@ const ready: Promise<void> = (async () => {
 
 /** Clears the mock database (used by "Reset the app"). */
 export async function resetMockData() {
-  cases.clear(); chats.clear(); ambulances.clear(); session = null;
+  cases.clear(); chats.clear(); ambulances.clear(); aiSessions.clear(); session = null;
   await AsyncStorage.removeItem(DB_KEY);
 }
 
@@ -115,8 +124,46 @@ function turn(role: Turn['role'], text: string, quickReplies?: string[]): Turn {
   return { id: id(), role, text, createdAt: now(), quickReplies };
 }
 
-function runTriage(c: CaseDetail, text: string, language: Language = 'fr'): TurnResult {
+const AI_DOWN_MESSAGE = "Nous ne pouvons pas analyser votre message pour l'instant. En cas de douleur thoracique, difficulté à respirer, saignement important ou malaise, appelez le 190.";
+
+/** Real-AI mode: one patient message → POST /turn on the Sahhanito AI service. */
+async function runAiTriage(c: CaseDetail, text: string, language: Language): Promise<TurnResult> {
+  const session = aiSessions.get(c.id) ?? { state: null, questionId: null };
+  let r;
+  try {
+    r = await aiTurn({ message: text, state: session.state, previousQuestionId: session.questionId, language, caseId: c.id });
+  } catch {
+    c.turns.push(turn('SYSTEM', AI_DOWN_MESSAGE));
+    return { kind: 'degraded', caseId: c.id, message: AI_DOWN_MESSAGE };
+  }
+  aiSessions.set(c.id, { state: r.state, questionId: r.reply?.question_id ?? null });
+  const decision = toDecision(r);
+  c.decision = decision;
+  c.level = decision.level;
+
+  switch (r.status) {
+    case 'emergency':
+      c.status = 'EMERGENCY';
+      return { kind: 'emergency', caseId: c.id, decision };
+    case 'question': {
+      const q = turn('ASSISTANT', r.reply!.text, r.reply!.quick_replies);
+      c.turns.push(q);
+      return { kind: 'question', caseId: c.id, turn: q };
+    }
+    case 'under_review':
+      c.status = 'UNDER_REVIEW';
+      simulateClinicianReview(c);
+      return { kind: 'under_review', caseId: c.id, decision };
+    default:
+      c.status = 'RESULT_READY';
+      return { kind: 'result', caseId: c.id, decision };
+  }
+}
+
+async function runTriage(c: CaseDetail, text: string, language: Language = 'fr'): Promise<TurnResult> {
   c.turns.push(turn('PATIENT', text));
+
+  if (MOCK_CHAT.mode === 'ai') return runAiTriage(c, text, language);
 
   if (MOCK_CHAT.mode === 'demo' && !isCritical(text)) {
     const reply = turn('ASSISTANT', DEMO_REPLY[language](text));
@@ -125,9 +172,8 @@ function runTriage(c: CaseDetail, text: string, language: Language = 'fr'): Turn
   }
 
   if (isDegradedTrigger(text)) {
-    const message = "Nous ne pouvons pas analyser votre message pour l'instant. En cas de douleur thoracique, difficulté à respirer, saignement important ou malaise, appelez le 190.";
-    c.turns.push(turn('SYSTEM', message));
-    return { kind: 'degraded', caseId: c.id, message };
+    c.turns.push(turn('SYSTEM', AI_DOWN_MESSAGE));
+    return { kind: 'degraded', caseId: c.id, message: AI_DOWN_MESSAGE };
   }
 
   const patientText = c.turns.filter((t) => t.role === 'PATIENT').map((t) => t.text).join(' ');
@@ -171,11 +217,17 @@ function rankFacilities(c: CaseDetail): Candidate[] {
   const specialty = c.decision?.suggestedSpecialty ?? 'EMERG';
   const needs = c.decision?.requiredEquipment ?? [];
 
-  return HOSPITALS
-    .filter((h) =>
-      h.bedsAvailable > 0 &&                                   // no free beds → excluded
-      needs.every((e) => h.equipment.includes(e)) &&           // e.g. scanner down → excluded
-      (h.specialties.includes(specialty) || h.specialties.includes('EMERG')))
+  const open = HOSPITALS.filter((h) => h.bedsAvailable > 0);  // no free beds → excluded
+  const strict = open.filter((h) =>
+    needs.every((e) => h.equipment.includes(e)) &&                // e.g. scanner down → excluded
+    (h.specialties.includes(specialty) || h.specialties.includes('EMERG')));
+  // Never leave a patient without a hospital: relax equipment, then specialty (nearest open ED).
+  const pool = strict.length ? strict
+    : open.filter((h) => h.specialties.includes(specialty) || h.specialties.includes('EMERG')).length
+      ? open.filter((h) => h.specialties.includes(specialty) || h.specialties.includes('EMERG'))
+      : open;
+
+  return pool
     .map((h) => {
       const d = distanceKm(c.location!, h);
       const eta = etaMinutes(d);
@@ -372,7 +424,7 @@ export const mockApi: PatientApi = {
       turns: [], location: null, referral: null, createdAt: now(), closedAt: null,
     };
     cases.set(c.id, c);
-    const result = runTriage(c, firstMessage, language);
+    const result = await runTriage(c, firstMessage, language);
     save();
     return result;
   },
@@ -381,7 +433,7 @@ export const mockApi: PatientApi = {
     await ready;
     await delay(500, 1200);
     const c = getCaseOrThrow(caseId);
-    const result = runTriage(c, text, language);
+    const result = await runTriage(c, text, language);
     assignIfNeeded(c); // location may already be known (e.g. the level rose later)
     save();
     return result;

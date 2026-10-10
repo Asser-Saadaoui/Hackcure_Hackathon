@@ -67,6 +67,7 @@ export default function SettingsScreen() {
       <Section title={t('testSection')}>
         <ModeOption selected={mode === 'demo'} title={t('testDemo')} hint={t('testDemoHint')} onPress={() => chooseMode('demo')} />
         <ModeOption selected={mode === 'triage'} title={t('testTriage')} hint={t('testTriageHint')} onPress={() => chooseMode('triage')} />
+        <ModeOption selected={mode === 'ai'} title={t('testAi')} hint={t('testAiHint')} onPress={() => chooseMode('ai')} />
 
         <AppText variant="label" style={styles.scenariosTitle}>{t('testScenarios')}</AppText>
         {TEST_SCENARIOS.map((s) => (
@@ -75,7 +76,7 @@ export default function SettingsScreen() {
               <AppText variant="label" style={styles.flex}>{s.label}</AppText>
               <View style={[styles.tag, s.mode === mode && styles.tagActive]}>
                 <AppText variant="small" style={[styles.tagText, s.mode === mode && styles.tagTextActive]}>
-                  {s.mode === 'demo' ? t('testDemo') : t('testTriage')}
+                  {s.mode === 'demo' ? t('testDemo') : s.mode === 'ai' ? t('testAi') : t('testTriage')}
                 </AppText>
               </View>
             </View>
