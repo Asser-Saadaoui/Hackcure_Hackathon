@@ -55,7 +55,13 @@ export default function ReportScreen() {
     }
   }, [caseId]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (!caseId) return;
+    let active = true;
+    api.getReport(caseId).then(data => { if (active) { setData(data); setState('ready'); } })
+      .catch(() => { if (active) setState('error'); });
+    return () => { active = false; };
+  }, [caseId]);
 
   if (state === 'loading') {
     return (

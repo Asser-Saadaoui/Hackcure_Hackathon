@@ -19,24 +19,22 @@ function deviceLanguage(): Language {
 }
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLang] = useState<Language>(deviceLanguage());
-  const [ready, setReady] = useState(false);
+  const [forced] = useState(() => {
+    const candidate = Platform.OS === 'web' && typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search).get('lang') : null;
+    return LANGUAGES.some(l => l.code === candidate) ? candidate as Language : null;
+  });
+  const [language, setLang] = useState<Language>(() => forced ?? deviceLanguage());
+  const [ready, setReady] = useState(!!forced);
 
   useEffect(() => {
     // Web only: ?lang=ar|darija|fr|en forces a language (testing and demos).
-    const forced = Platform.OS === 'web' && typeof window !== 'undefined'
-      ? (new URLSearchParams(window.location.search).get('lang') as Language | null)
-      : null;
-    if (forced && LANGUAGES.some((l) => l.code === forced)) {
-      setLang(forced);
-      setReady(true);
-      return;
-    }
+    if (forced) return;
     getJSON<Language>(Keys.language).then((saved) => {
       if (saved) setLang(saved);
       setReady(true);
     });
-  }, []);
+  }, [forced]);
 
   const rtl = LANGUAGES.find((l) => l.code === language)?.rtl ?? false;
 

@@ -1,32 +1,31 @@
 import type { RiskLevel } from '@/lib/types';
 
-/**
- * Design tokens, taken from central-park/ui (shadcn "clinical palette":
- * cool slate ground, deep teal accent). HSL tokens converted to hex.
- */
+/** Shared Sahhanito identity: deep blue, soft ice, and coral from the mascot pack. */
 export const Colors = {
-  background: '#F9FAFB',     // hsl(210 20% 98%)
-  foreground: '#222C39',     // hsl(215 25% 18%)
+  background: '#F2F6FC',
+  foreground: '#183455',
   card: '#FFFFFF',
-  primary: '#177082',        // hsl(190 70% 30%) deep teal
+  primary: '#245CAF',
   primaryFg: '#FFFFFF',
-  secondary: '#EDF0F3',      // hsl(210 20% 94%)
-  secondaryFg: '#344256',
+  secondary: '#EAF0F8',
+  secondaryFg: '#304C70',
   muted: '#F3F5F7',
   mutedFg: '#56667C',        // darkened from #65758B for ≥ 4.5:1 contrast on the slate background        // hsl(215 16% 47%)
-  accent: '#E7F6F9',         // hsl(190 60% 94%) light teal
-  accentFg: '#125A68',
+  accent: '#E8F2FF',
+  accentFg: '#24518E',
+  coral: '#E85466',
+  navy: '#142D50',
   destructive: '#C52020',    // hsl(0 72% 45%)
   destructiveBg: '#FDF2F2',  // red-50
   destructiveBorder: '#F87171', // red-400 (alert left border)
   destructiveText: '#B91C1C',   // red-700
   warningBorder: '#FB923C',  // orange-400
   warningBg: '#FFF7ED',      // orange-50
-  border: '#DAE0E7',         // hsl(214 20% 88%)
+  border: '#DDE6F1',
   input: '#D4DAE2',          // hsl(214 20% 86%)
 
   // aliases used by the screens
-  text: '#222C39',
+  text: '#183455',
   textSecondary: '#65758B',
   surface: '#FFFFFF',
 } as const;
@@ -50,7 +49,7 @@ export const Fonts = {
 export const Spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 } as const;
 
 /** --radius: 0.65rem ≈ 10 px; cards use rounded-xl (12 px); chips are pills. */
-export const Radius = { sm: 6, md: 8, lg: 10, xl: 12, pill: 999 } as const;
+export const Radius = { sm: 8, md: 12, lg: 16, xl: 20, pill: 999 } as const;
 
 /** shadow-sm */
 export const Shadow = {

@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { AlertTriangle, Phone, ShieldAlert } from 'lucide-react-native';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -37,13 +37,13 @@ export default function EdChatScreen() {
   const scrollRef = useRef<ScrollView>(null);
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const scrollToEnd = () => requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
+  const scrollToEnd = useCallback(() => requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true })), []);
 
   /** Add a message once (the sender also receives its own message back live). */
-  const upsert = (m: ChatMessage) => {
+  const upsert = useCallback((m: ChatMessage) => {
     setMessages((list) => (list.some((x) => x.id === m.id) ? list : [...list, m]));
     scrollToEnd();
-  };
+  }, [scrollToEnd]);
 
   // Everything shown here counts as read (the Care screen shows an unread badge otherwise).
   useEffect(() => {
@@ -86,7 +86,7 @@ export default function EdChatScreen() {
         if (e.level === 'EMERGENCY') router.push({ pathname: '/emergency', params: { caseId } });
       }
     });
-  }, [caseId, referralId]);
+  }, [caseId, referralId, scrollToEnd, upsert]);
 
   useEffect(() => () => { if (typingTimer.current) clearTimeout(typingTimer.current); }, []);
 
