@@ -1,6 +1,6 @@
 # Hospital Dashboard — Specification Book & Task Split
 
-**Project:** HELIOS (HackCure) · **App:** `hospital-dashboard/` (React + Vite) · **As of:** 2026-10-09
+**Project:** Sahhanito (HackCure) · **App:** `hospital-dashboard/` (React + Vite) · **As of:** 2026-10-09
 **Audience:** me and my teammate. We split the hospital dashboard **by feature, full stack** (§2).
 **Reference:** `docs/hackcure-app.md` (§ numbers below point to it).
 
@@ -390,7 +390,7 @@ A person with several memberships sees the union of the menus for the **selected
 | Server state | TanStack Query (cache, refetch, optimistic updates) |
 | UI kit | **shadcn/ui + Tailwind, copied from central-park** (`~/Desktop/central-park/ui/src/components/ui`, MIT — keep the notice); see `docs/central-park-reuse.md` §2 |
 | Charts | Recharts |
-| Forms | React Hook Form + Zod (schemas mirror `@helios/shared`) |
+| Forms | React Hook Form + Zod (schemas mirror `@sahhanito/shared`) |
 | i18n | react-i18next (FR default, AR RTL, EN) |
 | Live | native `EventSource` (SSE) |
 | Push | Service worker + Push API (Web Push) |
@@ -466,7 +466,7 @@ export function useLive(facilityId: string | null, onEvent: (e: LiveEvent) => vo
 ```
 - **Golden rule:** the DB is the truth; events only trigger a refetch or a small cache update.
 - The header shows **● Live / ◌ Reconnecting**.
-- Sound: an "Enable sound" button on first load (browsers block audio until the user clicks once). New EMERGENCY card → sound + browser notification + tab title "(2) New — HELIOS".
+- Sound: an "Enable sound" button on first load (browsers block audio until the user clicks once). New EMERGENCY card → sound + browser notification + tab title "(2) New — Sahhanito".
 
 ### 6.4 Web Push (`public/sw.js`, `lib/push.ts`)
 - An "Enable notifications on this device" banner appears after login until it's done (or dismissed). It runs `enablePush()` **on click**: register the SW → permission → `pushManager.subscribe({ userVisibleOnly: true, applicationServerKey })` → `POST /push/subscriptions`.
@@ -921,7 +921,7 @@ Stream: `GET /dashboard/stream?facilityId=` (cookie auth). Events are named; `da
 
 ## 11. Mocks (no page waits for an endpoint)
 
-- **MSW** handlers in `src/mocks/handlers.ts` for every endpoint of §9, typed with `@helios/shared`.
+- **MSW** handlers in `src/mocks/handlers.ts` for every endpoint of §9, typed with `@sahhanito/shared`.
 - **Fixtures** in `src/mocks/fixtures/`: 3 hospitals, staff per role, 12 referrals covering **every status** (incl. rerouted, timed out, arrived without outcome), 4 supervision cases (EMERGENCY, UNCERTAIN, disagreement, degraded), availability with one stale department, metrics data.
 - **Fake SSE:** a dev-only `MockEventSource` that emits a `referral.new` every 45 s, an `info.answered` 20 s after a request-info, and `case.turn` events on the supervision case. `useLive` picks it when `VITE_MOCKS=1`.
 - Mutations update the in-memory fixtures, so the flows (accept → card moves) work end to end.

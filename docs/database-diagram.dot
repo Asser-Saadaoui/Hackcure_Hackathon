@@ -1,6 +1,6 @@
-digraph HELIOS {
+digraph Sahhanito {
 graph [rankdir=LR, splines=true, overlap=false, nodesep=0.35, ranksep=1.1, fontname="Helvetica", fontsize=22, labelloc=t, pad=0.4,
-       label=<<B>HELIOS (HackCure) — database draft</B><BR/><FONT POINT-SIZE="13">PostgreSQL / Prisma · 32 tables · source of truth: docs/hackcure-app.md §14 · 2026-10-09</FONT>>];
+       label=<<B>Sahhanito (HackCure) — database draft</B><BR/><FONT POINT-SIZE="13">PostgreSQL / Prisma · 32 tables · source of truth: docs/hackcure-app.md §14 · 2026-10-09</FONT>>];
 node [shape=plain, fontname="Helvetica", fontsize=11];
 edge [color="#607D8B", arrowhead=crow, arrowtail=tee, dir=both, fontname="Helvetica", fontsize=9, fontcolor="#455A64"];
 subgraph cluster_0 { label=<<B>1 · Hospital directory (Grand Tunis)</B>>; fontsize=15; style="rounded,filled"; fillcolor="#E3F2FD"; color="#1565C0"; fontcolor="#1565C0";

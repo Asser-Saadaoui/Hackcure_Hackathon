@@ -95,7 +95,7 @@ export default function SettingsScreen() {
       {__DEV__ && <Button label={t('devTools')} variant="ghost" icon={Wrench} onPress={() => router.push('/hub')} />}
       <Button label={t('resetApp')} variant="destructive" icon={RotateCcw} onPress={resetApp} />
 
-      <AppText variant="small" style={styles.footer}>HELIOS · patient · v1.0 (mock backend)</AppText>
+      <AppText variant="small" style={styles.footer}>Sahhanito · patient · v1.0 (mock backend)</AppText>
     </Screen>
   );
 }

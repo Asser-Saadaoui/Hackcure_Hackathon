@@ -2,11 +2,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /** Small JSON wrapper over AsyncStorage (works on Android, iOS and web). */
 export const Keys = {
-  onboarding: 'helios.onboarding',   // { consentVersion, consentAt, notifications }
-  language: 'helios.language',
-  session: 'helios.session',
-  currentCase: 'helios.currentCase',  // id of the case in progress
-  testMode: 'helios.testMode',        // mock answers: 'demo' | 'triage' (testing only)
+  onboarding: 'sahhanito.onboarding',   // { consentVersion, consentAt, notifications }
+  language: 'sahhanito.language',
+  session: 'sahhanito.session',
+  currentCase: 'sahhanito.currentCase',  // id of the case in progress
+  testMode: 'sahhanito.testMode',        // mock answers: 'demo' | 'triage' (testing only)
 } as const;
 
 export async function getJSON<T>(key: string): Promise<T | null> {

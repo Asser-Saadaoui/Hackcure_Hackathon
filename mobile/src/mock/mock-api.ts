@@ -65,7 +65,7 @@ let session: Session | null = null;
 
 // ---------- Persistence (testing convenience: survive page reloads) ----------
 
-const DB_KEY = 'helios.mockdb';
+const DB_KEY = 'sahhanito.mockdb';
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 
 function save() {
@@ -428,7 +428,7 @@ export const mockApi: PatientApi = {
     return {
       caseId, referenceCode: c.referenceCode, facilityName: c.referral?.facilityName ?? null,
       version: 1, author: 'AI', reviewedByClinician: false, generatedAt: now(),
-      caseLink: `https://helios.example/p/${c.id}`, pdfUrl: null, report: buildReport(c),
+      caseLink: `https://sahhanito.example/p/${c.id}`, pdfUrl: null, report: buildReport(c),
     };
   },
 

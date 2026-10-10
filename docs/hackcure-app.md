@@ -1,4 +1,4 @@
-# HELIOS (HackCure) — Complete Reference
+# Sahhanito (HackCure) — Complete Reference
 
 As of 2026-10-09. This follows the **final repository architecture** (§5): `ai/`, `ai-stub/`, `backend/`, `packages/shared/`, `hospital-dashboard/`, `patient-dashboard/` and `mobile/`.
 
@@ -227,7 +227,7 @@ Format: **ID — As a … I want … so that …** followed by acceptance criter
 hackcure/
 ├── README.md                  # overview, setup, how to run the demo
 ├── docs/
-│   ├── architecture.png       # HELIOS architecture diagram
+│   ├── architecture.png       # Sahhanito architecture diagram
 │   ├── contracts.md           # API contracts, case/referral status machines, SSE events
 │   └── demo-script.md         # demo scenarios and scripted patient conversations
 ├── docker-compose.yml         # postgres, ai, backend, both dashboards with one command
@@ -1909,7 +1909,7 @@ AI_TIMEOUT_MS=15000
 LEARNING_HASH_SECRET=change-me-too
 VAPID_PUBLIC_KEY=...        # Web Push: generate once with `npx web-push generate-vapid-keys`
 VAPID_PRIVATE_KEY=...
-VAPID_SUBJECT=mailto:team@helios.tn
+VAPID_SUBJECT=mailto:team@sahhanito.tn
 EXPO_ACCESS_TOKEN=...       # optional, for Expo push
 # ai
 LLM_API_KEY=...
@@ -1919,7 +1919,7 @@ CLASSIFIER_PATH=/app/models/xlmr
 
 ### npm workspaces (for `packages/shared`)
 
-Root `package.json`: `{ "private": true, "workspaces": ["packages/*", "backend", "hospital-dashboard", "patient-dashboard", "mobile"] }`. Import types with `import type { CaseState } from '@helios/shared'`. Expo needs `metro.config.js` `watchFolders` pointing to the repo root so it can resolve the shared package.
+Root `package.json`: `{ "private": true, "workspaces": ["packages/*", "backend", "hospital-dashboard", "patient-dashboard", "mobile"] }`. Import types with `import type { CaseState } from '@sahhanito/shared'`. Expo needs `metro.config.js` `watchFolders` pointing to the repo root so it can resolve the shared package.
 
 ### Start (without Docker)
 
@@ -2360,7 +2360,7 @@ Validate it once at https://validator.fhir.org.
 
 ## 26. Notifications: push on the person's phone and computer (`notify/`, `delivery/`)
 
-**Rule:** HELIOS sends **no email and no SMS**. Every notification is a **push notification to the person's own devices**: their **phone** and their **computer**. A person can have several devices; every active one receives the notification.
+**Rule:** Sahhanito sends **no email and no SMS**. Every notification is a **push notification to the person's own devices**: their **phone** and their **computer**. A person can have several devices; every active one receives the notification.
 
 | Recipient | Phone | Computer |
 |---|---|---|
@@ -2924,7 +2924,7 @@ Every check uses the membership of **that** hospital, so a manager at La Rabta w
 - `App.tsx`: routing + **role-based layout**. ED: Board, Handoffs, Arrival, Availability. Clinician: + supervision queue, CaseWorkspace, Metrics. Manager: + Admin, Metrics.
 - Pages: `Login`, `Board`, `CaseWorkspace`, `Handoffs`, `Arrival`, `Availability`, `Admin`, `Metrics`
 - Components: `RiskBadge`, `UncertaintyBar`, `RedFlagList`, `ContributionChart`, `StateEditor`, `TranscriptView`, `ReportViewer`
-- Types from `@helios/shared` (`case-state.ts`, `assessment.ts`, `status.ts`, `events.ts`)
+- Types from `@sahhanito/shared` (`case-state.ts`, `assessment.ts`, `status.ts`, `events.ts`)
 - Hide links by role **and** enforce roles in the backend; the UI is never the security
 - **Push:** `public/sw.js` + `lib/push.ts` + `manifest.webmanifest` (installable PWA); an "Enable notifications on this device" button after login, and a "My devices" list (§26.2)
 - Target screens: 1366×768 ED PC and a 10" tablet; large buttons; FR first, AR/EN labels; `alert.mp3` in `public/`
@@ -3019,7 +3019,7 @@ The backend checks the key against `Facility.apiKeyHash` and that this referral 
 
 ### 29.7 Data export to the hospital's own system
 
-Hospitals already use their own software (patient records, ED management). They must be able to **take the case data out of HELIOS and load it there**.
+Hospitals already use their own software (patient records, ED management). They must be able to **take the case data out of Sahhanito and load it there**.
 
 **Per case** (export menu in the case drawer and on the Arrival page):
 
@@ -3053,7 +3053,7 @@ Hospitals already use their own software (patient records, ED management). They 
 
 ## 30. Patient apps (`patient-dashboard/`, `mobile/`)
 
-Both apps call the same endpoints and use the same flow: **Chat → (Emergency | Status) → InfoRequests → Report**, plus History. They share types from `@helios/shared` and the same translation keys (`i18n/`: Arabic RTL, French, English).
+Both apps call the same endpoints and use the same flow: **Chat → (Emergency | Status) → InfoRequests → Report**, plus History. They share types from `@sahhanito/shared` and the same translation keys (`i18n/`: Arabic RTL, French, English).
 
 | Flow step | Calls | Notes |
 |---|---|---|

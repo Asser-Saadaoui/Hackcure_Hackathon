@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "HELIOS",
-    "slug": "helios-patient",
+    "name": "Sahhanito",
+    "slug": "sahhanito",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "helios",
+    "scheme": "sahhanito",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon"
@@ -37,7 +37,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "HELIOS uses your location to find the nearest hospital that can treat you."
+          "locationWhenInUsePermission": "Sahhanito uses your location to find the nearest hospital that can treat you."
         }
       ]
     ],

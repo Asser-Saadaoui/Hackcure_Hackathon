@@ -1,4 +1,4 @@
-# Reusing central-park ("Triage Park") in HELIOS
+# Reusing central-park ("Triage Park") in Sahhanito
 
 **Status:** adopted (2026-10-10). **Source:** `~/Desktop/central-park` (MIT license, © 2026 Eungi Hong).
 **Rule:** keep the MIT copyright notice at the top of every file we copy or adapt, and credit the project in `README.md`.
@@ -30,7 +30,7 @@ central-park is a multi-agent clinical triage platform: a FastAPI + LangGraph ag
 
 ### Replace
 
-| central-park | HELIOS |
+| central-park | Sahhanito |
 |---|---|
 | Triage levels self-care / see-GP / urgent-care / ED | **LOW** (self-care, see-GP) / **HIGH** (urgent-care) / **EMERGENCY** (ED); **UNCERTAIN** when the reviewer or fusion is unsure |
 | Guidelines: `data/guidelines.json` (30 NICE summaries) + IRIS vector search | `ai/knowledge/`: guideline snippets reviewed for the Tunisian context (WHO / Tunisian ministry / clinician-validated) + a small in-memory or **pgvector** index |

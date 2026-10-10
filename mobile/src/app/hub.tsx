@@ -30,7 +30,7 @@ export default function DevHub() {
 
   return (
     <Screen>
-      <AppText variant="title">HELIOS · patient</AppText>
+      <AppText variant="title">Sahhanito · patient</AppText>
       <AppText variant="small">Temporary navigation while we build the app step by step.</AppText>
 
       <Link href="/dev" asChild>

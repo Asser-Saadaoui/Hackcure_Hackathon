@@ -19,7 +19,7 @@ Both tracks depend on **§0** (shared contracts) and consume the backend API (`b
 - [ ] `status.ts`: case and referral status enums + allowed transitions (§13)
 - [ ] `events.ts`: SSE event names and payload types (§7.4)
 - [ ] `api.ts`: request/response DTO types for the endpoints each app uses (§7.3)
-- [ ] Mobile: `metro.config.js` `watchFolders` → repo root so Expo resolves `@helios/shared`
+- [ ] Mobile: `metro.config.js` `watchFolders` → repo root so Expo resolves `@sahhanito/shared`
 
 ### 0.2 Conventions
 - [ ] Base URL from env (`EXPO_PUBLIC_API_URL`, `VITE_API_URL`); on a phone, use the laptop's LAN IP, not `localhost`
@@ -141,7 +141,7 @@ Both tracks depend on **§0** (shared contracts) and consume the backend API (`b
 **Stack:** React + Vite (TypeScript), React Router, a data-fetching lib (TanStack Query recommended), a UI kit (e.g. Mantine or shadcn/ui), Recharts (risk over time, metrics, contributions), Leaflet + OpenStreetMap (optional maps), the native `EventSource` (SSE), a service worker for Web Push, `react-i18next` (FR first, AR/EN).
 
 ### B1. Project setup
-- [ ] Vite app, TypeScript, ESLint/Prettier, `@helios/shared` types
+- [ ] Vite app, TypeScript, ESLint/Prettier, `@sahhanito/shared` types
 - [ ] `lib/api.ts`: fetch with `credentials: 'include'` (cookie session), error → toast, 409 → "Already handled" + refetch
 - [ ] `lib/auth.ts`: current user, memberships `[{ facilityId, facilityRole, supervisesNetwork }]`, selected hospital (persisted in `localStorage`)
 - [ ] `App.tsx`: routes + **layout by role** (ED / clinician / manager), route guards (the UI hides things; the backend enforces them)

@@ -163,7 +163,7 @@ const fr = {
   chooseLanguage: 'Choisissez votre langue',
   consentTitle: 'Avant de commencer',
   consentBody:
-    "HELIOS vous oriente vers le bon hôpital. Ce n'est pas un diagnostic. Vos réponses sont partagées avec les médecins qui supervisent et avec l'hôpital où vous allez, et utilisées de façon anonyme pour améliorer le service.",
+    "Sahhanito vous oriente vers le bon hôpital. Ce n'est pas un diagnostic. Vos réponses sont partagées avec les médecins qui supervisent et avec l'hôpital où vous allez, et utilisées de façon anonyme pour améliorer le service.",
   agreeContinue: "J'accepte et je continue",
   notifTitle: 'Restez joignable',
   notifBody:
@@ -330,7 +330,7 @@ const ar: Strings = {
   chooseLanguage: 'اختر لغتك',
   consentTitle: 'قبل أن نبدأ',
   consentBody:
-    'يوجهك HELIOS إلى المستشفى المناسب. هذا ليس تشخيصًا. تتم مشاركة إجاباتك مع الأطباء المشرفين ومع المستشفى الذي تتوجه إليه، وتُستخدم بشكل مجهول لتحسين الخدمة.',
+    'يوجهك Sahhanito إلى المستشفى المناسب. هذا ليس تشخيصًا. تتم مشاركة إجاباتك مع الأطباء المشرفين ومع المستشفى الذي تتوجه إليه، وتُستخدم بشكل مجهول لتحسين الخدمة.',
   agreeContinue: 'أوافق وأتابع',
   notifTitle: 'ابقَ على تواصل',
   notifBody: 'اسمح بالإشعارات حتى يتمكن المستشفى من الرد عليك أو طرح سؤال، حتى لو كان التطبيق مغلقًا.',
@@ -494,7 +494,7 @@ const darija: Strings = {
   chooseLanguage: 'اختار اللغة متاعك',
   consentTitle: 'قبل ما نبداو',
   consentBody:
-    'HELIOS يوجّهك للسبيطار المناسب. هذا موش تشخيص. الأجوبة متاعك يشوفوها الأطباء اللي يراقبو والسبيطار اللي ماشي ليه، ونستعملوها من غير اسمك باش نحسّنو الخدمة.',
+    'Sahhanito يوجّهك للسبيطار المناسب. هذا موش تشخيص. الأجوبة متاعك يشوفوها الأطباء اللي يراقبو والسبيطار اللي ماشي ليه، ونستعملوها من غير اسمك باش نحسّنو الخدمة.',
   agreeContinue: 'موافق، نكمّل',
   notifTitle: 'خلّيك على اتصال',
   notifBody: 'خلّي الإشعارات باش السبيطار ينجم يجاوبك ولا يسألك، حتى كان التطبيق مسكّر.',
@@ -658,7 +658,7 @@ const en: Strings = {
   chooseLanguage: 'Choose your language',
   consentTitle: 'Before we start',
   consentBody:
-    'HELIOS guides you to the right hospital. It is not a diagnosis. Your answers are shared with supervising doctors and the hospital you go to, and used anonymously to improve the service.',
+    'Sahhanito guides you to the right hospital. It is not a diagnosis. Your answers are shared with supervising doctors and the hospital you go to, and used anonymously to improve the service.',
   agreeContinue: 'I agree and continue',
   notifTitle: 'Stay reachable',
   notifBody: 'Allow notifications so the hospital can answer you or ask you a question, even when the app is closed.',

@@ -10,7 +10,7 @@ export function BrandTitle({ section }: { section?: string }) {
       <View style={styles.tile}>
         <Activity size={16} color={Colors.primaryFg} strokeWidth={2.25} />
       </View>
-      <Text style={styles.name}>HELIOS</Text>
+      <Text style={styles.name}>Sahhanito</Text>
       {section ? <Text style={styles.section} numberOfLines={1}>· {section}</Text> : null}
     </View>
   );
