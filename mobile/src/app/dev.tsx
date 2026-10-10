@@ -1,3 +1,4 @@
+import { Redirect } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -20,7 +21,7 @@ type LogLine = { at: string; text: string; level?: RiskLevel };
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-export default function DevScreen() {
+function DevScreen() {
   const [log, setLog] = useState<LogLine[]>([]);
   const [running, setRunning] = useState(false);
   const unsubscribers = useRef<(() => void)[]>([]);
@@ -162,3 +163,8 @@ const styles = StyleSheet.create({
   line: { gap: Spacing.xs, borderBottomWidth: 1, borderBottomColor: Colors.border, paddingBottom: Spacing.sm },
   lineText: { fontSize: 14 },
 });
+
+/** Developer tools: not reachable in production builds. */
+export default function GuardedDevScreen() {
+  return __DEV__ ? <DevScreen /> : <Redirect href="/" />;
+}

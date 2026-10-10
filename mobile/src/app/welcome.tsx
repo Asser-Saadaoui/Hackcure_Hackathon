@@ -8,6 +8,7 @@ import { AppText } from '@/components/app-text';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { Chip } from '@/components/chip';
+import { Mascot } from '@/components/mascot';
 import { Screen } from '@/components/screen';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 import { useI18n } from '@/i18n';
@@ -59,6 +60,9 @@ export default function WelcomeScreen() {
       />
 
       <View style={styles.intro}>
+        <View style={styles.hero}>
+          <Mascot size={120} />
+        </View>
         <AppText variant="title">{t('welcomeTitle')}</AppText>
         <AppText style={styles.lead}>{t('tagline')}</AppText>
       </View>
@@ -113,6 +117,7 @@ export default function WelcomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  hero: { alignSelf: 'center', width: 144, height: 144, borderRadius: 72, backgroundColor: Colors.brandBg, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.sm },
   intro: { gap: Spacing.sm, paddingTop: Spacing.lg },
   lead: { color: Colors.mutedFg, fontSize: 15, lineHeight: 24 },
   field: { gap: Spacing.sm, paddingTop: Spacing.sm },

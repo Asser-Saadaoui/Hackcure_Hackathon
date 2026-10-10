@@ -1,0 +1,53 @@
+{
+	email {$ACME_EMAIL}
+}
+
+(security) {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+}
+
+(api) {
+	# flush_interval -1 keeps Server-Sent Events streaming
+	handle /api/* {
+		reverse_proxy backend:8100 {
+			flush_interval -1
+		}
+	}
+	handle /p/* {
+		reverse_proxy backend:8100
+	}
+}
+
+# Patient web app + API + public case pages (QR)
+{$APP_DOMAIN} {
+	encode zstd gzip
+	import security
+	import api
+	header Permissions-Policy "geolocation=(self), camera=(), microphone=()"
+	handle {
+		root * /srv/patient
+		try_files {path} /index.html
+		file_server
+	}
+}
+
+# Hospital dashboard (staff only)
+{$STAFF_DOMAIN} {
+	encode zstd gzip
+	import security
+	import api
+	header {
+		X-Frame-Options DENY
+		X-Robots-Tag "noindex, nofollow"
+	}
+	handle {
+		root * /srv/dashboard
+		try_files {path} /index.html
+		file_server
+	}
+}

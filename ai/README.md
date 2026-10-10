@@ -91,3 +91,54 @@ be detected. Existing ML context-feature regression is unresolved. Historical F1
 and challenge metrics above were not recomputed for this patch; no clinical
 validation or new generalization score is claimed. Model features/schema, original
 benchmark preprocessing, continuous scores and calibration metadata are preserved.
+
+## Rule engine (`rule_engine/`, Sahhanito)
+
+Decision strategy: **NLP model + rule engine → fusion score → decision**. The LLM only chats with the patient and collects information; it never decides the level. This section covers the rule engine (step 1); fusion and the decision policy come next.
+
+```python
+from triage_pipeline import process_turn
+from rule_engine import evaluate
+r = process_turn(None, "3andi wja3 fi sadri w ma najamch netnaffes")
+rules = evaluate(r["patient_state"], r["rules"])   # reuses the clinical screens already computed
+rules["s_rule"], rules["level_floor"], rules["suggested_specialty"], rules["required_equipment"]
+# 1.0, 'EMERGENCY', 'CARDIO', ['CATH_LAB', 'ICU']
+```
+
+- Rules are data: `rule_engine/rules.v1.json` (31 rules, 21 lexicon entries in French, Darija Arabizi, Darija/Arabic script and English).
+- Inputs: extracted facts, the clinical screens of `clinical_rules.py`, and the raw patient messages. **Never the ML score**, so the two signals stay independent for fusion.
+- Severity: `critical` → `s_rule = 1.0`, level floor `EMERGENCY`; `high` → floor `HIGH` + weight; `moderate` → weight only. Non-critical weights combine as noisy-OR `1 − Π(1 − w)`.
+- Negation (`pas de`, `ma 3andich`, `ما عنديش`, `no`…) and context (`last year`, `ken`, `زمان`, `j'ai peur`…) are checked in the same clause; extracted facts are cross-checked the same way.
+- `suggested_specialty` / `required_equipment` use the codes of the Grand Tunis hospitals dataset (`CARDIO`, `NEURO`, `OBGYN`, `CT`, `CATH_LAB`, `ICU`…), from the most severe triggered group only.
+- Tests: `python -m unittest -q test_rule_engine test_integration`.
+
+Unvalidated prototype: rules, weights and translations need clinician and native-speaker review. No triggered rule does not mean safe.
+
+## Fusion, decision, LLM interviewer and HTTP service
+
+```
+patient message → process_turn (facts, NLP p_nlp, screens, next missing field)
+               → rule_engine.evaluate (s_rule, floor, specialty/equipment)
+               → fusion.fuse (p_final, uncertainty, contributions)
+               → decision.decide (EMERGENCY / HIGH / LOW / UNCERTAIN + actions)
+               → interviewer (LLM phrases the next question only; never decides)
+```
+
+- `fusion.py`: `p_final = sigmoid(-1.5 + 0.8·(logit(p_nlp) − logit(0.15)) + 4·s_rule)`. Hand-set, not fitted; contributions are returned for the dashboard.
+- `decision.py`: critical rule → EMERGENCY; level never below the rule floor; NLP abstains and no rule → UNCERTAIN (clinician review).
+- `interviewer.py`: Claude via `ANTHROPIC_API_KEY` (model `SAHHANITO_LLM_MODEL`, default `claude-sonnet-5-5`; `SAHHANITO_LLM=off` to disable). Unsafe, failed or slow replies fall back to the reviewed templates (FR / EN / Darija / Arabic). Its `collected` notes go to `state.sahhanito.llm_notes` for the report, never to the decision.
+- `sahhanito.py`: `triage_turn(state, message, previous_question_id, language='fr'|'en'|'ar'|'darija', mode='interview'|'monitor')`.
+
+Run the service:
+
+```sh
+uv pip install --python .venv/bin/python -r requirements.txt
+.venv/bin/uvicorn service:app --port 8000
+curl -s localhost:8000/health
+curl -s -X POST localhost:8000/turn -H 'content-type: application/json' \
+  -d '{"message":"3andi wja3 fi sadri w ma najamch netnaffes","language":"darija"}'
+```
+
+Send the returned `state` and `reply.question_id` back with the next message. The patient app's Settings → Test mode → "IA réelle" calls this service on `http://localhost:8000` (`EXPO_PUBLIC_AI_URL` to change it).
+
+Tests: `python -m unittest -q test_decision test_rule_engine test_integration`.

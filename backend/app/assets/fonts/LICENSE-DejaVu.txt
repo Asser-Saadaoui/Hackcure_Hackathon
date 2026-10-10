@@ -1,0 +1,2 @@
+DejaVu fonts (https://dejavu-fonts.github.io/). Bitstream Vera Fonts Copyright (c) 2003 Bitstream, Inc.;
+DejaVu changes are in the public domain. Free to use, copy and redistribute, including embedding in documents.
