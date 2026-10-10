@@ -9,7 +9,21 @@ Stateless: the caller (backend, or the patient app in dev) stores `state` per ca
 CORS is open to the Expo web dev server by default (SAHHANITO_CORS, comma-separated).
 """
 import os
+from pathlib import Path
 from typing import Any, Literal, Optional
+
+
+def _load_env(path=Path(__file__).resolve().parent / '.env'):
+    """KEY=value lines from ai/.env (git-ignored). Real environment variables win."""
+    if not path.exists():
+        return
+    for line in path.read_text(encoding='utf-8').splitlines():
+        key, sep, value = line.strip().partition('=')
+        if sep and key and not key.startswith('#'):
+            os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+
+
+_load_env()
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -68,6 +82,7 @@ def health():
     except Exception as error:
         nlp = f'unavailable: {type(error).__name__}'
     llm = interviewer.Interviewer()
-    return dict(ok=True, nlp_model=nlp, llm='on' if llm.enabled else 'off (templates)', llm_model=llm.model if llm.enabled else None,
+    return dict(ok=True, nlp_model=nlp, llm='on' if llm.enabled else 'off (templates)',
+                llm_provider=llm.provider if llm.enabled else None, llm_model=llm.model if llm.enabled else None,
                 versions=dict(turn=sahhanito.VERSION, rules=default_engine().version, fusion=fusion.VERSION,
                               decision=decision.VERSION, interviewer=interviewer.VERSION))

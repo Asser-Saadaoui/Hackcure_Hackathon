@@ -9,15 +9,19 @@ Division of work:
     They are stored in patient_state['llm_notes'] and are NOT read by the rules, fusion or decision.
   - It is never called for an emergency or a final result: those messages are fixed texts.
 
-Provider: Anthropic Messages API when ANTHROPIC_API_KEY is set (model SAHHANITO_LLM_MODEL),
-otherwise, or on any error or unsafe output, the reviewed question templates are used.
+Provider (SAHHANITO_LLM_PROVIDER, default: gemini when GEMINI_API_KEY is set):
+  - gemini:    Gemini's OpenAI-compatible endpoint, same setup as our central-park fork
+               (GEMINI_API_KEY, model SAHHANITO_GEMINI_MODEL or CP_GEMINI_MODEL, default gemini-3.8-flash)
+  - anthropic: Anthropic Messages API (ANTHROPIC_API_KEY, model SAHHANITO_ANTHROPIC_MODEL)
+No key, SAHHANITO_LLM=off, any error or an unsafe reply -> the reviewed question templates.
 """
 import json
 import os
 import re
 
-VERSION = 'interviewer-0.1'
-DEFAULT_MODEL = 'claude-sonnet-5-5'
+VERSION = 'interviewer-0.2'
+DEFAULT_MODELS = {'gemini': 'gemini-3.8-flash', 'anthropic': 'claude-sonnet-5-5'}
+GEMINI_OPENAI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/'
 TIMEOUT_S = 8.0
 LANG_NAMES = {'fr': 'French', 'en': 'English', 'ar': 'Modern Standard Arabic',
               'darija': 'Tunisian Darija (answer in the same script the patient uses: Arabic letters or Arabizi with numbers like 3, 7, 9)'}
@@ -92,10 +96,19 @@ def template_question(question, language, message):
 
 
 class Interviewer:
-    def __init__(self, api_key=None, model=None, enabled=None):
-        self.api_key = api_key if api_key is not None else os.environ.get('ANTHROPIC_API_KEY')
-        self.model = model or os.environ.get('SAHHANITO_LLM_MODEL', DEFAULT_MODEL)
-        flag = os.environ.get('SAHHANITO_LLM', 'auto').lower()
+    def __init__(self, api_key=None, model=None, enabled=None, provider=None):
+        env = os.environ
+        self.provider = (provider or env.get('SAHHANITO_LLM_PROVIDER')
+                         or ('gemini' if env.get('GEMINI_API_KEY') or not env.get('ANTHROPIC_API_KEY') else 'anthropic')).lower()
+        if self.provider not in DEFAULT_MODELS:
+            raise ValueError(f'Unknown SAHHANITO_LLM_PROVIDER {self.provider!r}: expected gemini | anthropic')
+        if self.provider == 'gemini':
+            self.api_key = api_key if api_key is not None else env.get('GEMINI_API_KEY')
+            self.model = model or env.get('SAHHANITO_GEMINI_MODEL') or env.get('CP_GEMINI_MODEL') or DEFAULT_MODELS['gemini']
+        else:
+            self.api_key = api_key if api_key is not None else env.get('ANTHROPIC_API_KEY')
+            self.model = model or env.get('SAHHANITO_ANTHROPIC_MODEL') or DEFAULT_MODELS['anthropic']
+        flag = env.get('SAHHANITO_LLM', 'auto').lower()
         self.enabled = enabled if enabled is not None else bool(self.api_key) and flag != 'off'
 
     def ask(self, question, history, language, message):
@@ -119,7 +132,6 @@ class Interviewer:
         return result
 
     def _call_llm(self, question, base_text, history, language):
-        import httpx
         system = (
             "You are the intake assistant of Sahhanito, a Tunisian emergency triage app. "
             "Your ONLY jobs: (1) ask the patient the next question, (2) note the information they gave.\n"
@@ -136,6 +148,36 @@ class Interviewer:
         )
         transcript = '\n'.join(f"{'Patient' if h['role'] == 'patient' else 'Assistant'}: {h['text']}" for h in history[-12:])
         user = f"Conversation so far:\n{transcript}\n\nBase question to ask next (field `{question['field']}`): {base_text}"
+        content = self._complete(system, user)
+        match = re.search(r'\{.*\}', content, re.S)
+        if not match:
+            raise ValueError('no JSON in LLM reply')
+        return json.loads(match.group())
+
+    def _complete(self, system, user):
+        """Retries rate limits (free-tier 429) and overloads twice, briefly: the template is a fine fallback."""
+        import time
+        import httpx
+        for attempt in range(3):
+            try:
+                return self._complete_once(system, user)
+            except httpx.HTTPStatusError as error:
+                if error.response.status_code not in (429, 500, 503) or attempt == 2:
+                    raise
+                retry_after = error.response.headers.get('retry-after', '')
+                time.sleep(min(float(retry_after) if retry_after.replace('.', '', 1).isdigit() else 1.0 + attempt, 2.5))
+
+    def _complete_once(self, system, user):
+        import httpx
+        if self.provider == 'gemini':
+            response = httpx.post(
+                GEMINI_OPENAI_BASE_URL + 'chat/completions',
+                headers={'authorization': f'Bearer {self.api_key}', 'content-type': 'application/json'},
+                json={'model': self.model, 'response_format': {'type': 'json_object'},
+                      'messages': [{'role': 'system', 'content': system}, {'role': 'user', 'content': user}]},
+                timeout=TIMEOUT_S)
+            response.raise_for_status()
+            return response.json()['choices'][0]['message']['content'] or ''
         response = httpx.post(
             'https://api.anthropic.com/v1/messages',
             headers={'x-api-key': self.api_key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json'},
@@ -143,8 +185,4 @@ class Interviewer:
                   'messages': [{'role': 'user', 'content': user}]},
             timeout=TIMEOUT_S)
         response.raise_for_status()
-        content = ''.join(block.get('text', '') for block in response.json().get('content', []))
-        match = re.search(r'\{.*\}', content, re.S)
-        if not match:
-            raise ValueError('no JSON in LLM reply')
-        return json.loads(match.group())
+        return ''.join(block.get('text', '') for block in response.json().get('content', []))
