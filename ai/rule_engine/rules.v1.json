@@ -1,5 +1,5 @@
 {
-  "version": "sahhanito-rules-2",
+  "version": "sahhanito-rules-3",
   "validation_status": "unvalidated_prototype: wording, thresholds and weights must be reviewed by a clinician before any real use",
   "severity_policy": {
     "critical": {
@@ -160,8 +160,8 @@
       "العظم\\s*(?:ظاهر|خارج|بارز|باين)|كسر\\s*مفتوح|نشوف\\s*في\\s*العظم"
     ],
     "fracture": [
-      "\\bbroke(?:n)?\\s+(?:my|his|her|a)?\\s*(?:leg|arm|wrist|ankle|hip|bone|knee|shoulder|foot|hand|rib)|fractur\\w*",
-      "fractur\\w*|(?:je\\s+me\\s+suis|il\\s+s.est|elle\\s+s.est)\\s+cass\\w*|(?:jambe|bras|poignet|cheville|hanche|genou|epaule|pied|main)\\s+cass\\w*",
+      "\\bbroke(?:n)?\\s+(?:my|his|her|a)?\\s*(?:leg|arm|wrist|ankle|hip|bone|knee|shoulder|foot|hand|rib)|fractur\\w*|\\b(?:leg|arm|wrist|ankle|hip|bone|knee|shoulder|foot|hand|rib|elbow|finger|toe|nose|collarbone)s?\\s+(?:is\\s+|was\\s+|got\\s+|seems\\s+|might\\s+be\\s+|looks\\s+)?(?:broken|fractured|cracked)",
+      "fractur\\w*|(?:je\\s+me\\s+suis|il\\s+s.est|elle\\s+s.est)\\s+cass\\w*|(?:jambe|bras|poignet|cheville|hanche|genou|epaule|pied|main)\\s+cass\\w*|\\b(?:jambe|bras|poignet|cheville|hanche|genou|epaule|pied|main|cote|coude|doigt|nez)\\s+(?:est\\s+|semble\\s+)?(?:casse|cassee|fracture|fracturee)",
       "t?k[ae]ss?[ae]r(?:et|it|ou)?\\b|m(?:e)?k[ae]ss?(?:ou)?r[ae]?\\b|(?:sa9|ydi|yedi|rjel|kraa?)\\w*\\s*t?k[ae]ss?r",
       "تكسرت|تكسر|مكسورة|مكسور|انكسرت|انكسر|كسر\\s*في"
     ],

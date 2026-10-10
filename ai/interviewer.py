@@ -27,7 +27,7 @@ log = logging.getLogger('sahhanito.llm')
 VERSION = 'interviewer-0.2'
 DEFAULT_MODELS = {'gemini': 'gemini-3.8-flash', 'anthropic': 'claude-sonnet-5-5'}
 # Tried in order when the main model is out of quota (each Gemini model has its own free-tier quota).
-GEMINI_FALLBACKS = 'gemini-3.7-flash,gemini-3.5-flash,gemini-2.5-flash,gemini-3.5-flash-lite,gemini-2.5-flash-lite'
+GEMINI_FALLBACKS = 'gemini-3.7-flash,gemini-3.5-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite,gemini-2.5-flash-lite'
 
 
 class LLMUnavailable(Exception):
@@ -62,8 +62,8 @@ def llm_status():
         cooling = {m: round(t - now) for m, t in _cooldown.items() if t > now}
         return dict(_status, cooling_down_seconds=cooling)
 GEMINI_OPENAI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/'
-TIMEOUT_S = 4.5            # per model call
-BUDGET_S = 7.0             # total LLM time per call to _complete (all fallbacks): the triage never waits longer
+TIMEOUT_S = 9.0            # per model call (Gemini flash models take 5-8 s)
+BUDGET_S = 12.0            # total LLM time per call to _complete (all fallbacks): the triage never waits longer
 SLOW_COOLDOWN_S = 120.0    # a model that timed out is skipped for 2 minutes
 LANG_NAMES = {'fr': 'French', 'en': 'English', 'ar': 'Modern Standard Arabic',
               'darija': 'Tunisian Darija (answer in the same script the patient uses: Arabic letters or Arabizi with numbers like 3, 7, 9)'}

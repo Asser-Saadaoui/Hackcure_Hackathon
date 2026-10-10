@@ -86,6 +86,9 @@ def triage_turn(state, message, previous_question_id=None, *, language='fr', mod
 
     asked = len(st.get('asked_questions', []))
     question = r['next_question']
+    if question and question['field'] is None and rules['triggered_rules']:
+        question = None   # generic "describe your problem": pointless once a rule identified it
+        st.pop('pending_question', None)
     reply = None
     if mode == 'monitor':
         status = 'monitor'
