@@ -84,6 +84,14 @@ export interface Scenario {
   log: { at: string; text: string }[]; hospitals: SimHospital[];
 }
 
+export interface LatLng { lat: number; lng: number }
+export interface Tracking {
+  caseId: string; referralId: string; status: ReferralStatus; arrivalMode: "SELF" | "AMBULANCE" | null;
+  hospital: LatLng & { name: string }; patient: (LatLng & { address?: string }) | null;
+  ambulance: { unitName: string; status: string; position: LatLng; etaMinutes: number; simulated: true } | null;
+  route: LatLng[]; distanceKm: number | null; etaMinutes: number | null;
+}
+
 export interface Hospital { key: string; name: string; nameAr?: string; type: string; lat: number; lng: number; specialties: string[]; equipment: string[]; availability: Availability }
 
 export interface ReviewItem {

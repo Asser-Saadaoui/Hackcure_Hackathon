@@ -137,6 +137,16 @@ def reject(referral_id: str, body: Reject, user: StaffUser = Depends(hospital_st
     return dict(ok=True)
 
 
+@router.get('/referrals/{referral_id}/tracking')
+def tracking(referral_id: str, user: StaffUser = Depends(hospital_staff), db: Session = Depends(get_db)):
+    """Live map for the receiving ED: patient position, route, hospital and the simulated ambulance."""
+    r = my_referral(db, user, referral_id)
+    case = db.get(Case, r.case_id)
+    if not case.location:
+        raise HTTPException(404, 'Position du patient inconnue.')
+    return dict(services.tracking_view(db, case, r), status=r.status)
+
+
 @router.get('/referrals/{referral_id}/report.pdf')
 def report_pdf(referral_id: str, user: StaffUser = Depends(hospital_staff), db: Session = Depends(get_db)):
     r = my_referral(db, user, referral_id)

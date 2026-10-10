@@ -1,4 +1,4 @@
-import type { Alternative, CaseDetail, ChatMessage, Hospital, ReferralRow, ReviewItem, Scenario, SimSettings, StaffUser, TriageFeedback } from "@/types";
+import type { Alternative, CaseDetail, ChatMessage, Hospital, ReferralRow, ReviewItem, Scenario, SimSettings, StaffUser, Tracking, TriageFeedback } from "@/types";
 
 const BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "";
 const TOKEN_KEY = "sahhanito.staff.token";
@@ -45,6 +45,7 @@ export const api = {
   referral: (id: string) => call<CaseDetail>("GET", `/staff/referrals/${id}`),
   accept: (id: string, arrivalMode: "SELF" | "AMBULANCE", note?: string) => call<CaseDetail>("POST", `/staff/referrals/${id}/accept`, { arrivalMode, note }),
   reject: (id: string, reason: string, explanation: string) => call<{ ok: boolean }>("POST", `/staff/referrals/${id}/reject`, { reason, explanation }),
+  tracking: (id: string) => call<Tracking>("GET", `/staff/referrals/${id}/tracking`),
   alternatives: (id: string) => call<Alternative[]>("GET", `/staff/referrals/${id}/alternatives`),
   reroute: (id: string, facilityKey: string | null, reason: string, explanation: string) =>
     call<{ ok: boolean; facilityName: string | null }>("POST", `/staff/referrals/${id}/reroute`, { facilityKey, reason, explanation }),

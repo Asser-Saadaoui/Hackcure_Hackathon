@@ -533,8 +533,8 @@ def tick_ambulances(db):
             mark_arrived(db, r, 'ambulance')
 
 
-def tracking_view(db, case):
-    r = current_referral(case)
+def tracking_view(db, case, referral=None):
+    r = referral or current_referral(case)
     if not r:
         raise HTTPException(404, 'No hospital assigned yet.')
     f = hospitals.FACILITIES[r.facility_key]
