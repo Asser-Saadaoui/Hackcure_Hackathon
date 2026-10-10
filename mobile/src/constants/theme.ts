@@ -8,7 +8,6 @@ export const Colors = {
   background: '#F9FAFB',     // hsl(210 20% 98%)
   foreground: '#222C39',     // hsl(215 25% 18%)
   card: '#FFFFFF',
-  brandBg: '#E6F3F5',         // Sahhanito brand tint (icon, splash, mascot tiles)
   primary: '#177082',        // hsl(190 70% 30%) deep teal
   primaryFg: '#FFFFFF',
   secondary: '#EDF0F3',      // hsl(210 20% 94%)

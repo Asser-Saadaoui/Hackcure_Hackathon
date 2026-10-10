@@ -8,6 +8,8 @@ import { AppText } from '@/components/app-text';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { Chip } from '@/components/chip';
+import { Hassanito } from '@/components/hassanito';
+import { PrototypeNotice } from '@/components/prototype-notice';
 import { Colors, Fonts, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { NEIGHBORHOODS } from '@/constants/neighborhoods';
 import { useI18n } from '@/i18n';
@@ -108,6 +110,8 @@ export default function EmergencyScreen() {
         </View>
 
         <View style={styles.column}>
+          <PrototypeNotice />
+          <Hassanito compact state="alert" />
           {/* 2. Nearest emergency department */}
           <Card>
             <View style={styles.cardHead}>

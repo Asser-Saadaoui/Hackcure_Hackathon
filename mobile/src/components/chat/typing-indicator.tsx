@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Animated, Platform, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/app-text';
@@ -13,9 +13,9 @@ export function TypingIndicator({ label, slowLabel, slowAfterMs = 4000 }: { labe
     const timer = setTimeout(() => setSlow(true), slowAfterMs);
     return () => clearTimeout(timer);
   }, [slowAfterMs]);
-  const d1 = useRef(new Animated.Value(0.3)).current;
-  const d2 = useRef(new Animated.Value(0.3)).current;
-  const d3 = useRef(new Animated.Value(0.3)).current;
+  const [d1] = useState(() => new Animated.Value(0.3));
+  const [d2] = useState(() => new Animated.Value(0.3));
+  const [d3] = useState(() => new Animated.Value(0.3));
 
   useEffect(() => {
     const anims = [d1, d2, d3].map((d, i) =>
@@ -30,7 +30,7 @@ export function TypingIndicator({ label, slowLabel, slowAfterMs = 4000 }: { labe
 
   return (
     <View style={styles.row} accessibilityLiveRegion="polite" accessibilityLabel={slow && slowLabel ? slowLabel : label}>
-      <AssistantAvatar pose="thinking" />
+      <AssistantAvatar />
       <View style={styles.bubble}>
         {[d1, d2, d3].map((d, i) => <Animated.View key={i} style={[styles.dot, { opacity: d }]} />)}
       </View>

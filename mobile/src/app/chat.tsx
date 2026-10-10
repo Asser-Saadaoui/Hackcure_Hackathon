@@ -11,6 +11,8 @@ import { AnswerButtons } from '@/components/chat/answer-buttons';
 import { ChatBubble } from '@/components/chat/chat-bubble';
 import { ChatInput } from '@/components/chat/chat-input';
 import { TypingIndicator } from '@/components/chat/typing-indicator';
+import { Hassanito } from '@/components/hassanito';
+import { PrototypeNotice } from '@/components/prototype-notice';
 import { Colors, Fonts, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useI18n } from '@/i18n';
 import { api } from '@/lib/api';
@@ -47,6 +49,8 @@ export default function ChatScreen() {
   const [quickReplies, setQuickReplies] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
   const [degraded, setDegraded] = useState<string | null>(null);   // last patient message, to retry
+  const [listening, setListening] = useState(false);
+  const [mascotState, setMascotState] = useState<'idle' | 'guiding' | 'alert' | 'happy'>('idle');
   const scrollRef = useRef<ScrollView>(null);
 
   // Resume the case in progress (if the backend still has it).
@@ -76,10 +80,12 @@ export default function ChatScreen() {
   const handleResult = (r: TurnResult) => {
     switch (r.kind) {
       case 'question':
+        setMascotState('guiding');
         addItem({ id: r.turn.id, role: 'ASSISTANT', text: r.turn.text, time: timeOf(r.turn.createdAt) });
         setQuickReplies(r.turn.quickReplies ?? []);
         break;
       case 'emergency':
+        setMascotState('alert');
         // Emergency wins: open the instructions right away, no extra tap.
         systemLine(t('routingEmergency'));
         router.push({ pathname: '/emergency', params: { caseId: r.caseId } });
@@ -89,6 +95,7 @@ export default function ChatScreen() {
         router.push({ pathname: '/result', params: { caseId: r.caseId } });
         break;
       case 'result':
+        setMascotState('happy');
         systemLine(t('routingResult'));
         router.push({ pathname: '/result', params: { caseId: r.caseId } });
         break;
@@ -130,6 +137,7 @@ export default function ChatScreen() {
     setItems([]);
     setQuickReplies([]);
     setDegraded(null);
+    setMascotState('idle');
   };
 
   return (
@@ -171,6 +179,8 @@ export default function ChatScreen() {
             </View>
 
             <ScrollView ref={scrollRef} style={styles.flex} contentContainerStyle={styles.messages} onContentSizeChange={scrollToEnd}>
+              <PrototypeNotice />
+              <Hassanito compact state={mascotState === 'alert' ? 'alert' : sending ? 'thinking' : listening ? 'listening' : mascotState} />
               <ChatBubble role="ASSISTANT" text={t('chatGreeting')} />
               {items.map((item) => (
                 <View key={item.id} style={styles.itemWrap}>
@@ -196,7 +206,7 @@ export default function ChatScreen() {
 
             {quickReplies.length > 0 && !sending && <AnswerButtons options={quickReplies} onPick={(q) => send(q)} />}
 
-            <ChatInput onSend={(text) => send(text)} disabled={sending} />
+            <ChatInput onSend={(text) => send(text)} disabled={sending} onActivity={setListening} />
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>

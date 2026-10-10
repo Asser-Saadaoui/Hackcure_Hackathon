@@ -6,12 +6,12 @@ import { Colors, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useI18n } from '@/i18n';
 import { startDictation, voiceSupported } from '@/lib/voice';
 
-type Props = { onSend: (text: string) => void; disabled?: boolean };
+type Props = { onSend: (text: string) => void; disabled?: boolean; onActivity?: (active: boolean) => void };
 
 const MAX_LENGTH = 1000;
 
 /** shadcn-style textarea + icon send button. Enter sends on web; Shift+Enter makes a new line. */
-export function ChatInput({ onSend, disabled }: Props) {
+export function ChatInput({ onSend, disabled, onActivity }: Props) {
   const { t, rtl, language } = useI18n();
   const [text, setText] = useState('');
   const [focused, setFocused] = useState(false);
@@ -25,8 +25,9 @@ export function ChatInput({ onSend, disabled }: Props) {
     if (listening) { stopRef.current?.(); return; }
     baseRef.current = text ? text.trimEnd() + ' ' : '';
     stopRef.current = startDictation(language, (spoken) => setText((baseRef.current + spoken).slice(0, MAX_LENGTH)),
-      () => { setListening(false); stopRef.current = null; });
+      () => { setListening(false); stopRef.current = null; onActivity?.(false); });
     setListening(Boolean(stopRef.current));
+    if (stopRef.current) onActivity?.(true);
   };
   const canSend = !disabled && text.trim().length > 0;
 
@@ -35,6 +36,7 @@ export function ChatInput({ onSend, disabled }: Props) {
     stopRef.current?.();
     onSend(text.trim());
     setText('');
+    onActivity?.(false);
   };
 
   return (
@@ -42,9 +44,9 @@ export function ChatInput({ onSend, disabled }: Props) {
       <TextInput
         style={[styles.input, focused && styles.inputFocused, { textAlign: rtl ? 'right' : 'left' }]}
         value={text}
-        onChangeText={setText}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
+        onChangeText={(value) => { setText(value); onActivity?.(value.length > 0); }}
+        onFocus={() => { setFocused(true); onActivity?.(true); }}
+        onBlur={() => { setFocused(false); onActivity?.(false); }}
         placeholder={listening ? t('voiceListening') : t('chatPlaceholder')}
         placeholderTextColor={Colors.mutedFg}
         multiline
