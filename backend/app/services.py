@@ -240,6 +240,16 @@ def assign_if_needed(db, case):
     return route_case(db, case)
 
 
+def assign_waiting(db):
+    """Cases that need a hospital but have none (every ED was full or closed when they were decided): try again."""
+    since = utcnow() - timedelta(hours=6)
+    waiting = db.scalars(select(Case).where(Case.status.in_(('EMERGENCY', 'RESULT_READY')), Case.location.is_not(None),
+                                            Case.created_at >= since)).all()
+    for case in waiting:
+        if needs_hospital(case) and not case.referrals:
+            assign_if_needed(db, case)
+
+
 def alternatives(db, case):
     """Hospitals the case could go to now (best first), excluding every hospital already tried."""
     tried = {r.facility_key for r in case.referrals}
