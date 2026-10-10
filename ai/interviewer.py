@@ -204,7 +204,7 @@ class Interviewer:
             raise ValueError('no JSON in LLM reply')
         return json.loads(match.group())
 
-    def _complete(self, system, user):
+    def _complete(self, system, user, budget_s=None):
         """Try each model in order, skipping models in cooldown. A quota error (429) puts that model in
         cooldown for as long as the provider asks and moves on at once; no retry delays for the patient."""
         import httpx
@@ -214,7 +214,7 @@ class Interviewer:
         if not candidates:
             raise LLMUnavailable('every model is out of quota')
         last = None
-        deadline = time.time() + BUDGET_S
+        deadline = time.time() + (budget_s or BUDGET_S)
         for model in candidates:
             remaining = deadline - time.time()
             if remaining < 1.0:
@@ -483,7 +483,7 @@ def template_explanation(level, reasons, language, reported=()):
     return ' '.join(parts)
 
 
-def explain_decision(interviewer, level, reasons, history, language, reported=()):
+def explain_decision(interviewer, level, reasons, history, language, reported=(), budget_s=None):
     """Short chat message explaining the decided level. reasons: the system's own reasons, in the patient's language;
     reported: the symptoms the patient reported (labels), so the patient sees what led to the decision."""
     fallback = dict(text=template_explanation(level, reasons, language, reported), source='template')
@@ -509,7 +509,7 @@ def explain_decision(interviewer, level, reasons, history, language, reported=()
             f"Symptoms the patient reported: {', '.join(reported) if reported else '(see conversation)'}\n"
             f"Next step: {NEXT_STEP[lang][level]}")
     try:
-        content = interviewer._complete(system, user)
+        content = interviewer._complete(system, user, budget_s=budget_s)
         msg = (json.loads(re.search(r'\{.*\}', content, re.S).group()).get('message') or '').strip()
     except Exception:
         return fallback

@@ -205,12 +205,11 @@ def _decision_reply(state, rules, decided, language, interviewer):
     if not reasons and decided.get('rationale_all'):
         reasons = [decided['rationale_all'].get(lang, decided['rationale_all']['fr']).rstrip('.')]
     reported = _reported(state, lang)
-    if decided['level'] == 'EMERGENCY':
-        # Emergencies never wait for the LLM: the reviewed template is immediate and always says "call 190".
-        out = dict(text=interviewer_module.template_explanation('EMERGENCY', reasons, lang, reported), source='template')
-    else:
-        out = interviewer_module.explain_decision(interviewer or default_interviewer(), decided['level'], reasons,
-                                                  _history(state), lang, reported)
+    # The LLM explains every decision, emergencies included; for an emergency it gets a short time budget and the
+    # reviewed template (which always says "call 190") is used if it is slower or its text fails the checks.
+    out = interviewer_module.explain_decision(interviewer or default_interviewer(), decided['level'], reasons,
+                                              _history(state), lang, reported,
+                                              budget_s=5.0 if decided['level'] == 'EMERGENCY' else None)
     return dict(text=out['text'], quick_replies=[], source=out['source'], kind='decision', level=decided['level'],
                 explain=_patient_explain(state, decided, reasons, lang))
 
