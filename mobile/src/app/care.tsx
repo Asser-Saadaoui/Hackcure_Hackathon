@@ -1,9 +1,9 @@
-import { router, useLocalSearchParams, type Href } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams, type Href } from 'expo-router';
 import {
-  Ambulance, Check, ChevronLeft, ChevronRight, FileText, Footprints, Hospital, MapPinned,
-  MessageSquare, Navigation, Phone, type LucideIcon,
+  Ambulance, Bell, Check, ChevronLeft, ChevronRight, FileText, Footprints, Hospital, MapPinned,
+  MessageSquare, Navigation, Phone, ShieldAlert, type LucideIcon,
 } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/app-text';
@@ -11,10 +11,15 @@ import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { RiskBadge } from '@/components/risk-badge';
 import { Screen } from '@/components/screen';
+import { Hassanito } from '@/components/hassanito';
+import { PrototypeNotice } from '@/components/prototype-notice';
 import { Colors, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useI18n } from '@/i18n';
 import type { StringKey } from '@/i18n/strings';
 import { api } from '@/lib/api';
+import { attention } from '@/lib/attention';
+import { unreadCount } from '@/lib/chat-seen';
+import { getNotificationStatus, requestNotifications, type NotificationStatus } from '@/lib/notifications';
 import { getJSON, Keys } from '@/lib/storage';
 import type { CaseDetail, Referral } from '@/lib/types';
 
@@ -46,6 +51,13 @@ export default function StatusScreen() {
   const [c, setCase] = useState<CaseDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [arrived, setArrived] = useState(false);
+  const [unread, setUnread] = useState(0);
+  const [toast, setToast] = useState<string | null>(null);
+  const [eta, setEta] = useState<number | null>(null);
+  const [escalation, setEscalation] = useState<string | null>(null);
+  const [notif, setNotif] = useState<NotificationStatus | null>(null);
+
+  useEffect(() => { getNotificationStatus().then(setNotif); }, []);
 
   // No caseId in the URL → the case in progress on this device.
   useEffect(() => {
@@ -57,12 +69,26 @@ export default function StatusScreen() {
     if (!caseId) return;
     const load = () => api.getCase(caseId).then(setCase).catch(() => setCase(null)).finally(() => setLoading(false));
     load();
-    // Live: assignment, acceptance by the ED, urgency raised…
+    // Live: assignment, acceptance by the ED, urgency raised, ED messages, ambulance position.
     return api.subscribe(caseId, (e) => {
-      if (e.type === 'referral.status') setCase((prev) => (prev ? { ...prev, referral: e.referral } : prev));
-      if (e.type === 'case.escalated') load();
+      if (e.type === 'referral.status') { setCase((prev) => (prev ? { ...prev, referral: e.referral } : prev)); attention(); }
+      if (e.type === 'case.escalated') { setEscalation(e.instruction ?? ''); attention(); load(); }
+      if (e.type === 'tracking.position') setEta(e.ambulance.etaMinutes);
+      if (e.type === 'chat.message' && e.message.sender === 'STAFF') {
+        setUnread((n) => n + 1);
+        setToast(e.message.text);
+        attention();
+      }
     });
   }, [caseId]);
+
+  // Unread ED messages, recomputed whenever this screen comes back into view.
+  useFocusEffect(useCallback(() => {
+    const id = c?.referral?.id;
+    if (!id) return;
+    api.getChat(id).then((list) => unreadCount(id, list)).then(setUnread).catch(() => {});
+    setToast(null);
+  }, [c?.referral?.id]));
 
   if (loading) {
     return <Screen><ActivityIndicator color={Colors.primary} /></Screen>;
@@ -90,6 +116,8 @@ export default function StatusScreen() {
 
   return (
     <Screen>
+      <PrototypeNotice />
+      <Hassanito compact state={c.level === 'EMERGENCY' ? 'alert' : arrived ? 'happy' : accepted ? 'guiding' : referral ? 'thinking' : 'idle'} />
       <View style={styles.head}>
         <AppText variant="title">{t('statusTitle')}</AppText>
         <View style={styles.headMeta}>
@@ -97,6 +125,29 @@ export default function StatusScreen() {
           <AppText variant="small">{t('caseCode')} · {c.referenceCode}</AppText>
         </View>
       </View>
+
+      {escalation !== null && (
+        <View style={styles.escalated} accessibilityRole="alert">
+          <ShieldAlert size={20} color="#FFFFFF" strokeWidth={2.25} />
+          <View style={styles.flex}>
+            <AppText style={styles.escalatedTitle}>{t('escalatedTitle')}</AppText>
+            {escalation ? <AppText variant="small" style={styles.escalatedText}>{escalation}</AppText> : null}
+          </View>
+          <Button label="190" variant="outline" size="sm" icon={Phone} onPress={() => call('190')} />
+        </View>
+      )}
+
+      {toast && referral && (
+        <Pressable accessibilityRole="button" style={styles.toast}
+          onPress={() => router.push({ pathname: '/ed-chat', params: { caseId: c.id, referralId: referral.id } })}>
+          <MessageSquare size={18} color={Colors.primaryFg} strokeWidth={2.25} />
+          <View style={styles.flex}>
+            <AppText variant="label" style={styles.toastTitle}>{t('newEdMessage')}</AppText>
+            <AppText variant="small" style={styles.toastText} numberOfLines={2} autoDirection>{toast}</AppText>
+          </View>
+          <AppText variant="label" style={styles.toastTitle}>{t('open')}</AppText>
+        </Pressable>
+      )}
 
       {/* Assigned hospital (automatic) + live timeline */}
       <Card>
@@ -152,6 +203,9 @@ export default function StatusScreen() {
             <View style={styles.flex}>
               <AppText variant="subtitle">{ambulance ? t('ambulanceSimulated') : t('goOnYourOwn')}</AppText>
               <AppText variant="small">{ambulance ? t('ambulanceComing') : referral.acceptNote}</AppText>
+              {ambulance && eta != null && (
+                <AppText style={styles.eta} accessibilityLiveRegion="polite">{t('etaLabel')} · ~{eta} {t('minutes')}</AppText>
+              )}
             </View>
           </View>
           <Button
@@ -167,9 +221,23 @@ export default function StatusScreen() {
         <View style={styles.tiles}>
           <Tile icon={FileText} title={t('myReport')} hint={t('myReportHint')} Chevron={Chevron}
             href={{ pathname: '/report', params: { caseId: c.id } }} />
-          <Tile icon={MessageSquare} title={t('chatWithEd')} hint={t('chatWithEdHint')} Chevron={Chevron}
+          <Tile icon={MessageSquare} title={t('chatWithEd')} hint={t('chatWithEdHint')} Chevron={Chevron} badge={unread}
             href={{ pathname: '/ed-chat', params: { caseId: c.id, referralId: referral.id } }} />
         </View>
+      )}
+
+      {/* Asked here, not at onboarding: the moment it is clearly useful. */}
+      {referral && !arrived && (notif === 'undetermined') && (
+        <Card>
+          <View style={styles.row}>
+            <View style={styles.iconTile}><Bell size={20} color={Colors.primary} strokeWidth={2.25} /></View>
+            <View style={styles.flex}>
+              <AppText variant="label">{t('notifCardTitle')}</AppText>
+              <AppText variant="small">{t('notifBody')}</AppText>
+            </View>
+          </View>
+          <Button label={t('allowNotifications')} variant="outline" icon={Bell} onPress={() => requestNotifications().then(setNotif)} />
+        </Card>
       )}
 
       {referral && (referral.edPhone
@@ -189,7 +257,7 @@ export default function StatusScreen() {
   );
 }
 
-function Tile({ icon: Icon, title, hint, href, Chevron }: { icon: LucideIcon; title: string; hint: string; href: Href; Chevron: LucideIcon }) {
+function Tile({ icon: Icon, title, hint, href, Chevron, badge = 0 }: { icon: LucideIcon; title: string; hint: string; href: Href; Chevron: LucideIcon; badge?: number }) {
   return (
     <Pressable accessibilityRole="button" onPress={() => router.push(href)} style={({ pressed }) => [styles.tile, pressed && styles.pressed]}>
       <View style={styles.iconTile}><Icon size={20} color={Colors.primary} strokeWidth={2.25} /></View>
@@ -197,6 +265,9 @@ function Tile({ icon: Icon, title, hint, href, Chevron }: { icon: LucideIcon; ti
         <AppText variant="label">{title}</AppText>
         <AppText variant="small">{hint}</AppText>
       </View>
+      {badge > 0 && (
+        <View style={styles.badge} accessibilityLabel={`${badge}`}><AppText style={styles.badgeText}>{badge > 9 ? '9+' : badge}</AppText></View>
+      )}
       <Chevron size={18} color={Colors.mutedFg} />
     </Pressable>
   );
@@ -233,4 +304,13 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.85 },
   arrived: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, padding: Spacing.md, borderRadius: Radius.md, backgroundColor: '#DCFCE7' },
   arrivedText: { color: '#166534', flex: 1 },
+  badge: { minWidth: 22, height: 22, paddingHorizontal: 6, borderRadius: 11, backgroundColor: Colors.destructive, alignItems: 'center', justifyContent: 'center' },
+  badgeText: { color: '#FFFFFF', fontSize: 12, fontFamily: Fonts.semibold },
+  toast: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, padding: Spacing.md, borderRadius: Radius.lg, backgroundColor: Colors.primary },
+  toastTitle: { color: Colors.primaryFg },
+  toastText: { color: '#D7EEF2' },
+  escalated: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, padding: Spacing.md, borderRadius: Radius.lg, backgroundColor: Colors.destructive },
+  escalatedTitle: { color: '#FFFFFF', fontFamily: Fonts.semibold },
+  escalatedText: { color: '#FEE2E2' },
+  eta: { marginTop: 2, fontFamily: Fonts.semibold, color: Colors.accentFg },
 });

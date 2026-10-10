@@ -1,5 +1,5 @@
 import { Hospital } from 'lucide-react-native';
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { Animated, Platform, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/app-text';
@@ -7,9 +7,9 @@ import { Colors, Radius, Shadow, Spacing } from '@/constants/theme';
 
 /** "The ED is typing…": hospital tile + pulsing dots. */
 export function EdTyping({ label }: { label: string }) {
-  const d1 = useRef(new Animated.Value(0.3)).current;
-  const d2 = useRef(new Animated.Value(0.3)).current;
-  const d3 = useRef(new Animated.Value(0.3)).current;
+  const [d1] = useState(() => new Animated.Value(0.3));
+  const [d2] = useState(() => new Animated.Value(0.3));
+  const [d3] = useState(() => new Animated.Value(0.3));
 
   useEffect(() => {
     const native = Platform.OS !== 'web';

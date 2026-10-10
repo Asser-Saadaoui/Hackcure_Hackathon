@@ -8,13 +8,12 @@ export const Colors = {
   background: '#F9FAFB',     // hsl(210 20% 98%)
   foreground: '#222C39',     // hsl(215 25% 18%)
   card: '#FFFFFF',
-  brandBg: '#E6F3F5',         // Sahhanito brand tint (icon, splash, mascot tiles)
   primary: '#177082',        // hsl(190 70% 30%) deep teal
   primaryFg: '#FFFFFF',
   secondary: '#EDF0F3',      // hsl(210 20% 94%)
   secondaryFg: '#344256',
   muted: '#F3F5F7',
-  mutedFg: '#65758B',        // hsl(215 16% 47%)
+  mutedFg: '#56667C',        // darkened from #65758B for ≥ 4.5:1 contrast on the slate background        // hsl(215 16% 47%)
   accent: '#E7F6F9',         // hsl(190 60% 94%) light teal
   accentFg: '#125A68',
   destructive: '#C52020',    // hsl(0 72% 45%)

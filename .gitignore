@@ -30,3 +30,4 @@ web-build/
 # Local databases
 *.db
 *.db.bak-*
+.vite/

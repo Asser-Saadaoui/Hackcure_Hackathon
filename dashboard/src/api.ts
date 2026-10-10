@@ -53,6 +53,8 @@ export const api = {
   chat: (id: string, text: string, kind: "TEXT" | "QUESTION" | "INSTRUCTION", options?: string[]) =>
     call<ChatMessage>("POST", `/staff/referrals/${id}/chat`, { text, kind, options }),
   hospital: () => call<Hospital>("GET", "/staff/hospital"),
+  savedReplies: () => call<{ replies: string[]; updatedBy: string | null }>("GET", "/staff/hospital/replies"),
+  setSavedReplies: (replies: string[]) => call<{ replies: string[]; updatedBy: string | null }>("PUT", "/staff/hospital/replies", { replies }),
   setAvailability: (body: Record<string, unknown>) => call<Hospital>("PUT", "/staff/hospital/availability", body),
   clearAvailability: () => call<Hospital>("DELETE", "/staff/hospital/availability"),
   hospitals: () => call<{ simulator: { ok: boolean }; hospitals: Hospital[] }>("GET", "/staff/hospitals"),
@@ -67,6 +69,18 @@ export async function openReportPdf(referralId: string): Promise<void> {
   if (!resp.ok) { tab?.close(); throw new ApiError(`Erreur ${resp.status}`, resp.status); }
   const url = URL.createObjectURL(await resp.blob());
   if (tab) tab.location.href = url; else window.location.href = url;
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+/** HL7 FHIR R4 document Bundle of the case, downloaded as JSON for import into the hospital's own system. */
+export async function downloadFhir(referralId: string, referenceCode: string): Promise<void> {
+  const resp = await fetch(`${BASE}/api/v1/staff/referrals/${referralId}/fhir`, { headers: { Authorization: `Bearer ${session.get() ?? ""}` } });
+  if (!resp.ok) throw new ApiError(`Erreur ${resp.status}`, resp.status);
+  const url = URL.createObjectURL(await resp.blob());
+  const link = Object.assign(document.createElement("a"), { href: url, download: `sahhanito-${referenceCode}-fhir.json` });
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 

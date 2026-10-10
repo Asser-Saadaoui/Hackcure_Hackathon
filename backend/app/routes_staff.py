@@ -12,7 +12,7 @@ from app import config, hospitals, services
 from app.db import get_db
 from app.deps import clinician, hospital_staff, staff
 from app.events import sse
-from app.models import AvailabilityOverride, Case, Referral, StaffSession, StaffUser
+from app.models import AvailabilityOverride, Case, HospitalSettings, Referral, StaffSession, StaffUser
 from app.security import new_token, token_hash, verify_password
 
 router = APIRouter(prefix='/api/v1/staff')
@@ -143,6 +143,14 @@ def report_pdf(referral_id: str, user: StaffUser = Depends(hospital_staff), db: 
     return services.report_pdf(db, db.get(Case, r.case_id), 'staff', referral=r)
 
 
+@router.get('/referrals/{referral_id}/fhir')
+def fhir_export(referral_id: str, user: StaffUser = Depends(hospital_staff), db: Session = Depends(get_db)):
+    r = my_referral(db, user, referral_id)
+    services.audit(db, user.email, 'export.fhir', r.case_id)
+    db.commit()
+    return services.fhir_response(db.get(Case, r.case_id), r)
+
+
 @router.get('/referrals/{referral_id}/alternatives')
 def alternatives(referral_id: str, user: StaffUser = Depends(hospital_staff), db: Session = Depends(get_db)):
     r = my_referral(db, user, referral_id)
@@ -223,6 +231,37 @@ def clear_availability(user: StaffUser = Depends(hospital_staff), db: Session = 
     return hospital_view(db, user.hospital_key)
 
 
+DEFAULT_REPLIES = [
+    "Ne mangez pas et ne buvez pas avant d'être examiné.",
+    "Présentez-vous à l'accueil des urgences avec ce code de dossier.",
+    "Restez allongé et ne restez pas seul.",
+    "Apportez vos médicaments ou leur liste.",
+    "Si votre état s'aggrave, appelez le 190 immédiatement.",
+]
+
+
+class RepliesIn(BaseModel):
+    replies: list[str] = Field(max_length=30)
+
+
+@router.get('/hospital/replies')
+def saved_replies(user: StaffUser = Depends(hospital_staff), db: Session = Depends(get_db)):
+    s = db.get(HospitalSettings, user.hospital_key)
+    return dict(replies=s.saved_replies if s and s.saved_replies is not None else DEFAULT_REPLIES,
+                updatedBy=s.updated_by if s else None)
+
+
+@router.put('/hospital/replies')
+def set_saved_replies(body: RepliesIn, user: StaffUser = Depends(hospital_staff), db: Session = Depends(get_db)):
+    replies = [r.strip()[:500] for r in body.replies if r.strip()]
+    s = db.get(HospitalSettings, user.hospital_key) or HospitalSettings(hospital_key=user.hospital_key)
+    s.saved_replies, s.updated_by, s.updated_at = replies, user.name, datetime.now(timezone.utc)
+    db.merge(s)
+    services.audit(db, user.email, 'settings.saved_replies', None, hospital=user.hospital_key, count=len(replies))
+    db.commit()
+    return dict(replies=replies, updatedBy=user.name)
+
+
 @router.get('/hospitals')
 def all_hospitals(user: StaffUser = Depends(staff), db: Session = Depends(get_db)):
     return dict(simulator=hospitals.sim_status(), hospitals=[hospital_view(db, k) for k in hospitals.FACILITIES])
@@ -234,7 +273,7 @@ def all_hospitals(user: StaffUser = Depends(staff), db: Session = Depends(get_db
 def reviews(user: StaffUser = Depends(clinician), db: Session = Depends(get_db)):
     cases = db.scalars(select(Case).where(Case.status == 'UNDER_REVIEW').order_by(Case.created_at))
     return [dict(caseId=c.id, referenceCode=c.reference_code, createdAt=services.iso(c.created_at), language=c.language,
-                 chiefComplaint=next((x.text for x in c.turns if x.role == 'PATIENT'), ''), decision=c.decision,
+                 chiefComplaint=services.chief_complaint(c), decision=c.decision,
                  assessment=c.assessment, transcript=[services.turn_view(x) for x in c.turns],
                  report=services.structured_report(c)) for c in cases]
 

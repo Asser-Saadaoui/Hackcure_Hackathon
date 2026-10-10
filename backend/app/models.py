@@ -134,6 +134,15 @@ class AvailabilityOverride(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
+class HospitalSettings(Base):
+    """Per-hospital settings shared by the whole ED team (saved chat replies)."""
+    __tablename__ = 'hospital_settings'
+    hospital_key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    saved_replies: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    updated_by: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
 class AuditLog(Base):
     __tablename__ = 'audit_log'
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)

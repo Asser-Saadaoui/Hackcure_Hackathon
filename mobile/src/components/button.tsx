@@ -30,6 +30,9 @@ export function Button({ label, variant = 'default', size = 'default', icon: Ico
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={rest.accessibilityLabel ?? label}
+      accessibilityState={{ disabled: !!disabled }}
+      hitSlop={size === 'sm' ? 6 : 2}
       disabled={disabled}
       style={(state) => [
         styles.base,

@@ -19,7 +19,7 @@ export function Chip({ label, selected, onPress, role = 'button' }: Props) {
 
 const styles = StyleSheet.create({
   chip: {
-    minHeight: 40,
+    minHeight: 44,
     paddingHorizontal: Spacing.lg,
     borderRadius: Radius.pill,
     borderWidth: 1,

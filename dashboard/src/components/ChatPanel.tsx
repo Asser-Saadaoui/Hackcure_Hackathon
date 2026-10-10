@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { HelpCircle, Send, TriangleAlert } from "lucide-react";
+import { BookmarkPlus, HelpCircle, Send, Settings2, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/api";
 import { time } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -19,6 +20,20 @@ export function ChatPanel({ referralId, messages, disabled, onSent }: { referral
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const end = useRef<HTMLDivElement>(null);
+  const [replies, setReplies] = useState<string[]>([]);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  useEffect(() => { api.savedReplies().then((r) => setReplies(r.replies)).catch(() => {}); }, []);
+
+  async function saveReplies() {
+    try {
+      const r = await api.setSavedReplies(draft.split("\n").map((x) => x.trim()).filter(Boolean));
+      setReplies(r.replies);
+      setEditing(false);
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
   useEffect(() => {
     end.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length]);
@@ -71,6 +86,29 @@ export function ChatPanel({ referralId, messages, disabled, onSent }: { referral
       </div>
       {!disabled && (
         <div className="space-y-2 border-t p-3">
+          {editing ? (
+            <div className="space-y-2 rounded-lg border bg-secondary/40 p-2">
+              <p className="text-xs text-muted-foreground">Réponses enregistrées de votre service, une par ligne (partagées avec toute l'équipe).</p>
+              <Textarea rows={5} value={draft} onChange={(e) => setDraft(e.target.value)} />
+              <div className="flex gap-2">
+                <Button size="sm" onClick={saveReplies}>Enregistrer</Button>
+                <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>Annuler</Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center gap-1.5">
+              {replies.map((x) => (
+                <button key={x} disabled={busy} onClick={() => send({ text: x, kind: "INSTRUCTION" })} title="Envoyer cette consigne"
+                  className="max-w-full truncate rounded-full border border-primary/30 bg-accent/60 px-2.5 py-1 text-xs text-accent-foreground hover:bg-accent">
+                  <BookmarkPlus className="mr-1 inline h-3 w-3" />{x}
+                </button>
+              ))}
+              <button onClick={() => { setDraft(replies.join("\n")); setEditing(true); }}
+                className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs text-muted-foreground hover:text-foreground">
+                <Settings2 className="h-3 w-3" />Gérer
+              </button>
+            </div>
+          )}
           <div className="flex flex-wrap gap-1.5">
             {QUICK_QUESTIONS.map((q) => (
               <button key={q.text} disabled={busy} onClick={() => send({ text: q.text, kind: "QUESTION", options: q.options })}

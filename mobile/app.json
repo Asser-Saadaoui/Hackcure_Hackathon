@@ -4,19 +4,17 @@
     "slug": "sahhanito",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/sahhanito-icon.png",
     "scheme": "sahhanito",
     "userInterfaceStyle": "light",
     "ios": {
-      "icon": "./assets/images/icon.png",
+      "icon": "./assets/images/sahhanito-icon.png",
       "bundleIdentifier": "tn.sahhanito.app"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F3F5",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#F1FAF5",
+        "foregroundImage": "./assets/images/hassanito.png"
       },
       "predictiveBackGestureEnabled": false,
       "package": "tn.sahhanito.app",
@@ -28,20 +26,20 @@
     },
     "web": {
       "output": "single",
-      "favicon": "./assets/images/favicon.png",
+      "favicon": "./assets/images/sahhanito-icon.png",
       "name": "Sahhanito",
       "shortName": "Sahhanito",
       "themeColor": "#177082",
-      "backgroundColor": "#E6F3F5"
+      "backgroundColor": "#F1FAF5"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#E6F3F5",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200
+          "backgroundColor": "#F1FAF5",
+          "image": "./assets/images/hassanito.png",
+          "imageWidth": 112
         }
       ],
       "expo-localization",
@@ -50,7 +48,8 @@
         {
           "locationWhenInUsePermission": "Sahhanito uses your location to find the nearest hospital that can treat you."
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,

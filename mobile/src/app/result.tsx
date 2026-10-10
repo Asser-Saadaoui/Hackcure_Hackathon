@@ -12,6 +12,8 @@ import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { RiskBadge } from '@/components/risk-badge';
 import { Screen } from '@/components/screen';
+import { Hassanito } from '@/components/hassanito';
+import { PrototypeNotice } from '@/components/prototype-notice';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 import { useI18n } from '@/i18n';
 import type { StringKey } from '@/i18n/strings';
@@ -32,6 +34,24 @@ const TONES: Record<Exclude<RiskLevel, 'EMERGENCY'>, { icon: LucideIcon; bg: str
 };
 
 const SELF_CARE: StringKey[] = ['selfCare1', 'selfCare2', 'selfCare3'];
+const BRING: StringKey[] = ['bring1', 'bring2', 'bring3'];
+const COME_BACK: StringKey[] = ['lowReturn1', 'lowReturn2', 'lowReturn3'];
+const REVIEW_STEPS: StringKey[] = ['reviewStep1', 'reviewStep2', 'reviewStep3'];
+
+function NumberedList({ items, t, tone = 'accent' }: { items: StringKey[]; t: (k: StringKey) => string; tone?: 'accent' | 'warning' }) {
+  return (
+    <>
+      {items.map((key, i) => (
+        <View key={key} style={styles.step}>
+          <View style={[styles.stepNumber, tone === 'warning' && styles.stepNumberWarning]}>
+            <AppText style={[styles.stepNumberText, tone === 'warning' && styles.stepNumberTextWarning]}>{i + 1}</AppText>
+          </View>
+          <AppText style={styles.flex}>{t(key)}</AppText>
+        </View>
+      ))}
+    </>
+  );
+}
 
 export default function ResultScreen() {
   const { t, rtl } = useI18n();
@@ -93,6 +113,8 @@ export default function ResultScreen() {
 
   return (
     <Screen>
+      <PrototypeNotice />
+      <Hassanito state={level === 'LOW' ? 'happy' : level === 'UNCERTAIN' ? 'thinking' : 'guiding'} />
       <View style={styles.head}>
         <AppText variant="title">{t('resultTitle')}</AppText>
         <View style={styles.headMeta}>
@@ -116,16 +138,38 @@ export default function ResultScreen() {
         <AppText variant="subtitle">{t(tone.title)}</AppText>
         <AppText style={styles.muted}>{t(tone.body)}</AppText>
         {level === 'UNCERTAIN' && (
-          <View style={styles.waiting}>
-            <ActivityIndicator color={tone.fg} />
-            <AppText variant="small">{t('routingReview')}</AppText>
+          <View style={styles.timeline} accessibilityLiveRegion="polite">
+            {REVIEW_STEPS.map((key, i) => (
+              <View key={key} style={styles.tlRow}>
+                <View style={styles.tlRail}>
+                  <View style={[styles.tlDot, i === 0 && styles.tlDone, i === 1 && styles.tlCurrent]}>
+                    {i === 0 && <Check size={12} color="#FFFFFF" strokeWidth={3} />}
+                    {i === 1 && <ActivityIndicator size="small" color={tone.fg} />}
+                  </View>
+                  {i < REVIEW_STEPS.length - 1 && <View style={[styles.tlLine, i === 0 && styles.tlLineDone]} />}
+                </View>
+                <AppText style={[styles.tlText, i === 1 && styles.tlTextCurrent, i === 2 && styles.muted]}>{t(key)}</AppText>
+              </View>
+            ))}
+            <AppText variant="small">{t('reviewMeanwhile')}</AppText>
           </View>
         )}
       </Card>
 
+      {level === 'UNCERTAIN' && (
+        <Button label={t('worseButton')} size="lg" variant="destructive" icon={AlertTriangle} onPress={backToChat} />
+      )}
+
       {level === 'HIGH' && !c.referral && (
         <Button label={t('findHospital')} size="lg" icon={MapPin} iconRight={Arrow}
           onPress={() => router.push({ pathname: '/location', params: { caseId: c.id } })} />
+      )}
+
+      {level === 'HIGH' && (
+        <Card>
+          <AppText variant="subtitle">{t('bringTitle')}</AppText>
+          <NumberedList items={BRING} t={t} />
+        </Card>
       )}
 
       {c.referral && (
@@ -134,17 +178,16 @@ export default function ResultScreen() {
       )}
 
       {level === 'LOW' && (
-        <Card>
-          <AppText variant="subtitle">{t('selfCareTitle')}</AppText>
-          {SELF_CARE.map((key, i) => (
-            <View key={key} style={styles.step}>
-              <View style={styles.stepNumber}>
-                <AppText style={styles.stepNumberText}>{i + 1}</AppText>
-              </View>
-              <AppText style={styles.flex}>{t(key)}</AppText>
-            </View>
-          ))}
-        </Card>
+        <>
+          <Card>
+            <AppText variant="subtitle">{t('selfCareTitle')}</AppText>
+            <NumberedList items={SELF_CARE} t={t} />
+          </Card>
+          <Card style={styles.warnCard}>
+            <AppText variant="subtitle">{t('lowReturnTitle')}</AppText>
+            <NumberedList items={COME_BACK} t={t} tone="warning" />
+          </Card>
+        </>
       )}
 
       {/* Explanation + red flags */}
@@ -169,7 +212,7 @@ export default function ResultScreen() {
           <Button label={t('newConversation')} variant="ghost" onPress={newConversation} />
         </>
       )}
-      {level !== 'LOW' && (
+      {level === 'HIGH' && (
         <Button label={t('symptomsChanged')} variant="ghost" icon={MessageSquare} onPress={backToChat} />
       )}
 
@@ -191,4 +234,17 @@ const styles = StyleSheet.create({
   stepNumber: { width: 24, height: 24, borderRadius: Radius.pill, backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
   stepNumberText: { color: Colors.accentFg, fontFamily: Fonts.semibold, fontSize: 13 },
   flagText: { color: Colors.destructiveText },
+  stepNumberWarning: { backgroundColor: '#FFEDD5' },
+  stepNumberTextWarning: { color: '#C2410C' },
+  warnCard: { borderColor: '#FED7AA', backgroundColor: '#FFF7ED' },
+  timeline: { marginTop: Spacing.sm, gap: Spacing.xs },
+  tlRow: { flexDirection: 'row', gap: Spacing.md },
+  tlRail: { alignItems: 'center', width: 22 },
+  tlDot: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: Colors.input, backgroundColor: Colors.card, alignItems: 'center', justifyContent: 'center' },
+  tlDone: { backgroundColor: '#6D28D9', borderColor: '#6D28D9' },
+  tlCurrent: { borderColor: '#6D28D9' },
+  tlLine: { width: 2, flex: 1, minHeight: 12, backgroundColor: Colors.border },
+  tlLineDone: { backgroundColor: '#6D28D9' },
+  tlText: { paddingBottom: Spacing.md, lineHeight: 22 },
+  tlTextCurrent: { fontFamily: Fonts.semibold },
 });

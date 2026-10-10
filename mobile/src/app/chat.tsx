@@ -7,10 +7,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Alert } from '@/components/alert';
 import { AppText } from '@/components/app-text';
 import { Button } from '@/components/button';
-import { Chip } from '@/components/chip';
+import { AnswerButtons } from '@/components/chat/answer-buttons';
 import { ChatBubble } from '@/components/chat/chat-bubble';
 import { ChatInput } from '@/components/chat/chat-input';
 import { TypingIndicator } from '@/components/chat/typing-indicator';
+import { Hassanito } from '@/components/hassanito';
+import { PrototypeNotice } from '@/components/prototype-notice';
 import { Colors, Fonts, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useI18n } from '@/i18n';
 import { api } from '@/lib/api';
@@ -46,7 +48,9 @@ export default function ChatScreen() {
   const [items, setItems] = useState<Item[]>([]);
   const [quickReplies, setQuickReplies] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
-  const [degraded, setDegraded] = useState(false);
+  const [degraded, setDegraded] = useState<string | null>(null);   // last patient message, to retry
+  const [listening, setListening] = useState(false);
+  const [mascotState, setMascotState] = useState<'idle' | 'guiding' | 'alert' | 'happy'>('idle');
   const scrollRef = useRef<ScrollView>(null);
 
   // Resume the case in progress (if the backend still has it).
@@ -76,10 +80,12 @@ export default function ChatScreen() {
   const handleResult = (r: TurnResult) => {
     switch (r.kind) {
       case 'question':
+        setMascotState('guiding');
         addItem({ id: r.turn.id, role: 'ASSISTANT', text: r.turn.text, time: timeOf(r.turn.createdAt) });
         setQuickReplies(r.turn.quickReplies ?? []);
         break;
       case 'emergency':
+        setMascotState('alert');
         // Emergency wins: open the instructions right away, no extra tap.
         systemLine(t('routingEmergency'));
         router.push({ pathname: '/emergency', params: { caseId: r.caseId } });
@@ -89,12 +95,12 @@ export default function ChatScreen() {
         router.push({ pathname: '/result', params: { caseId: r.caseId } });
         break;
       case 'result':
+        setMascotState('happy');
         systemLine(t('routingResult'));
         router.push({ pathname: '/result', params: { caseId: r.caseId } });
         break;
       case 'degraded':
-        systemLine(r.message);
-        setDegraded(true);
+        // Shown as a clear alert with "try again" + 190 below, not as a grey chat line.
         break;
     }
   };
@@ -115,6 +121,7 @@ export default function ChatScreen() {
         setCaseId(result.caseId);
         await setJSON(Keys.currentCase, result.caseId);
       }
+      setDegraded(result.kind === 'degraded' ? text : null);
       handleResult(result);
     } catch {
       setItems((list) => list.map((i) => (i.id === id ? { ...i, failed: true } : i)));
@@ -129,7 +136,8 @@ export default function ChatScreen() {
     setCaseId(null);
     setItems([]);
     setQuickReplies([]);
-    setDegraded(false);
+    setDegraded(null);
+    setMascotState('idle');
   };
 
   return (
@@ -171,6 +179,8 @@ export default function ChatScreen() {
             </View>
 
             <ScrollView ref={scrollRef} style={styles.flex} contentContainerStyle={styles.messages} onContentSizeChange={scrollToEnd}>
+              <PrototypeNotice />
+              <Hassanito compact state={mascotState === 'alert' ? 'alert' : sending ? 'thinking' : listening ? 'listening' : mascotState} />
               <ChatBubble role="ASSISTANT" text={t('chatGreeting')} />
               {items.map((item) => (
                 <View key={item.id} style={styles.itemWrap}>
@@ -182,22 +192,21 @@ export default function ChatScreen() {
                   )}
                 </View>
               ))}
-              {sending && <TypingIndicator label={t('typing')} />}
-              {degraded && (
-                <Alert variant="destructive" icon={ShieldAlert} title={t('callNow')}
-                  action={<Button label="190" variant="destructive" icon={Phone} onPress={() => Linking.openURL('tel:190')} />}>
-                  <AppText variant="small" style={styles.alertText}>{t('aiDegradedNote')}</AppText>
+              {sending && <TypingIndicator label={t('typing')} slowLabel={t('typingLong')} />}
+              {degraded && !sending && (
+                <Alert variant="destructive" icon={ShieldAlert} title={t('aiUnavailableTitle')}>
+                  <AppText variant="small" style={styles.alertText}>{t('aiUnavailableBody')}</AppText>
+                  <View style={styles.degradedActions}>
+                    <Button label={t('call190')} variant="destructive" size="sm" icon={Phone} onPress={() => Linking.openURL('tel:190')} />
+                    <Button label={t('retryNow')} variant="outline" size="sm" onPress={() => send(degraded)} />
+                  </View>
                 </Alert>
               )}
             </ScrollView>
 
-            {quickReplies.length > 0 && !sending && (
-              <ScrollView horizontal style={styles.quickBar} contentContainerStyle={styles.quickRow} keyboardShouldPersistTaps="handled">
-                {quickReplies.map((q) => <Chip key={q} label={q} onPress={() => send(q)} />)}
-              </ScrollView>
-            )}
+            {quickReplies.length > 0 && !sending && <AnswerButtons options={quickReplies} onPick={(q) => send(q)} />}
 
-            <ChatInput onSend={(text) => send(text)} disabled={sending} />
+            <ChatInput onSend={(text) => send(text)} disabled={sending} onActivity={setListening} />
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -209,8 +218,9 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
   flex: { flex: 1 },
   column: { flex: 1, width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center' },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingHorizontal: Spacing.md },
-  headerIcon: { padding: 4 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, paddingHorizontal: Spacing.sm },
+  degradedActions: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginTop: Spacing.sm },
+  headerIcon: { padding: 10, borderRadius: 999 },   // ≥ 44 px touch target
   headerLink: { color: Colors.primary, fontFamily: Fonts.medium, fontSize: 14 },
   emergencyWrap: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.md },
   pageHead: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.lg },
@@ -219,6 +229,4 @@ const styles = StyleSheet.create({
   retry: { alignSelf: 'flex-end' },
   retryText: { color: Colors.destructive },
   alertText: { color: Colors.destructiveText },
-  quickBar: { flexGrow: 0 },
-  quickRow: { gap: 6, paddingHorizontal: Spacing.lg, paddingBottom: Spacing.md },
 });

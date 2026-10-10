@@ -1,6 +1,29 @@
+import { useEffect } from "react";
+import { CircleMarker, MapContainer, Popup, TileLayer, useMap } from "react-leaflet";
 import { EQUIPMENT } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { Hospital } from "@/types";
+
+const GRAND_TUNIS: [number, number] = [36.81, 10.17];
+
+/** Green: beds free · amber: few beds · red: full or not receiving · grey: unknown. */
+function status(h: Hospital): { color: string; label: string } {
+  const a = h.availability;
+  if (!a.accepting || a.bedsAvailable === 0) return { color: "#DC2626", label: a.accepting ? "Complet" : "Ne reçoit plus" };
+  if (a.bedsAvailable == null) return { color: "#94A3B8", label: "Inconnu" };
+  if (a.bedsAvailable < 5 || a.equipmentDown.length > 0) return { color: "#F59E0B", label: "Places limitées" };
+  return { color: "#16A34A", label: "Disponible" };
+}
+
+/** Leaflet measures its container once; recompute when the layout settles. */
+function FixSize() {
+  const map = useMap();
+  useEffect(() => {
+    const timers = [0, 200, 600].map((ms) => setTimeout(() => map.invalidateSize(), ms));
+    return () => timers.forEach(clearTimeout);
+  }, [map]);
+  return null;
+}
 
 export function NetworkView({ hospitals, simulatorOk }: { hospitals: Hospital[]; simulatorOk: boolean }) {
   return (
@@ -9,6 +32,38 @@ export function NetworkView({ hospitals, simulatorOk }: { hospitals: Hospital[];
         <h1 className="text-xl font-semibold tracking-tight">Réseau Grand Tunis</h1>
         <p className="text-sm text-muted-foreground">{simulatorOk ? "Disponibilités simulées en direct, corrigées par les équipes quand elles les saisissent." : "Simulateur indisponible : dernières valeurs connues."}</p>
       </div>
+
+      <div className="overflow-hidden rounded-xl border bg-card">
+        <MapContainer center={GRAND_TUNIS} zoom={11} scrollWheelZoom={false} className="h-[380px] w-full" attributionControl>
+          <FixSize />
+          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap" />
+          {hospitals.map((h) => {
+            const s = status(h);
+            const a = h.availability;
+            return (
+              <CircleMarker key={h.key} center={[h.lat, h.lng]} radius={9}
+                pathOptions={{ color: "#FFFFFF", weight: 2, fillColor: s.color, fillOpacity: 0.95 }}>
+                <Popup>
+                  <div className="space-y-1 text-sm">
+                    <p className="font-semibold">{h.name}</p>
+                    <p style={{ color: s.color }} className="font-medium">{s.label}</p>
+                    <p>Lits libres : {a.bedsAvailable ?? "?"}{a.bedsTotal != null && ` / ${a.bedsTotal}`} · Réa : {a.icuAvailable ?? "?"}</p>
+                    <p>Attente : {a.waitMinutes != null ? `${a.waitMinutes} min` : "?"}</p>
+                    {a.equipmentDown.length > 0 && <p>Indisponible : {a.equipmentDown.map((e) => EQUIPMENT[e] ?? e).join(", ")}</p>}
+                    <p className="text-xs text-gray-500">{a.source === "staff" ? "Saisie de l'équipe" : "Valeurs simulées"}</p>
+                  </div>
+                </Popup>
+              </CircleMarker>
+            );
+          })}
+        </MapContainer>
+        <div className="flex flex-wrap gap-4 border-t px-3 py-2 text-xs text-muted-foreground">
+          {[["#16A34A", "Disponible"], ["#F59E0B", "Places limitées"], ["#DC2626", "Complet / ne reçoit plus"], ["#94A3B8", "Inconnu"]].map(([c, l]) => (
+            <span key={l} className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: c }} />{l}</span>
+          ))}
+        </div>
+      </div>
+
       <div className="overflow-x-auto rounded-xl border bg-card">
         <table className="w-full text-sm">
           <thead className="bg-secondary/60 text-left text-xs text-muted-foreground">
@@ -19,7 +74,10 @@ export function NetworkView({ hospitals, simulatorOk }: { hospitals: Hospital[];
               const a = h.availability;
               return (
                 <tr key={h.key} className="border-t">
-                  <td className="px-3 py-2"><p className="font-medium">{h.name}</p><p className="text-xs text-muted-foreground">{h.specialties.join(" · ")}</p></td>
+                  <td className="px-3 py-2">
+                    <p className="flex items-center gap-2 font-medium"><span className="h-2.5 w-2.5 rounded-full" style={{ background: status(h).color }} />{h.name}</p>
+                    <p className="text-xs text-muted-foreground">{h.specialties.join(" · ")}</p>
+                  </td>
                   <td className={cn(a.bedsAvailable === 0 && "font-semibold text-red-700")}>{a.bedsAvailable ?? "?"}{a.bedsTotal != null && ` / ${a.bedsTotal}`}</td>
                   <td className={cn(a.icuAvailable === 0 && "text-red-700")}>{a.icuAvailable ?? "?"}{a.icuTotal != null && ` / ${a.icuTotal}`}</td>
                   <td>{a.waitMinutes != null ? `${a.waitMinutes} min` : "?"}</td>

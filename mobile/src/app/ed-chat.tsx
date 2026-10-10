@@ -13,6 +13,7 @@ import { EdTyping } from '@/components/ed-chat/ed-typing';
 import { Colors, Fonts, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useI18n } from '@/i18n';
 import { api } from '@/lib/api';
+import { markChatSeen } from '@/lib/chat-seen';
 import { getJSON, Keys } from '@/lib/storage';
 import type { ChatKind, ChatMessage } from '@/lib/types';
 
@@ -43,6 +44,11 @@ export default function EdChatScreen() {
     setMessages((list) => (list.some((x) => x.id === m.id) ? list : [...list, m]));
     scrollToEnd();
   };
+
+  // Everything shown here counts as read (the Care screen shows an unread badge otherwise).
+  useEffect(() => {
+    if (referralId && messages.length) markChatSeen(referralId, messages);
+  }, [referralId, messages]);
 
   // caseId: URL param, else the case in progress on this device.
   useEffect(() => {

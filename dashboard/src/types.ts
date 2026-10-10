@@ -14,9 +14,10 @@ export interface ReferralRow {
   id: string; caseId: string; referenceCode: string; level: Level | null; status: ReferralStatus; arrivalMode: "SELF" | "AMBULANCE" | null;
   chiefComplaint: string; pFinal: number | null; uncertainty: string | null; suggestedSpecialty: string | null; redFlags: string[];
   etaMinutes: number; distanceKm: number | null; createdAt: string; lastMessage: ChatMessage | null;
+  unread: number; patientAge: string | number | null;
 }
 
-export interface TriggeredRule { id: string; name: string; severity: "critical" | "high" | "moderate"; weight?: number; evidence?: string[] }
+export interface TriggeredRule { id: string; name: string; severity: "critical" | "high" | "moderate"; weight?: number; evidence?: string[]; rationale?: Record<string, string> }
 
 export interface Report {
   summary: string; chiefComplaint: string; timeline: { at: string; event: string }[]; positives: string[]; negatives: string[];
@@ -41,6 +42,8 @@ export interface CaseDetail {
     actions: string[];
   };
   transcript: Turn[];
+  explanation: { headline: string; points: string[]; confidence: string; confidenceNote: string };
+  patientAge: string | number | null;
   journey: { referralId: string; facilityName: string; status: ReferralStatus; statusLabel: string; reason: string | null;
     decidedBy: string | null; sentAt: string; decidedAt: string | null }[];
   report: Report;

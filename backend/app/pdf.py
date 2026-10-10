@@ -2,7 +2,7 @@
 
 Two versions from the same stored data:
   patient: summary, warning signs, what was reported, assigned hospital, recommendations, QR to the case page
-  staff:   + how the level was decided, the hospital journey, the full triage transcript and the ED chat
+  staff:   + how the level was decided, the hospital journey and the FHIR codes (no message history)
 
 Patient words in Arabic script are shaped and reordered (arabic-reshaper + python-bidi) so they render
 correctly with the embedded DejaVu font. Nothing is invented: every field comes from the case record.
@@ -45,6 +45,7 @@ base = ParagraphStyle('base', fontName='DejaVu', fontSize=9.5, leading=13.5, tex
 small = ParagraphStyle('small', parent=base, fontSize=8, leading=11, textColor=MUTED)
 h1 = ParagraphStyle('h1', parent=base, fontName='DejaVu-Bold', fontSize=16, leading=20)
 h2 = ParagraphStyle('h2', parent=base, fontName='DejaVu-Bold', fontSize=10.5, leading=14, textColor=TEAL, spaceBefore=10, spaceAfter=4)
+hospital_name = ParagraphStyle('hospital', parent=base, fontName='DejaVu-Bold', fontSize=10.5, leading=14, textColor=TEAL)
 label = ParagraphStyle('label', parent=small, fontName='DejaVu-Bold', textColor=MUTED)
 
 
@@ -88,7 +89,7 @@ def qr(link, size=26 * mm):
     return d
 
 
-def build(case, report, referral, audience='patient', staff_view=None):
+def build(case, report, referral, audience='patient', staff_view=None, fhir_summary=None):
     """report = services.report_view(case); referral = current referral or None; staff_view = services.staff_case_view."""
     buf = io.BytesIO()
     generated = datetime.now(timezone.utc).astimezone(TZ).strftime('%d/%m/%Y à %H:%M')
@@ -99,7 +100,7 @@ def build(case, report, referral, audience='patient', staff_view=None):
         canvas.saveState()
         canvas.setFont('DejaVu', 7.5)
         canvas.setFillColor(MUTED)
-        canvas.drawString(18 * mm, 10 * mm, f"Sahhanito · {report['referenceCode']} · généré le {generated} · "
+        canvas.drawString(18 * mm, 10 * mm, f"Généré par Sahhanito · {report['referenceCode']} · {generated} · "
                                             + ('version patient' if audience == 'patient' else 'version équipe soignante (confidentiel)'))
         canvas.drawRightString(A4[0] - 18 * mm, 10 * mm, f'Page {doc.page}')
         canvas.restoreState()
@@ -108,14 +109,14 @@ def build(case, report, referral, audience='patient', staff_view=None):
                             title=f"Sahhanito {report['referenceCode']}", author='Sahhanito', subject='Rapport de triage')
     story = []
 
-    # Header: logo, title, case code, QR to the case page
+    # Header: hospital name, title, case code, QR to the case page (no logo)
     head = Table([[
-        Image(str(ASSETS / 'mascot.png'), width=16 * mm, height=16 * mm),
-        [Paragraph('Rapport de triage', h1),
+        [Paragraph(txt(referral['facilityName']) if referral else 'Rapport de triage', hospital_name if referral else h1),
+         *([Paragraph('Rapport de triage · urgences', h1)] if referral else []),
          Paragraph(f"Dossier <b>{txt(report['referenceCode'])}</b> · ouvert le {local(case['createdAt'])}", base),
          Paragraph('Version patient' if audience == 'patient' else 'Version équipe soignante · confidentiel', small)],
         qr(report['caseLink']),
-    ]], colWidths=[20 * mm, 128 * mm, 28 * mm])
+    ]], colWidths=[148 * mm, 28 * mm])
     head.setStyle(TableStyle([('VALIGN', (0, 0), (-1, -1), 'MIDDLE'), ('LEFTPADDING', (0, 0), (-1, -1), 0)]))
     story += [head, Spacer(1, 4 * mm)]
 
@@ -126,7 +127,7 @@ def build(case, report, referral, audience='patient', staff_view=None):
                                 ('TOPPADDING', (0, 0), (-1, -1), 6), ('BOTTOMPADDING', (0, 0), (-1, -1), 6), ('LEFTPADDING', (0, 0), (-1, -1), 8)]))
     story.append(banner)
 
-    story.append(section('Motif de recours', [Paragraph(f'« {txt(r["chiefComplaint"])} »', base)]))
+    story.append(section('Motif de recours', [Paragraph(txt(r["chiefComplaint"]), base)]))
     if r['redFlags']:
         story.append(section("Signes d'alerte", bullets(r['redFlags'])))
     story.append(Spacer(1, 2 * mm))
@@ -170,22 +171,26 @@ def build(case, report, referral, audience='patient', staff_view=None):
                 [f"{j['facilityName']} · {j['statusLabel']} · {local(j['sentAt'])}" + (f" · {j['decidedBy']}" if j['decidedBy'] else '')
                  + (f" — {j['reason']}" if j['reason'] else '') for j in staff_view['journey']])))
 
-        transcript = [Paragraph(f"<font color='#6B7280'>{local(t['createdAt'])[-5:]}</font> <b>{'Patient' if t['role'] == 'PATIENT' else 'Assistant' if t['role'] == 'ASSISTANT' else 'Système'} :</b> {txt(t['text'])}", base)
-                      for t in staff_view['transcript']]
-        story.append(Paragraph('Conversation de triage', h2))
-        story += transcript or [Paragraph('—', small)]
 
-        chat = [m for m in staff_view['chat'] if m['sender'] != 'SYSTEM' or m['kind'] == 'RED_FLAG']
-        if chat:
-            story.append(Paragraph('Échanges avec les urgences', h2))
-            who = {'PATIENT': 'Patient', 'STAFF': 'Urgences', 'SYSTEM': 'Alerte'}
-            for m in chat:
-                name = m.get('senderName') or who[m['sender']]
-                story.append(Paragraph(f"<font color='#6B7280'>{local(m['createdAt'])[-5:]}</font> <b>{txt(name)} :</b> {txt(m['text'])}"
-                                       + (f" <font color='#6B7280'>(choix : {txt(' / '.join(m['options']))})</font>" if m.get('options') else ''), base))
+    if fhir_summary and audience == 'staff':
+        counts = ', '.join(f'{n} {k}' for k, n in fhir_summary['counts'].items())
+        rows = [[Paragraph('<b>Ressource</b>', small), Paragraph('<b>Système</b>', small), Paragraph('<b>Code</b>', small), Paragraph('<b>Libellé</b>', small)]]
+        rows += [[Paragraph(txt(res), small), Paragraph(txt(sys_), small), Paragraph(txt(code), small), Paragraph(txt(disp), small)]
+                 for res, sys_, code, disp in fhir_summary['codes']]
+        t = Table(rows, colWidths=[36 * mm, 34 * mm, 26 * mm, 78 * mm], repeatRows=1)
+        t.setStyle(TableStyle([('LINEBELOW', (0, 0), (-1, 0), 0.6, TEAL), ('LINEBELOW', (0, 1), (-1, -2), 0.3, BORDER),
+                               ('VALIGN', (0, 0), (-1, -1), 'TOP'), ('LEFTPADDING', (0, 0), (-1, -1), 2)]))
+        story.append(section('Données structurées HL7 FHIR R4', [
+            Paragraph(f"Bundle de type <b>document</b> · identifiant <font face='DejaVu'>{txt(fhir_summary['id'])}</font>", base),
+            Paragraph(f"Composition LOINC 34111-5 « Emergency department Note » · ressources : {txt(counts)}", base),
+            Paragraph("Codes : SNOMED CT (symptômes, antécédents, signes d'alerte), LOINC (document, sections, triage), "
+                      "HL7 v3 ActCode / ActPriority (rencontre urgente, priorité). Export JSON disponible depuis le tableau de bord.", small),
+            Spacer(1, 2 * mm), t]))
 
     story += [Spacer(1, 6 * mm), Paragraph(txt(r['disclaimer']), small),
               Paragraph(f"Dossier en ligne : {txt(report['caseLink'])}", small)]
+    if fhir_summary:
+        story.append(Paragraph(f"Document structuré HL7 FHIR R4 (Composition LOINC 34111-5) · identifiant {txt(fhir_summary['id'])}", small))
     doc.build(story, onFirstPage=frame, onLaterPages=frame)
     return buf.getvalue()
 
