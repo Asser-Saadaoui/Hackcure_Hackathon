@@ -524,5 +524,8 @@
     "bytes": 1157129714,
     "sha256": "57af7f3d8d72a3ca4e5619c247344b4b5ee362a5ebcf307c0634d67b65e721c0",
     "git_included": false
-  }
+  },
+  "software_tests": 93,
+  "portable_integration_tests": 18,
+  "final_contract_review": "Added regression guards for same-turn known condition plus ambiguous complaint, and old routine context plus new unrecognized input."
 }

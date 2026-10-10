@@ -88,6 +88,19 @@ class HybridContracts(unittest.TestCase):
         self.assertEqual(b['ml']['status'],'insufficient_input')
         self.assertIsNone(b['ml']['prediction'])
 
+    def test_known_condition_does_not_mask_ambiguous_current_complaint(self):
+        r=process_turn(None,'3andi sokkor ama taw 3andi 7aja ghriba fi batni')
+        self.assertEqual(r['ml']['status'],'insufficient_input')
+        self.assertIsNone(r['ml']['prediction'])
+        self.assertIsNotNone(r['next_question'])
+        self.assertEqual(fact(r['patient_state'],'diabetes','condition')['status'],'confirmed')
+
+    def test_old_routine_context_does_not_mask_new_unknown_input(self):
+        a=process_turn(None,'I have diabetes and need a routine prescription refill')
+        b=process_turn(a['patient_state'],'xyz unfamiliar complaint')
+        self.assertEqual(b['ml']['status'],'insufficient_input')
+        self.assertIsNone(b['ml']['emergency_score'])
+
     def test_critical_does_not_call_either_model(self):
         from unittest.mock import patch
         class FailingSemantic:

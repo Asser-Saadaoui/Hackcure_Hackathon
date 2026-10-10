@@ -505,8 +505,14 @@ def update_patient_state(state, answer, question=None, field=None):
                                understanding_status='recognized_facts_with_limited_vocabulary' if recognized else 'no_clinical_fact_recognized')
     primary=any(f['kind'] in ('symptom','condition','medication','vital') and f['experiencer']==updated['patient_experiencer']
                 and any(e.get('turn_id')==turn_id and e.get('source')=='answer' for e in f['evidence']) for f in updated['facts'])
-    routine=any(f['kind']=='context' and f['status']=='confirmed' and f['name'] in ('routine','planned_care','preventive_care','general_education','chronic_care') for f in updated['facts'])
-    updated['nlp_requires_clarification']=not primary and field is None and not routine
+    routine=any(f['kind']=='context' and f['status']=='confirmed' and f['name'] in ('routine','planned_care','preventive_care','general_education','chronic_care')
+                and any(e.get('turn_id')==turn_id and e.get('source')=='answer' for e in f['evidence']) for f in updated['facts'])
+    # Explicit ambiguous complaints cannot be explained by a known condition or
+    # a routine context from another turn. This recognizes ambiguity, not pain.
+    from multilingual_nlp import fold
+    folded,_=fold(answer)
+    ambiguous=bool(re.search(r'\b(?:7aja\s*ghriba|something\s*(?:strange|weird|wrong))\b|حاجة\s*غريبة',folded,re.I))
+    updated['nlp_requires_clarification']=field is None and (ambiguous or not primary and not routine)
     for item in updated['unresolved_answers']:
         if item['turn_id']==turn_id:item.update(answer=answer,question=question)
     from clinical_state import facts_to_info
@@ -532,7 +538,7 @@ def add_semantic_candidates(state,answer,semantic):
         updated['facts'].append(f)
     updated['turns'][-1]['semantic_metadata']=info['semantic_metadata']
     # An unfamiliar new complaint cannot be scored using only old known facts.
-    if additions and not local:updated['nlp_requires_clarification']=True
+    if additions:updated['nlp_requires_clarification']=True
     updated.update({k:v for k,v in facts_to_info(updated['facts'],target).items() if k not in ('facts','schema_version','patient_experiencer')})
     return updated
 
