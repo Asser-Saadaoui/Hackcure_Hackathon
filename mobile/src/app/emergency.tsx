@@ -8,11 +8,13 @@ import { AppText } from '@/components/app-text';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { Chip } from '@/components/chip';
+import { Hassanito } from '@/components/hassanito';
+import { PrototypeNotice } from '@/components/prototype-notice';
 import { Colors, Fonts, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { NEIGHBORHOODS } from '@/constants/neighborhoods';
 import { useI18n } from '@/i18n';
 import type { StringKey } from '@/i18n/strings';
-import { api } from '@/lib/api';
+import { api, API_MODE } from '@/lib/api';
 import { locate } from '@/lib/location';
 import type { Referral } from '@/lib/types';
 
@@ -38,7 +40,7 @@ const directions = (lat: number, lng: number) => Linking.openURL(`https://www.go
 export default function EmergencyScreen() {
   const { t, rtl } = useI18n();
   const { caseId } = useLocalSearchParams<{ caseId?: string }>();
-  const [ed, setEd] = useState<EdState>({ kind: 'locating' });
+  const [ed, setEd] = useState<EdState>({ kind: API_MODE === 'mock' && caseId ? 'locating' : 'needLocation' });
   const [referenceCode, setReferenceCode] = useState<string | null>(null);
 
   const sendLocation = useCallback(async (location: Parameters<typeof api.setLocation>[1]) => {
@@ -59,7 +61,7 @@ export default function EmergencyScreen() {
   }, [sendLocation]);
 
   useEffect(() => {
-    if (!caseId) { setEd({ kind: 'needLocation' }); return; }
+    if (API_MODE !== 'mock' || !caseId) return;
 
     // Live updates: referral created by the backend, then accepted by the hospital.
     const unsubscribe = api.subscribe(caseId, (e) => {
@@ -95,8 +97,10 @@ export default function EmergencyScreen() {
         </View>
 
         <View style={styles.column}>
+          <PrototypeNotice />
+          <Hassanito compact state="alert" />
           {/* 2. Nearest emergency department */}
-          <Card>
+          {API_MODE === 'mock' && <Card>
             <View style={styles.cardHead}>
               <Hospital size={18} color={Colors.primary} strokeWidth={2.25} />
               <AppText variant="subtitle">{t('nearestEd')}</AppText>
@@ -151,7 +155,7 @@ export default function EmergencyScreen() {
                 </View>
               </View>
             )}
-          </Card>
+          </Card>}
 
           {/* 3. First aid while waiting — bundled, works offline */}
           <Card>

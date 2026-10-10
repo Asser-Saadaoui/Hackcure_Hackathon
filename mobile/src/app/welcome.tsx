@@ -9,10 +9,12 @@ import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { Chip } from '@/components/chip';
 import { Screen } from '@/components/screen';
+import { Hassanito } from '@/components/hassanito';
+import { PrototypeNotice } from '@/components/prototype-notice';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 import { useI18n } from '@/i18n';
 import { LANGUAGES } from '@/i18n/strings';
-import { api } from '@/lib/api';
+import { api, API_MODE } from '@/lib/api';
 import { requestNotifications, type NotificationStatus } from '@/lib/notifications';
 import { Keys, setJSON } from '@/lib/storage';
 
@@ -62,6 +64,8 @@ export default function WelcomeScreen() {
         <AppText variant="title">{t('welcomeTitle')}</AppText>
         <AppText style={styles.lead}>{t('tagline')}</AppText>
       </View>
+      <Hassanito state={phase === 'starting' ? 'thinking' : 'idle'} />
+      <PrototypeNotice />
 
       {phase === 'consent' && (
         <>
@@ -76,7 +80,10 @@ export default function WelcomeScreen() {
 
           <Card>
             <AppText variant="subtitle">{t('consentTitle')}</AppText>
-            <AppText style={styles.muted}>{t('consentBody')}</AppText>
+            <AppText style={styles.muted}>{API_MODE === 'mock' ? t('consentBody') : language === 'en'
+              ? 'This local prototype processes your messages on this computer. It does not send reports to hospitals or connect you to a doctor. Use fictional examples for testing. It is not a diagnosis.'
+              : language === 'fr' ? 'Ce prototype local traite vos messages sur cet ordinateur. Aucun rapport envoyé à un hôpital ni médecin connecté. Utilisez des exemples fictifs. Ce n’est pas un diagnostic.'
+                : 'النموذج المحلي يفهم رسائلك على الكمبيوتر هذا. ما يبعثش تقارير للمستشفيات وما يوصلكش بطبيب. استعمل أمثلة خيالية للتجربة. موش تشخيص.'}</AppText>
           </Card>
 
           <Button label={t('agreeContinue')} size="lg" iconRight={ArrowRight} onPress={() => setPhase('notifications')} />

@@ -10,6 +10,8 @@ import { Card } from '@/components/card';
 import { Chip } from '@/components/chip';
 import { LocationMap } from '@/components/location/location-map';
 import { Screen } from '@/components/screen';
+import { Hassanito } from '@/components/hassanito';
+import { PrototypeNotice } from '@/components/prototype-notice';
 import { NEIGHBORHOODS } from '@/constants/neighborhoods';
 import { Colors, Spacing } from '@/constants/theme';
 import { useI18n } from '@/i18n';
@@ -32,7 +34,7 @@ export default function LocationScreen() {
   const { t } = useI18n();
   const params = useLocalSearchParams<{ caseId?: string }>();
   const [caseId, setCaseId] = useState<string | null>(params.caseId ?? null);
-  const [phase, setPhase] = useState<Phase>('locating');
+  const [phase, setPhase] = useState<Phase>('ready');
   const [denied, setDenied] = useState(false);
   const [loc, setLoc] = useState<CaseLocation>({ lat: DEFAULT.lat, lng: DEFAULT.lng, source: 'MANUAL', address: DEFAULT.name });
   const done = useRef(false);
@@ -54,7 +56,7 @@ export default function LocationScreen() {
     setPhase('ready');
   }, []);
 
-  useEffect(() => { findMe(); }, [findMe]);
+  // Request location only after the patient taps the location button.
 
   // Hospital assigned (live event) → status screen.
   useEffect(() => {
@@ -96,6 +98,8 @@ export default function LocationScreen() {
 
   return (
     <Screen>
+      <PrototypeNotice />
+      <Hassanito compact state={phase === 'assigning' ? 'thinking' : 'guiding'} />
       <View style={styles.head}>
         <AppText variant="title">{t('locationTitle')}</AppText>
         <AppText style={styles.muted}>{t('locationHint')}</AppText>

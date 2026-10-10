@@ -11,6 +11,8 @@ import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { RiskBadge } from '@/components/risk-badge';
 import { Screen } from '@/components/screen';
+import { Hassanito } from '@/components/hassanito';
+import { PrototypeNotice } from '@/components/prototype-notice';
 import { Colors, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useI18n } from '@/i18n';
 import type { StringKey } from '@/i18n/strings';
@@ -90,6 +92,8 @@ export default function StatusScreen() {
 
   return (
     <Screen>
+      <PrototypeNotice />
+      <Hassanito compact state={c.level === 'EMERGENCY' ? 'alert' : accepted ? 'guiding' : arrived ? 'happy' : 'idle'} />
       <View style={styles.head}>
         <AppText variant="title">{t('statusTitle')}</AppText>
         <View style={styles.headMeta}>

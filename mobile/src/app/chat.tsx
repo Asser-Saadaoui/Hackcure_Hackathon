@@ -11,9 +11,11 @@ import { Chip } from '@/components/chip';
 import { ChatBubble } from '@/components/chat/chat-bubble';
 import { ChatInput } from '@/components/chat/chat-input';
 import { TypingIndicator } from '@/components/chat/typing-indicator';
+import { Hassanito } from '@/components/hassanito';
+import { PrototypeNotice } from '@/components/prototype-notice';
 import { Colors, Fonts, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useI18n } from '@/i18n';
-import { api } from '@/lib/api';
+import { api, API_MODE } from '@/lib/api';
 import { getJSON, Keys, remove, setJSON } from '@/lib/storage';
 import type { Turn, TurnResult } from '@/lib/types';
 
@@ -47,6 +49,8 @@ export default function ChatScreen() {
   const [quickReplies, setQuickReplies] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
   const [degraded, setDegraded] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [mascotState, setMascotState] = useState<'idle' | 'guiding' | 'alert' | 'happy'>('idle');
   const scrollRef = useRef<ScrollView>(null);
 
   // Resume the case in progress (if the backend still has it).
@@ -76,19 +80,22 @@ export default function ChatScreen() {
   const handleResult = (r: TurnResult) => {
     switch (r.kind) {
       case 'question':
+        setMascotState('guiding');
         addItem({ id: r.turn.id, role: 'ASSISTANT', text: r.turn.text, time: timeOf(r.turn.createdAt) });
         setQuickReplies(r.turn.quickReplies ?? []);
         break;
       case 'emergency':
+        setMascotState('alert');
         // Emergency wins: open the instructions right away, no extra tap.
         systemLine(t('routingEmergency'));
         router.push({ pathname: '/emergency', params: { caseId: r.caseId } });
         break;
       case 'under_review':
-        systemLine(t('routingReview'));
+        systemLine(API_MODE === 'mock' ? t('routingReview') : language === 'en' ? 'Opening the prototype assessment.' : language === 'fr' ? 'Ouverture de l’évaluation du prototype.' : 'باش نوريك تقييم النموذج التجريبي.');
         router.push({ pathname: '/result', params: { caseId: r.caseId } });
         break;
       case 'result':
+        setMascotState('happy');
         systemLine(t('routingResult'));
         router.push({ pathname: '/result', params: { caseId: r.caseId } });
         break;
@@ -117,6 +124,7 @@ export default function ChatScreen() {
       }
       handleResult(result);
     } catch {
+      setDegraded(true);
       setItems((list) => list.map((i) => (i.id === id ? { ...i, failed: true } : i)));
     } finally {
       setSending(false);
@@ -130,6 +138,7 @@ export default function ChatScreen() {
     setItems([]);
     setQuickReplies([]);
     setDegraded(false);
+    setMascotState('idle');
   };
 
   return (
@@ -171,7 +180,9 @@ export default function ChatScreen() {
             </View>
 
             <ScrollView ref={scrollRef} style={styles.flex} contentContainerStyle={styles.messages} onContentSizeChange={scrollToEnd}>
-              <ChatBubble role="ASSISTANT" text={t('chatGreeting')} />
+              <PrototypeNotice />
+              <Hassanito compact state={mascotState === 'alert' ? 'alert' : sending ? 'thinking' : listening ? 'listening' : mascotState} />
+              <ChatBubble role="ASSISTANT" text={API_MODE === 'mock' ? t('chatGreeting') : language === 'en' ? 'Hello. Describe how you feel in English, Arabic-script Darija or Arabizi. I will ask questions to clarify your symptoms.' : language === 'fr' ? 'Le prototype accepte anglais, darija et Arabizi. Choisissez une de ces langues pour décrire vos symptômes.' : 'عسلامة. احكيلي شنوّة تحس بالدارجة، بالعربيزي ولا بالإنقليزية. باش نسألك باش نفهم الأعراض.'} />
               {items.map((item) => (
                 <View key={item.id} style={styles.itemWrap}>
                   <ChatBubble role={item.role} text={item.text} time={item.time} failed={item.failed} />
@@ -197,7 +208,7 @@ export default function ChatScreen() {
               </ScrollView>
             )}
 
-            <ChatInput onSend={(text) => send(text)} disabled={sending} />
+            <ChatInput onSend={(text) => send(text)} disabled={sending} onActivity={setListening} />
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>

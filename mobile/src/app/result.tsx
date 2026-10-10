@@ -12,10 +12,12 @@ import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { RiskBadge } from '@/components/risk-badge';
 import { Screen } from '@/components/screen';
+import { Hassanito } from '@/components/hassanito';
+import { PrototypeNotice } from '@/components/prototype-notice';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 import { useI18n } from '@/i18n';
 import type { StringKey } from '@/i18n/strings';
-import { api } from '@/lib/api';
+import { api, API_MODE } from '@/lib/api';
 import { getJSON, Keys, remove } from '@/lib/storage';
 import type { CaseDetail, Decision, RiskLevel } from '@/lib/types';
 
@@ -93,6 +95,8 @@ export default function ResultScreen() {
 
   return (
     <Screen>
+      <PrototypeNotice />
+      <Hassanito state={level === 'LOW' ? 'happy' : 'guiding'} />
       <View style={styles.head}>
         <AppText variant="title">{t('resultTitle')}</AppText>
         <View style={styles.headMeta}>
@@ -113,9 +117,9 @@ export default function ResultScreen() {
         <View style={[styles.tile, { backgroundColor: tone.bg }]}>
           <Icon size={26} color={tone.fg} strokeWidth={2.25} />
         </View>
-        <AppText variant="subtitle">{t(tone.title)}</AppText>
-        <AppText style={styles.muted}>{t(tone.body)}</AppText>
-        {level === 'UNCERTAIN' && (
+        <AppText variant="subtitle">{API_MODE === 'ai' ? 'Prototype assessment' : t(tone.title)}</AppText>
+        <AppText style={styles.muted}>{API_MODE === 'ai' ? decision?.rationale : t(tone.body)}</AppText>
+        {level === 'UNCERTAIN' && API_MODE === 'mock' && (
           <View style={styles.waiting}>
             <ActivityIndicator color={tone.fg} />
             <AppText variant="small">{t('routingReview')}</AppText>
