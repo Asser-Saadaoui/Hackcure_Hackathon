@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   Ambulance, ArrowLeft, ArrowRightLeft, Check, ChevronDown, Clock, FileJson, FileText, Footprints, Hospital, MapPin, ShieldAlert,
-  TriangleAlert, User, X,
+  Flag, TriangleAlert, User, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { ChatPanel } from "@/components/ChatPanel";
 import { LevelBadge } from "@/components/LevelBadge";
+import { FeedbackPanel } from "@/components/FeedbackPanel";
 import { ReroutePanel } from "@/components/ReroutePanel";
 import { api, downloadFhir, openReportPdf } from "@/api";
 import { AMBULANCE, ago, EQUIPMENT, LANG, pct, STATUS, time } from "@/lib/format";
@@ -47,6 +48,8 @@ export function CaseView({ detail, onBack, onChanged }: { detail: CaseDetail; on
   const [reason, setReason] = useState(REJECT_REASONS[0]);
   const [explanation, setExplanation] = useState("");
   const [tab, setTab] = useState("summary");
+  const [reporting, setReporting] = useState(false);
+  const [reported, setReported] = useState(false);
   const pending = r.status === "SENT" || r.status === "INFO_REQUESTED";
   const open = pending || r.status === "ACCEPTED";
   const criticalFlags = a.triggeredRules.filter((x) => x.severity === "critical");
@@ -71,6 +74,9 @@ export function CaseView({ detail, onBack, onChanged }: { detail: CaseDetail; on
         <div className="flex items-center justify-between">
           <button onClick={onBack} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /> Patients</button>
           <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={() => { setReporting(true); setReported(false); }} title="Le niveau donné par Sahhanito était faux">
+              <Flag className="mr-1.5 h-4 w-4" />Signaler un faux négatif
+            </Button>
             <Button variant="outline" size="sm" title="HL7 FHIR R4 (Bundle document) à importer dans le dossier patient de l'hôpital"
               onClick={() => downloadFhir(r.id, c.referenceCode).catch((err) => setError((err as Error).message))}>
               <FileJson className="mr-1.5 h-4 w-4" />Export FHIR
@@ -120,6 +126,11 @@ export function CaseView({ detail, onBack, onChanged }: { detail: CaseDetail; on
         )}
       </div>
 
+      {reporting && (
+        <FeedbackPanel referralId={r.id} aiLevel={c.level} onCancel={() => setReporting(false)}
+          onDone={() => { setReporting(false); setReported(true); }} />
+      )}
+      {reported && <p className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">Merci : le signalement est transmis à l'équipe IA.</p>}
       {moved && <p className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">Patient réorienté vers {moved}. Le dossier reste consultable dans l'historique.</p>}
       {rerouting && (
         <ReroutePanel referralId={r.id} accepted={r.status === "ACCEPTED"} onCancel={() => setRerouting(false)}
