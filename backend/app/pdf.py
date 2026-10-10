@@ -17,7 +17,7 @@ from zoneinfo import ZoneInfo
 import arabic_reshaper
 from bidi.algorithm import get_display
 from reportlab.graphics.barcode.qr import QrCodeWidget
-from reportlab.graphics.shapes import Drawing
+from reportlab.graphics.shapes import Drawing, Rect, String
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
@@ -45,6 +45,7 @@ base = ParagraphStyle('base', fontName='DejaVu', fontSize=9.5, leading=13.5, tex
 small = ParagraphStyle('small', parent=base, fontSize=8, leading=11, textColor=MUTED)
 h1 = ParagraphStyle('h1', parent=base, fontName='DejaVu-Bold', fontSize=16, leading=20)
 h2 = ParagraphStyle('h2', parent=base, fontName='DejaVu-Bold', fontSize=10.5, leading=14, textColor=TEAL, spaceBefore=10, spaceAfter=4)
+hospital_name = ParagraphStyle('hospital', parent=base, fontName='DejaVu-Bold', fontSize=10.5, leading=14, textColor=TEAL)
 label = ParagraphStyle('label', parent=small, fontName='DejaVu-Bold', textColor=MUTED)
 
 
@@ -80,6 +81,38 @@ def two_columns(left_title, left, right_title, right):
     return t
 
 
+LOGOS = ASSETS / 'hospital-logos'
+
+
+def hospital_emblem(short, size=16 * mm):
+    """Neutral emblem: teal tile, white medical cross, the hospital's short name. Not an official logo."""
+    d = Drawing(size, size)
+    d.add(Rect(0, 0, size, size, rx=3 * mm, ry=3 * mm, fillColor=TEAL, strokeColor=None))
+    arm, thick, cx, cy = size * 0.36, size * 0.12, size / 2, size * 0.60
+    d.add(Rect(cx - thick / 2, cy - arm / 2, thick, arm, fillColor=colors.white, strokeColor=None))
+    d.add(Rect(cx - arm / 2, cy - thick / 2, arm, thick, fillColor=colors.white, strokeColor=None))
+    label = (short or 'H')[:5]
+    d.add(String(cx, size * 0.13, label, fontName='DejaVu-Bold', fontSize=7 if len(label) > 3 else 8,
+                 fillColor=colors.white, textAnchor='middle'))
+    return d
+
+
+def hospital_logo(referral, size=16 * mm):
+    """The receiving hospital's logo if provided in assets/hospital-logos/<key>.png, otherwise its emblem."""
+    if not referral:
+        return hospital_emblem('', size)
+    key = referral['facilityId']
+    path = LOGOS / f'{key}.png'
+    if path.exists():
+        img = Image(str(path))
+        ratio = img.imageHeight / float(img.imageWidth or 1)
+        img.drawWidth, img.drawHeight = (size, size * ratio) if ratio <= 1 else (size / ratio, size)
+        return img
+    f = hospitals.FACILITIES.get(key, {})
+    short = f.get('shortName') or ''.join(w[0] for w in re.findall(r"[A-Za-zÀ-ÿ]+", f.get('name', 'H')) if w[0].isupper())[:4]
+    return hospital_emblem(short, size)
+
+
 def qr(link, size=26 * mm):
     w = QrCodeWidget(link)
     x1, y1, x2, y2 = w.getBounds()
@@ -99,7 +132,7 @@ def build(case, report, referral, audience='patient', staff_view=None, fhir_summ
         canvas.saveState()
         canvas.setFont('DejaVu', 7.5)
         canvas.setFillColor(MUTED)
-        canvas.drawString(18 * mm, 10 * mm, f"Sahhanito · {report['referenceCode']} · généré le {generated} · "
+        canvas.drawString(18 * mm, 10 * mm, f"Généré par Sahhanito · {report['referenceCode']} · {generated} · "
                                             + ('version patient' if audience == 'patient' else 'version équipe soignante (confidentiel)'))
         canvas.drawRightString(A4[0] - 18 * mm, 10 * mm, f'Page {doc.page}')
         canvas.restoreState()
@@ -110,8 +143,9 @@ def build(case, report, referral, audience='patient', staff_view=None, fhir_summ
 
     # Header: logo, title, case code, QR to the case page
     head = Table([[
-        Image(str(ASSETS / 'mascot.png'), width=16 * mm, height=16 * mm),
-        [Paragraph('Rapport de triage', h1),
+        hospital_logo(referral),
+        [Paragraph(txt(referral['facilityName']) if referral else 'Rapport de triage', hospital_name if referral else h1),
+         *([Paragraph('Rapport de triage · urgences', h1)] if referral else []),
          Paragraph(f"Dossier <b>{txt(report['referenceCode'])}</b> · ouvert le {local(case['createdAt'])}", base),
          Paragraph('Version patient' if audience == 'patient' else 'Version équipe soignante · confidentiel', small)],
         qr(report['caseLink']),
@@ -126,7 +160,7 @@ def build(case, report, referral, audience='patient', staff_view=None, fhir_summ
                                 ('TOPPADDING', (0, 0), (-1, -1), 6), ('BOTTOMPADDING', (0, 0), (-1, -1), 6), ('LEFTPADDING', (0, 0), (-1, -1), 8)]))
     story.append(banner)
 
-    story.append(section('Motif de recours', [Paragraph(f'« {txt(r["chiefComplaint"])} »', base)]))
+    story.append(section('Motif de recours', [Paragraph(txt(r["chiefComplaint"]), base)]))
     if r['redFlags']:
         story.append(section("Signes d'alerte", bullets(r['redFlags'])))
     story.append(Spacer(1, 2 * mm))
