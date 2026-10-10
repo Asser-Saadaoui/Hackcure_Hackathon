@@ -117,7 +117,7 @@ export default function StatusScreen() {
   return (
     <Screen>
       <PrototypeNotice />
-      <Hassanito compact state={c.level === 'EMERGENCY' ? 'alert' : arrived ? 'happy' : accepted ? 'guiding' : referral ? 'thinking' : 'idle'} />
+      <Hassanito compact state={c.level === 'EMERGENCY' ? 'alert' : arrived ? 'happy' : accepted ? 'guiding' : referral ? 'thinking' : 'idle'} message={c.level !== 'EMERGENCY' && !arrived && !accepted ? t('waitingHospital') : undefined} />
       <View style={styles.head}>
         <AppText variant="title">{t('statusTitle')}</AppText>
         <View style={styles.headMeta}>

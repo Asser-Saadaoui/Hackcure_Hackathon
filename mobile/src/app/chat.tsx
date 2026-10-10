@@ -1,6 +1,6 @@
 import { router, Stack } from 'expo-router';
 import { History, Phone, RotateCcw, Settings, ShieldAlert } from 'lucide-react-native';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -15,7 +15,8 @@ import { Hassanito } from '@/components/hassanito';
 import { PrototypeNotice } from '@/components/prototype-notice';
 import { Colors, Fonts, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useI18n } from '@/i18n';
-import { api } from '@/lib/api';
+import { api, USING_MOCK } from '@/lib/api';
+import { HttpError } from '@/lib/http-api';
 import { getJSON, Keys, remove, setJSON } from '@/lib/storage';
 import type { Turn, TurnResult } from '@/lib/types';
 
@@ -50,23 +51,34 @@ export default function ChatScreen() {
   const [sending, setSending] = useState(false);
   const [degraded, setDegraded] = useState<string | null>(null);   // last patient message, to retry
   const [listening, setListening] = useState(false);
+  const [resumeError, setResumeError] = useState(false);
   const [mascotState, setMascotState] = useState<'idle' | 'guiding' | 'alert' | 'happy'>('idle');
   const scrollRef = useRef<ScrollView>(null);
 
   // Resume the case in progress (if the backend still has it).
-  useEffect(() => {
+  const resume = useCallback(() => {
     getJSON<string>(Keys.currentCase).then(async (id) => {
       if (!id) return;
       try {
         const c = await api.getCase(id);
+        setResumeError(false);
         setCaseId(c.id);
         setItems(c.turns.map((tr) => ({ id: tr.id, role: tr.role, text: tr.text, time: timeOf(tr.createdAt) })));
         setQuickReplies(c.turns.at(-1)?.quickReplies ?? []);
-      } catch {
-        await remove(Keys.currentCase); // unknown case (e.g. mock data lost on reload) → start fresh
+        if (c.level === 'EMERGENCY') {
+          setMascotState('alert');
+          router.push({ pathname: '/emergency', params: { caseId: c.id } });
+        } else if (c.status === 'TRIAGING' && c.turns.at(-1)?.role === 'ASSISTANT') setMascotState('guiding');
+      } catch (error) {
+        if (USING_MOCK || error instanceof HttpError && error.status === 404) await remove(Keys.currentCase);
+        else {
+          setCaseId(id); // retain the reference across network failures
+          setResumeError(true);
+        }
       }
     });
   }, []);
+  useEffect(() => { resume(); }, [resume]);
 
   const scrollToEnd = () => requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
 
@@ -114,6 +126,7 @@ export default function ChatScreen() {
     }
     setQuickReplies([]);
     setSending(true);
+    setListening(false);
     scrollToEnd();
     try {
       const result = caseId ? await api.sendMessage(caseId, text, language) : await api.createCase(text, language);
@@ -134,6 +147,8 @@ export default function ChatScreen() {
   const newConversation = async () => {
     await remove(Keys.currentCase);
     setCaseId(null);
+    setResumeError(false);
+    setListening(false);
     setItems([]);
     setQuickReplies([]);
     setDegraded(null);
@@ -147,7 +162,7 @@ export default function ChatScreen() {
           headerRight: () => (
             <View style={styles.headerActions}>
               {items.length > 0 && (
-                <Pressable accessibilityRole="button" accessibilityLabel={t('newConversation')} onPress={newConversation} hitSlop={8} style={styles.headerIcon}>
+                <Pressable accessibilityRole="button" accessibilityLabel={t('newConversation')} onPress={newConversation} disabled={sending} hitSlop={8} style={styles.headerIcon}>
                   <RotateCcw size={18} color={Colors.mutedFg} strokeWidth={2.25} />
                 </Pressable>
               )}
@@ -176,11 +191,15 @@ export default function ChatScreen() {
 
             <View style={styles.pageHead}>
               <AppText variant="subtitle">{t('chatTitle')}</AppText>
+              {items.length > 0 && <Button label={t('newConversation')} size="sm" variant="ghost" icon={RotateCcw} onPress={newConversation} disabled={sending} />}
             </View>
+            <View style={styles.companion}><Hassanito compact state={mascotState === 'alert' ? 'alert' : sending ? 'thinking' : listening ? 'listening' : mascotState} /></View>
 
             <ScrollView ref={scrollRef} style={styles.flex} contentContainerStyle={styles.messages} onContentSizeChange={scrollToEnd}>
               <PrototypeNotice />
-              <Hassanito compact state={mascotState === 'alert' ? 'alert' : sending ? 'thinking' : listening ? 'listening' : mascotState} />
+              {resumeError && <Alert variant="warning" title={t('errorRetry')}>
+                <Button label={t('retry')} variant="outline" onPress={resume} disabled={sending} />
+              </Alert>}
               <ChatBubble role="ASSISTANT" text={t('chatGreeting')} />
               {items.map((item) => (
                 <View key={item.id} style={styles.itemWrap}>
@@ -217,13 +236,14 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
   flex: { flex: 1 },
-  column: { flex: 1, width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center' },
+  column: { flex: 1, width: '100%', maxWidth: MaxContentWidth + 200, alignSelf: 'center' },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, paddingHorizontal: Spacing.sm },
   degradedActions: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginTop: Spacing.sm },
   headerIcon: { padding: 10, borderRadius: 999 },   // ≥ 44 px touch target
   headerLink: { color: Colors.primary, fontFamily: Fonts.medium, fontSize: 14 },
   emergencyWrap: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.md },
-  pageHead: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.lg },
+  pageHead: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  companion: { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm },
   messages: { padding: Spacing.lg, gap: Spacing.lg },
   itemWrap: { gap: Spacing.xs },
   retry: { alignSelf: 'flex-end' },

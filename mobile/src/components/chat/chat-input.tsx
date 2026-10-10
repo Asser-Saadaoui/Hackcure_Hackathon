@@ -1,6 +1,6 @@
 import { Mic, Square, SendHorizontal } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { Colors, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useI18n } from '@/i18n';
@@ -53,6 +53,7 @@ export function ChatInput({ onSend, disabled, onActivity }: Props) {
         maxLength={MAX_LENGTH}
         accessibilityLabel={t('chatPlaceholder')}
         onKeyPress={(e) => {
+          if (Platform.OS !== 'web') return;
           const ne = e.nativeEvent as unknown as { key: string; shiftKey?: boolean };
           if (ne.key === 'Enter' && !ne.shiftKey) {
             (e as unknown as { preventDefault?: () => void }).preventDefault?.();

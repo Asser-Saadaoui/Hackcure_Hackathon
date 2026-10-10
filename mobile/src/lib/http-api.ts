@@ -33,11 +33,15 @@ async function token(): Promise<string> {
 }
 
 async function newSession(): Promise<Session> {
-  const res = await fetch(`${API_URL}/api/v1/session`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
-  if (!res.ok) throw new HttpError(`session ${res.status}`, res.status);
-  const s = (await res.json()) as Session;
-  await setJSON(Keys.session, s);
-  return s;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  try {
+    const res = await fetch(`${API_URL}/api/v1/session`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}', signal: controller.signal });
+    if (!res.ok) throw new HttpError(`session ${res.status}`, res.status);
+    const s = (await res.json()) as Session;
+    await setJSON(Keys.session, s);
+    return s;
+  } finally { clearTimeout(timer); }
 }
 
 async function call<T>(method: string, path: string, body?: unknown, retry = true): Promise<T> {
@@ -84,7 +88,7 @@ function subscribeSse(caseId: string, onEvent: (e: PatientEvent) => void) {
     source.onmessage = (m) => {
       try { onEvent(JSON.parse(m.data) as PatientEvent); } catch { /* heartbeat */ }
     };
-  });
+  }).catch(() => { if (!closed) source?.close(); });
   return () => { closed = true; source?.close(); };
 }
 

@@ -4,11 +4,11 @@ import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
 import { Colors, MaxContentWidth, Spacing } from '@/constants/theme';
 
-type Props = { children: ReactNode; scroll?: boolean; edges?: Edge[] };
+type Props = { children: ReactNode; scroll?: boolean; edges?: Edge[]; maxWidth?: number };
 
 /** Page container: safe area, background, centered max width (useful on web). */
-export function Screen({ children, scroll = true, edges = ['bottom', 'left', 'right'] }: Props) {
-  const content = <View style={styles.inner}>{children}</View>;
+export function Screen({ children, scroll = true, edges = ['bottom', 'left', 'right'], maxWidth = MaxContentWidth }: Props) {
+  const content = <View style={[styles.inner, { maxWidth }]}>{children}</View>;
   return (
     <SafeAreaView style={styles.safe} edges={edges}>
       {scroll ? <ScrollView contentContainerStyle={styles.scroll}>{content}</ScrollView> : content}

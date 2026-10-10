@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Brand } from "@/components/Brand";
 import { api, session } from "@/api";
 import type { StaffUser } from "@/types";
 
@@ -32,12 +33,10 @@ export function LoginScreen({ onLogin }: { onLogin: (u: StaffUser) => void }) {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm space-y-6">
         <div className="flex flex-col items-center gap-3 text-center">
-          <span className="flex h-24 w-24 items-center justify-center rounded-full bg-[#E6F3F5]">
-            <img src="/mascot.png" alt="Sahhanito" className="h-20 w-20" />
-          </span>
+          <Brand />
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Sahhanito · Urgences</h1>
-            <p className="text-sm text-muted-foreground">Espace des équipes hospitalières du Grand Tunis</p>
+            <h1 className="text-xl font-semibold tracking-tight">Bienvenue dans votre espace</h1>
+            <p className="mt-2 text-sm text-muted-foreground">Équipes hospitalières du Grand Tunis</p>
           </div>
         </div>
         <Card>
@@ -58,6 +57,7 @@ export function LoginScreen({ onLogin }: { onLogin: (u: StaffUser) => void }) {
             </form>
           </CardContent>
         </Card>
+        <p className="text-center text-xs text-muted-foreground">Prototype non validé cliniquement. Capacités et suivi ambulance simulés.</p>
         <p className="text-center text-xs text-muted-foreground">Accès réservé au personnel autorisé. Toutes les actions sont journalisées.</p>
       </div>
     </div>

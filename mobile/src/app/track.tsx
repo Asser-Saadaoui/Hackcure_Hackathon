@@ -46,7 +46,7 @@ export default function TrackScreen() {
 
   useEffect(() => {
     if (!caseId) return;
-    load();
+    api.getTracking(caseId).then(data => { setView(data); setState('ready'); }).catch(() => setState('error'));
     return api.subscribe(caseId, (e) => {
       if (e.type === 'tracking.position') {
         setView((v) => (v ? { ...v, ambulance: e.ambulance, etaMinutes: e.ambulance.etaMinutes } : v));
