@@ -1,5 +1,4 @@
-import { Activity } from 'lucide-react-native';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 
@@ -8,9 +7,9 @@ export function BrandTitle({ section }: { section?: string }) {
   return (
     <View style={styles.row}>
       <View style={styles.tile}>
-        <Activity size={16} color={Colors.primaryFg} strokeWidth={2.25} />
+        <Image source={require('../../assets/images/hassanito.png')} style={{ width: 28, height: 28 }} />
       </View>
-      <Text style={styles.name}>Sahhanito</Text>
+      <Text style={styles.name}>Sahhanito · صحة نيتو</Text>
       {section ? <Text style={styles.section} numberOfLines={1}>· {section}</Text> : null}
     </View>
   );
