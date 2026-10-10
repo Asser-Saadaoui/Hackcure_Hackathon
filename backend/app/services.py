@@ -166,7 +166,9 @@ def create_case(db, session, message, language):
 
 
 def triage(db, case, message):
-    if case.status not in ('TRIAGING',):
+    # A patient waiting for a clinician can still add information ("my symptoms are getting worse"):
+    # the AI re-evaluates and may escalate before the clinician has decided.
+    if case.status not in ('TRIAGING', 'UNDER_REVIEW'):
         raise HTTPException(409, 'This case is no longer in triage.')
     _add_turn(db, case, 'PATIENT', message)
     try:

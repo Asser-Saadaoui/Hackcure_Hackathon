@@ -40,6 +40,7 @@ export default function EmergencyScreen() {
   const { caseId } = useLocalSearchParams<{ caseId?: string }>();
   const [ed, setEd] = useState<EdState>({ kind: 'locating' });
   const [referenceCode, setReferenceCode] = useState<string | null>(null);
+  const [ambulanceEta, setAmbulanceEta] = useState<number | null>(null);
 
   const sendLocation = useCallback(async (location: Parameters<typeof api.setLocation>[1]) => {
     if (!caseId) return;
@@ -64,6 +65,7 @@ export default function EmergencyScreen() {
     // Live updates: referral created by the backend, then accepted by the hospital.
     const unsubscribe = api.subscribe(caseId, (e) => {
       if (e.type === 'referral.status') setEd({ kind: 'referred', referral: e.referral });
+      if (e.type === 'tracking.position') setAmbulanceEta(e.ambulance.etaMinutes);
     });
 
     api.getCase(caseId).then((c) => {
@@ -75,6 +77,13 @@ export default function EmergencyScreen() {
 
     return unsubscribe;
   }, [caseId, findMe]);
+
+  // One line of live status under the title: what is happening right now.
+  const status = ed.kind === 'referred'
+    ? ed.referral.status === 'ACCEPTED' || ed.referral.status === 'ARRIVED'
+      ? `${ed.referral.arrivalMode === 'AMBULANCE' ? t('statusAcceptedAmbulance') : t('statusAcceptedSelf')}${ambulanceEta != null ? ` · ~${ambulanceEta} ${t('minutes')}` : ''}`
+      : `${t('statusWaitingEd')} · ${ed.referral.facilityName}`
+    : ed.kind === 'needLocation' ? t('locationNeeded') : t('statusSearching');
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
@@ -88,6 +97,10 @@ export default function EmergencyScreen() {
             <AppText style={styles.heroTitle}>{t('emergencyTitle')}</AppText>
             <AppText style={styles.heroSubtitle}>{t('emergencySubtitle')}</AppText>
             <Button label={t('call190')} size="lg" variant="outline" icon={Phone} onPress={() => call('190')} style={styles.heroButton} />
+            <View style={styles.statusPillHero} accessibilityLiveRegion="polite">
+              {ed.kind !== 'referred' && ed.kind !== 'needLocation' && <ActivityIndicator color="#FFFFFF" size="small" />}
+              <AppText style={styles.statusHeroText}>{status}</AppText>
+            </View>
             {referenceCode && (
               <AppText style={styles.heroCode}>{t('caseCode')} · {referenceCode}</AppText>
             )}
@@ -173,13 +186,21 @@ export default function EmergencyScreen() {
             onPress={() => (router.canGoBack() ? router.back() : router.replace('/chat'))} />
         </View>
       </ScrollView>
+      {/* Always reachable, whatever the scroll position. */}
+      <View style={styles.callBar}>
+        <Button label={t('call190')} size="lg" variant="destructive" icon={Phone} onPress={() => call('190')} style={styles.callBarButton} />
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.destructive },
-  scroll: { flexGrow: 1, backgroundColor: Colors.background },
+  scroll: { flexGrow: 1, backgroundColor: Colors.background, paddingBottom: 96 },
+  statusPillHero: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: Radius.pill, backgroundColor: 'rgba(255,255,255,0.18)' },
+  statusHeroText: { color: '#FFFFFF', fontFamily: Fonts.medium, fontSize: 14, textAlign: 'center' },
+  callBar: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: Spacing.lg, backgroundColor: 'rgba(249,250,251,0.96)', borderTopWidth: 1, borderTopColor: Colors.border },
+  callBarButton: { width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center' },
   flex: { flex: 1 },
   hero: { backgroundColor: Colors.destructive, paddingHorizontal: Spacing.xl, paddingTop: Spacing.xxl, paddingBottom: Spacing.xl },
   heroInner: { width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center', alignItems: 'center', gap: Spacing.md },

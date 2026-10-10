@@ -15,7 +15,9 @@ type Props = TextProps & {
 export function AppText({ variant = 'body', autoDirection, style, ...rest }: Props) {
   const { rtl } = useI18n();
   const direction = autoDirection ? undefined : { writingDirection: rtl ? ('rtl' as const) : ('ltr' as const) };
-  return <Text style={[styles.base, styles[variant], direction, style]} {...rest} />;
+  // Titles are announced as headings; system text size is honoured up to 1.8x so layouts stay usable.
+  const role = variant === 'title' || variant === 'subtitle' ? 'header' : undefined;
+  return <Text accessibilityRole={role} maxFontSizeMultiplier={1.8} style={[styles.base, styles[variant], direction, style]} {...rest} />;
 }
 
 const styles = StyleSheet.create({

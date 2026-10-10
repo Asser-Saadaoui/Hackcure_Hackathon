@@ -14,7 +14,7 @@ export const Colors = {
   secondary: '#EDF0F3',      // hsl(210 20% 94%)
   secondaryFg: '#344256',
   muted: '#F3F5F7',
-  mutedFg: '#65758B',        // hsl(215 16% 47%)
+  mutedFg: '#56667C',        // darkened from #65758B for ≥ 4.5:1 contrast on the slate background        // hsl(215 16% 47%)
   accent: '#E7F6F9',         // hsl(190 60% 94%) light teal
   accentFg: '#125A68',
   destructive: '#C52020',    // hsl(0 72% 45%)

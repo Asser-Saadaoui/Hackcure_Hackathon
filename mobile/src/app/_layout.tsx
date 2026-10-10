@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 import { View } from 'react-native';
 
 import { BrandTitle } from '@/components/brand-title';
+import { ConnectionBanner } from '@/components/connection-banner';
 import { Colors } from '@/constants/theme';
 import { LanguageProvider, useI18n } from '@/i18n';
 import { loadTestMode } from '@/lib/test-mode';
@@ -17,6 +18,7 @@ function Navigator() {
   return (
     <View style={{ flex: 1, direction: rtl ? 'rtl' : 'ltr' }}>
       <StatusBar style="dark" />
+      <ConnectionBanner />
       <Stack
         screenOptions={{
           headerStyle: { backgroundColor: Colors.card },

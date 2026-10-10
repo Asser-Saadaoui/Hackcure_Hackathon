@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 
 import type { PatientApi } from '@/lib/api';
+import { connection } from '@/lib/connection';
 import { getJSON, Keys, setJSON } from '@/lib/storage';
 import type {
   AmbulanceView, CaseDetail, ChatMessage, PatientEvent, Referral, Session,
@@ -42,13 +43,21 @@ async function newSession(): Promise<Session> {
 async function call<T>(method: string, path: string, body?: unknown, retry = true): Promise<T> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  let res: Response;
   try {
-    const res = await fetch(`${API_URL}/api/v1${path}`, {
+    res = await fetch(`${API_URL}/api/v1${path}`, {
       method,
       headers: { 'content-type': 'application/json', authorization: `Bearer ${await token()}` },
       body: body === undefined ? undefined : JSON.stringify(body),
       signal: controller.signal,
     });
+  } catch (error) {
+    clearTimeout(timer);
+    connection.set(false);         // network down or timeout: show the banner; callers retry
+    throw error;
+  }
+  connection.set(true);
+  try {
     if (res.status === 401 && retry) {
       await newSession();          // session lost (reinstall, cleared data): start a new anonymous one
       return call<T>(method, path, body, false);
