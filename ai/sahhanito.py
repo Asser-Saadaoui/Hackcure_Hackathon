@@ -83,6 +83,7 @@ def triage_turn(state, message, previous_question_id=None, *, language='fr', mod
 
     rules = evaluate_rules(st, r['rules'])
     assessment = fusion.fuse(r['ml'], rules)
+    assessment['nlp_explanation'] = _explain(st, r['ml'], ml_bundle)
     decided = decision_policy.decide(assessment, rules, language)
 
     asked = len(st.get('asked_questions', []))
@@ -151,6 +152,18 @@ def triage_turn(state, message, previous_question_id=None, *, language='fr', mod
                       decision=decision_policy.VERSION, interviewer=interviewer_module.VERSION,
                       nlp_model=r['ml'].get('model_version')),
     )
+
+
+def _explain(state, ml, ml_bundle):
+    """Which elements of the case moved the NLP score (see explain.py). Never blocks the turn."""
+    if ml.get('status') != 'ok':
+        return None
+    try:
+        from explain import explain_nlp
+        from triage_pipeline import _cached_state_model
+        return explain_nlp(state, ml_bundle or _cached_state_model('experimental_v3'))
+    except Exception:
+        return None
 
 
 def _intake_question(st, meta, decided, asked, language, message, interviewer):

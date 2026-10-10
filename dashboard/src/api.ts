@@ -1,4 +1,4 @@
-import type { Alternative, CaseDetail, ChatMessage, Hospital, ReferralRow, ReviewItem, StaffUser, TriageFeedback } from "@/types";
+import type { Alternative, CaseDetail, ChatMessage, Hospital, ReferralRow, ReviewItem, Scenario, SimSettings, StaffUser, TriageFeedback } from "@/types";
 
 const BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "";
 const TOKEN_KEY = "sahhanito.staff.token";
@@ -63,6 +63,14 @@ export const api = {
     call<TriageFeedback>("POST", `/staff/referrals/${id}/feedback`, body),
   caseFeedback: (id: string) => call<TriageFeedback[]>("GET", `/staff/referrals/${id}/feedback`),
   allFeedback: () => call<TriageFeedback[]>("GET", "/staff/feedback"),
+  scenario: () => call<Scenario>("GET", "/staff/sim/scenario"),
+  setScenario: (body: { speed?: number; paused?: boolean; autoOutages?: boolean }) => call<Scenario>("PUT", "/staff/sim/scenario", body),
+  stepScenario: (minutes: number) => call<Scenario>("POST", "/staff/sim/scenario/step", { minutes }),
+  resetScenario: () => call<Scenario>("POST", "/staff/sim/scenario/reset", {}),
+  presetScenario: (id: string) => call<Scenario>("POST", `/staff/sim/scenario/preset/${id}`, {}),
+  addSimEvent: (body: Record<string, unknown>) => call<Scenario>("POST", "/staff/sim/scenario/events", body),
+  clearSimEvents: (hospital?: string) => call<Scenario>("DELETE", `/staff/sim/scenario/events${hospital ? `?hospital=${hospital}` : ""}`),
+  setSimSettings: (key: string, settings: Omit<SimSettings, "seed"> & { seed?: number }) => call<Scenario>("PUT", `/staff/sim/hospitals/${key}/settings`, settings),
   reviews: () => call<ReviewItem[]>("GET", "/staff/reviews"),
   review: (caseId: string, level: "EMERGENCY" | "HIGH" | "LOW", note?: string) => call<{ ok: boolean }>("POST", `/staff/reviews/${caseId}`, { level, note }),
 };
