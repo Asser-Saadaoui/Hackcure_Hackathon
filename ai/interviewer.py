@@ -62,7 +62,9 @@ def llm_status():
         cooling = {m: round(t - now) for m, t in _cooldown.items() if t > now}
         return dict(_status, cooling_down_seconds=cooling)
 GEMINI_OPENAI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/'
-TIMEOUT_S = 8.0
+TIMEOUT_S = 4.5            # per model call
+BUDGET_S = 7.0             # total LLM time per call to _complete (all fallbacks): the triage never waits longer
+SLOW_COOLDOWN_S = 120.0    # a model that timed out is skipped for 2 minutes
 LANG_NAMES = {'fr': 'French', 'en': 'English', 'ar': 'Modern Standard Arabic',
               'darija': 'Tunisian Darija (answer in the same script the patient uses: Arabic letters or Arabizi with numbers like 3, 7, 9)'}
 
@@ -207,9 +209,14 @@ class Interviewer:
         if not candidates:
             raise LLMUnavailable('every model is out of quota')
         last = None
+        deadline = time.time() + BUDGET_S
         for model in candidates:
+            remaining = deadline - time.time()
+            if remaining < 1.0:
+                self._record('time budget exhausted, using templates')
+                break
             try:
-                out = self._complete_once(system, user, model)
+                out = self._complete_once(system, user, model, timeout=min(TIMEOUT_S, remaining))
                 with _lock:
                     _status['last_model'] = model
                 return out
@@ -229,7 +236,12 @@ class Interviewer:
                 raise
             except httpx.TransportError as error:
                 last = error
-                self._record(f'{model}: {type(error).__name__}')
+                if isinstance(error, httpx.TimeoutException):
+                    with _lock:
+                        _cooldown[model] = time.time() + SLOW_COOLDOWN_S
+                    self._record(f'{model}: too slow ({type(error).__name__}), skipped for {int(SLOW_COOLDOWN_S)} s')
+                else:
+                    self._record(f'{model}: {type(error).__name__}')
                 continue
         raise LLMUnavailable(str(last))
 
@@ -239,7 +251,7 @@ class Interviewer:
         with _lock:
             _status.update(last_error=message, last_error_at=time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()))
 
-    def _complete_once(self, system, user, model=None):
+    def _complete_once(self, system, user, model=None, timeout=TIMEOUT_S):
         import httpx
         model = model or self.model
         if self.provider == 'gemini':
@@ -248,7 +260,7 @@ class Interviewer:
                 headers={'authorization': f'Bearer {self.api_key}', 'content-type': 'application/json'},
                 json={'model': model, 'response_format': {'type': 'json_object'},
                       'messages': [{'role': 'system', 'content': system}, {'role': 'user', 'content': user}]},
-                timeout=TIMEOUT_S)
+                timeout=timeout)
             response.raise_for_status()
             return response.json()['choices'][0]['message']['content'] or ''
         response = httpx.post(
@@ -256,7 +268,7 @@ class Interviewer:
             headers={'x-api-key': self.api_key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json'},
             json={'model': model, 'max_tokens': 400, 'system': system,
                   'messages': [{'role': 'user', 'content': user}]},
-            timeout=TIMEOUT_S)
+            timeout=timeout)
         response.raise_for_status()
         return ''.join(block.get('text', '') for block in response.json().get('content', []))
 
