@@ -12,7 +12,7 @@ from app import config, hospitals, services
 from app.db import get_db
 from app.deps import clinician, hospital_staff, staff
 from app.events import sse
-from app.models import AvailabilityOverride, Case, HospitalSettings, Referral, StaffSession, StaffUser
+from app.models import AvailabilityOverride, Case, HospitalSettings, Referral, StaffSession, StaffUser, TriageFeedback
 from app.security import new_token, token_hash, verify_password
 
 router = APIRouter(prefix='/api/v1/staff')
@@ -229,6 +229,88 @@ def clear_availability(user: StaffUser = Depends(hospital_staff), db: Session = 
         services.audit(db, user.email, 'availability.cleared', None, hospital=user.hospital_key)
         db.commit()
     return hospital_view(db, user.hospital_key)
+
+
+RANK = {'LOW': 0, 'UNCERTAIN': 1, 'HIGH': 2, 'EMERGENCY': 3}
+MISSED_SIGNS = ['Douleur thoracique', 'Détresse respiratoire', 'Signes neurologiques (AVC)', 'Trouble de conscience',
+                'Hémorragie', 'Sepsis / infection grave', 'Traumatisme grave', 'Urgence obstétricale', 'Urgence pédiatrique',
+                'Intoxication', 'Douleur sévère', 'Constantes anormales']
+
+
+class FeedbackIn(BaseModel):
+    kind: Literal['FALSE_NEGATIVE', 'FALSE_POSITIVE'] = 'FALSE_NEGATIVE'
+    actualLevel: Literal['EMERGENCY', 'HIGH', 'LOW']
+    missedSigns: list[str] = Field(default_factory=list, max_length=12)
+    note: str | None = Field(default=None, max_length=1000)
+
+
+def feedback_view(f):
+    return dict(id=f.id, caseId=f.case_id, referralId=f.referral_id, hospitalKey=f.hospital_key,
+                hospitalName=hospitals.FACILITIES.get(f.hospital_key or '', {}).get('name'), kind=f.kind, aiLevel=f.ai_level,
+                actualLevel=f.actual_level, missedSigns=f.missed_signs or [], note=f.note, reportedBy=f.reported_by,
+                createdAt=services.iso(f.created_at), snapshot=f.snapshot)
+
+
+@router.get('/feedback/options')
+def feedback_options(user: StaffUser = Depends(staff)):
+    return dict(missedSigns=MISSED_SIGNS)
+
+
+@router.post('/referrals/{referral_id}/feedback')
+def report_feedback(referral_id: str, body: FeedbackIn, user: StaffUser = Depends(hospital_staff), db: Session = Depends(get_db)):
+    """Report that the AI under-triaged (false negative) or over-triaged (false positive) this patient."""
+    r = my_referral(db, user, referral_id)
+    case = db.get(Case, r.case_id)
+    ai = case.level or 'UNCERTAIN'
+    if body.kind == 'FALSE_NEGATIVE' and RANK[body.actualLevel] <= RANK.get(ai, 1):
+        raise HTTPException(422, f'A false negative needs an actual level higher than the AI level ({ai}).')
+    if body.kind == 'FALSE_POSITIVE' and RANK[body.actualLevel] >= RANK.get(ai, 1):
+        raise HTTPException(422, f'Over-triage needs an actual level lower than the AI level ({ai}).')
+    a = case.assessment or {}
+    f = TriageFeedback(case_id=case.id, referral_id=r.id, hospital_key=r.facility_key, kind=body.kind, ai_level=ai,
+                       actual_level=body.actualLevel, missed_signs=[s.strip()[:120] for s in body.missedSigns if s.strip()],
+                       note=(body.note or '').strip() or None, reported_by=user.name,
+                       snapshot=dict(p_nlp=a.get('p_nlp'), s_rule=a.get('s_rule'), p_final=a.get('p_final'), uncertainty=a.get('uncertainty'),
+                                     rules=[x['id'] for x in a.get('triggered_rules', [])], chief_complaint=services.chief_complaint(case),
+                                     language=case.language, versions=(case.ai_decision or {}).get('decision_version')))
+    db.add(f)
+    services.audit(db, user.email, f'feedback.{body.kind.lower()}', case.id, ai_level=ai, actual_level=body.actualLevel)
+    db.commit()
+    return feedback_view(f)
+
+
+@router.get('/referrals/{referral_id}/feedback')
+def referral_feedback(referral_id: str, user: StaffUser = Depends(hospital_staff), db: Session = Depends(get_db)):
+    r = my_referral(db, user, referral_id)
+    rows = db.scalars(select(TriageFeedback).where(TriageFeedback.case_id == r.case_id).order_by(TriageFeedback.created_at.desc()))
+    return [feedback_view(f) for f in rows]
+
+
+@router.get('/feedback')
+def all_feedback(kind: str | None = None, user: StaffUser = Depends(clinician), db: Session = Depends(get_db)):
+    """All triage feedback (clinicians / AI team). ?kind=FALSE_NEGATIVE to filter."""
+    q = select(TriageFeedback).order_by(TriageFeedback.created_at.desc()).limit(500)
+    if kind:
+        q = q.where(TriageFeedback.kind == kind)
+    return [feedback_view(f) for f in db.scalars(q)]
+
+
+@router.get('/feedback.csv')
+def feedback_csv(user: StaffUser = Depends(clinician), db: Session = Depends(get_db)):
+    import csv
+    import io
+    from fastapi.responses import Response
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(['date', 'type', 'hospital', 'ai_level', 'actual_level', 'missed_signs', 'note', 'p_nlp', 's_rule', 'p_final',
+                'uncertainty', 'rules', 'chief_complaint', 'language', 'reported_by'])
+    for f in db.scalars(select(TriageFeedback).order_by(TriageFeedback.created_at)):
+        snap = f.snapshot or {}
+        w.writerow([services.iso(f.created_at), f.kind, f.hospital_key, f.ai_level, f.actual_level, '; '.join(f.missed_signs or []),
+                    f.note or '', snap.get('p_nlp'), snap.get('s_rule'), snap.get('p_final'), snap.get('uncertainty'),
+                    ' '.join(snap.get('rules') or []), snap.get('chief_complaint'), snap.get('language'), f.reported_by])
+    return Response(buf.getvalue(), media_type='text/csv; charset=utf-8',
+                    headers={'Content-Disposition': 'attachment; filename="sahhanito-triage-feedback.csv"'})
 
 
 DEFAULT_REPLIES = [

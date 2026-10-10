@@ -1,4 +1,4 @@
-import type { Alternative, CaseDetail, ChatMessage, Hospital, ReferralRow, ReviewItem, StaffUser } from "@/types";
+import type { Alternative, CaseDetail, ChatMessage, Hospital, ReferralRow, ReviewItem, StaffUser, TriageFeedback } from "@/types";
 
 const BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "";
 const TOKEN_KEY = "sahhanito.staff.token";
@@ -58,6 +58,11 @@ export const api = {
   setAvailability: (body: Record<string, unknown>) => call<Hospital>("PUT", "/staff/hospital/availability", body),
   clearAvailability: () => call<Hospital>("DELETE", "/staff/hospital/availability"),
   hospitals: () => call<{ simulator: { ok: boolean }; hospitals: Hospital[] }>("GET", "/staff/hospitals"),
+  feedbackOptions: () => call<{ missedSigns: string[] }>("GET", "/staff/feedback/options"),
+  reportFeedback: (id: string, body: { kind: "FALSE_NEGATIVE" | "FALSE_POSITIVE"; actualLevel: "EMERGENCY" | "HIGH" | "LOW"; missedSigns: string[]; note?: string }) =>
+    call<TriageFeedback>("POST", `/staff/referrals/${id}/feedback`, body),
+  caseFeedback: (id: string) => call<TriageFeedback[]>("GET", `/staff/referrals/${id}/feedback`),
+  allFeedback: () => call<TriageFeedback[]>("GET", "/staff/feedback"),
   reviews: () => call<ReviewItem[]>("GET", "/staff/reviews"),
   review: (caseId: string, level: "EMERGENCY" | "HIGH" | "LOW", note?: string) => call<{ ok: boolean }>("POST", `/staff/reviews/${caseId}`, { level, note }),
 };
@@ -78,6 +83,18 @@ export async function downloadFhir(referralId: string, referenceCode: string): P
   if (!resp.ok) throw new ApiError(`Erreur ${resp.status}`, resp.status);
   const url = URL.createObjectURL(await resp.blob());
   const link = Object.assign(document.createElement("a"), { href: url, download: `sahhanito-${referenceCode}-fhir.json` });
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+/** Triage feedback as CSV (clinicians / AI team). */
+export async function downloadFeedbackCsv(): Promise<void> {
+  const resp = await fetch(`${BASE}/api/v1/staff/feedback.csv`, { headers: { Authorization: `Bearer ${session.get() ?? ""}` } });
+  if (!resp.ok) throw new ApiError(`Erreur ${resp.status}`, resp.status);
+  const url = URL.createObjectURL(await resp.blob());
+  const link = Object.assign(document.createElement("a"), { href: url, download: "sahhanito-triage-feedback.csv" });
   document.body.appendChild(link);
   link.click();
   link.remove();

@@ -64,6 +64,13 @@ export interface Alternative {
   bedsAvailable: number | null; waitMinutes: number | null; source: "simulator" | "staff" | "unknown";
 }
 
+export interface TriageFeedback {
+  id: string; caseId: string; referralId: string | null; hospitalKey: string | null; hospitalName: string | null;
+  kind: "FALSE_NEGATIVE" | "FALSE_POSITIVE"; aiLevel: Level | null; actualLevel: Level; missedSigns: string[]; note: string | null;
+  reportedBy: string; createdAt: string;
+  snapshot: { p_nlp: number | null; s_rule: number | null; p_final: number | null; uncertainty: string | null; rules: string[]; chief_complaint: string; language: string } | null;
+}
+
 export interface Hospital { key: string; name: string; nameAr?: string; type: string; lat: number; lng: number; specialties: string[]; equipment: string[]; availability: Availability }
 
 export interface ReviewItem {

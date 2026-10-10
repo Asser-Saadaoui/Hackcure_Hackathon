@@ -54,6 +54,7 @@ export default function StatusScreen() {
   const [unread, setUnread] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
   const [eta, setEta] = useState<number | null>(null);
+  const [ambStatus, setAmbStatus] = useState<string | null>(null);
   const [escalation, setEscalation] = useState<string | null>(null);
   const [notif, setNotif] = useState<NotificationStatus | null>(null);
 
@@ -73,7 +74,10 @@ export default function StatusScreen() {
     return api.subscribe(caseId, (e) => {
       if (e.type === 'referral.status') { setCase((prev) => (prev ? { ...prev, referral: e.referral } : prev)); attention(); }
       if (e.type === 'case.escalated') { setEscalation(e.instruction ?? ''); attention(); load(); }
-      if (e.type === 'tracking.position') setEta(e.ambulance.etaMinutes);
+      if (e.type === 'tracking.position') {
+        setEta(e.ambulance.etaMinutes);
+        setAmbStatus((prev) => { if (prev && prev !== e.ambulance.status) attention(); return e.ambulance.status; });
+      }
       if (e.type === 'chat.message' && e.message.sender === 'STAFF') {
         setUnread((n) => n + 1);
         setToast(e.message.text);
@@ -203,8 +207,10 @@ export default function StatusScreen() {
             <View style={styles.flex}>
               <AppText variant="subtitle">{ambulance ? t('ambulanceSimulated') : t('goOnYourOwn')}</AppText>
               <AppText variant="small">{ambulance ? t('ambulanceComing') : referral.acceptNote}</AppText>
-              {ambulance && eta != null && (
-                <AppText style={styles.eta} accessibilityLiveRegion="polite">{t('etaLabel')} · ~{eta} {t('minutes')}</AppText>
+              {ambulance && ambStatus && (
+                <AppText style={styles.eta} accessibilityLiveRegion="polite">
+                  {t(`amb${ambStatus}` as StringKey)}{eta != null && ambStatus !== 'ARRIVED' ? ` · ~${eta} ${t('minutes')}` : ''}
+                </AppText>
               )}
             </View>
           </View>
