@@ -1,5 +1,5 @@
 {
-  "version": "sahhanito-rules-4",
+  "version": "sahhanito-rules-5",
   "validation_status": "unvalidated_prototype: wording, thresholds and weights must be reviewed by a clinician before any real use",
   "severity_policy": {
     "critical": {
@@ -53,7 +53,7 @@
     ],
     "stroke_signs": [
       "face (?:is )?droop\\w*|one side of (?:my|his|her) (?:body|face)|can.?t move (?:my|his|her) (?:arm|leg)|slurred speech",
-      "visage (?:paralyse|tordu)|bouche (?:tordue|de travers)|bras (?:paralyse|qui ne bouge plus)|paralysie|parole pateuse|ne peut plus parler",
+      "(?:visage|bouche|levre|joue)\\s+(?:est\\s+|s.est\\s+|a\\s+l.air\\s+|semble\\s+)?(?:paralyse\\w*|tordu\\w*|deforme\\w*|de\\s+travers|tombe\\w*|affaisse\\w*)|(?:bras|jambe|main)\\s+(?:est\\s+|ne\\s+)?(?:paralyse\\w*|bouge\\s+plus|ne\\s+bouge\\s+plus|sans\\s+force|engourdi\\w*)|paralys\\w*|hemiplegi\\w*|parole\\s+pateuse|(?:il|elle|je)\\s+(?:ne\\s+)?(?:peu[tx]|arrive)\\s+plus\\s+(?:a\\s+)?parler|ne\\s+peut\\s+plus\\s+parler|difficulte\\s+a\\s+parler",
       "wejh(?:i|ou|a|ha)\\s*mayel|fomm(?:i|ou|a|ha)\\s*mayel|ma\\s*(?:y|t|n)?(?:n[ae]j[ae]?m(?:e)?ch|9d[ae]rch)\\s*(?:y|t|n)?(?:[ae]?7ki|ahki|hki)|nos+\\s*bdan(?:i|ou|ha)|ma\\s*y?n[ae]jemch\\s*y?7ar+ek|kl[ae]m(?:ou|ha)\\s*met5alet",
       "وجه[هوي]?\\s*مايل|فم[هوي]?\\s*مايل|نص\\s*بدن|شلل|كلامو\\s*متخلط"
     ],

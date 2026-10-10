@@ -183,9 +183,13 @@ class Interviewer:
             "Strict rules:\n"
             "- Never assess urgency, never diagnose, never reassure, never give medical advice or medication. "
             "Urgency is decided by a separate validated system, not by you.\n"
-            "- Ask for the SAME information as the base question, but in your own natural words: adapt to what the "
-            "patient just said (you may reuse their words), and you may open with one short sentence of acknowledgement "
-            "or empathy. Exactly ONE question, max 45 words in total. Keep it simple and warm, like a calm nurse.\n"
+            "- Ask for the SAME information as the base question, in your own natural words, adapted to what the patient "
+            "said. Exactly ONE question, max 45 words in total, simple and warm, like a calm nurse.\n"
+            "- Ask neutrally: never suggest the answer and never presuppose a symptom, a cause or a timeline the patient "
+            "did not mention (no 'since that started', 'still', 'also' unless they said so). Keep only what the base "
+            "question itself asks.\n"
+            "- Acknowledge only what you understood. If the patient's last message is unclear or meaningless (a single "
+            "word, letters, a greeting), do not say 'I understand' or 'I'm sorry to hear': just ask kindly.\n"
             f"- Write in {LANG_NAMES.get(language, 'French')}.\n"
             "- Reply with JSON only: {\"question\": string, \"collected\": {\"age\": number|null, \"sex\": string|null, "
             "\"onset\": string|null, \"duration\": string|null, \"severity\": string|null, \"symptoms\": [string], "
@@ -397,8 +401,10 @@ def ask_adaptive_intake(interviewer, answered, history, language, message, purpo
         "You are the intake assistant of Sahhanito, a Tunisian emergency triage app. " + PURPOSE[purpose] +
         "Strict rules:\n"
         "- Never assess urgency, never mention a level or a hospital, never diagnose, never reassure, never give advice or medication.\n"
-        "- Talk naturally: you may acknowledge what the patient said in one short sentence, then ask ONE question "
-        "(max 45 words in total), adapted to their words; never repeat a question already asked.\n"
+        "- Talk naturally: you may acknowledge what the patient said in one short sentence (only if you understood it; "
+        "never 'I understand' after an unclear message), then ask ONE question (max 45 words in total), adapted to "
+        "their words; never repeat a question already asked.\n"
+        "- Ask neutrally: never suggest the answer and never presuppose a symptom or timeline the patient did not mention.\n"
         "- Up to 4 short quick replies (max 4 words each) the patient can tap, in the same language.\n"
         f"- Write in {LANG_NAMES.get(language, 'French')}.\n"
         "- JSON only: {\"topic\": one of " + json.dumps((['clarify'] if purpose == 'uncertain' else []) + list(remaining)) + ", \"question\": string, "
@@ -462,21 +468,25 @@ INTRO = {'fr': 'D’après ce que vous m’avez dit, votre situation est évalu�
          'ar': 'بناءً على ما أخبرتني به، تم تقييم حالتك: {level}.',
          'darija': 'حسب اللي قلتهولي، الحالة متاعك: {level}.'}
 WHY = {'fr': 'Ce qui compte surtout : {why}.', 'en': 'What matters most: {why}.', 'ar': 'الأهم: {why}.', 'darija': 'أهم حاجة: {why}.'}
+REPORTED = {'fr': 'Vous avez signalé : {x}.', 'en': 'You reported: {x}.', 'ar': 'لقد ذكرت: {x}.', 'darija': 'قلتلي: {x}.'}
 
 
-def template_explanation(level, reasons, language):
+def template_explanation(level, reasons, language, reported=()):
     lang = language if language in LEVEL_NAMES else 'fr'
+    sep = '، ' if lang in ('ar', 'darija') else ', '
     parts = [INTRO[lang].format(level=LEVEL_NAMES[lang][level])]
+    if reported:
+        parts.append(REPORTED[lang].format(x=sep.join(reported[:3]).lower() if lang in ('fr', 'en') else sep.join(reported[:3])))
     if reasons:
-        sep = '، ' if lang in ('ar', 'darija') else ', '
         parts.append(WHY[lang].format(why=sep.join(reasons[:3]).rstrip('.')))
     parts.append(NEXT_STEP[lang][level])
     return ' '.join(parts)
 
 
-def explain_decision(interviewer, level, reasons, history, language):
-    """Short chat message explaining the decided level. reasons: the system's own reasons, in the patient's language."""
-    fallback = dict(text=template_explanation(level, reasons, language), source='template')
+def explain_decision(interviewer, level, reasons, history, language, reported=()):
+    """Short chat message explaining the decided level. reasons: the system's own reasons, in the patient's language;
+    reported: the symptoms the patient reported (labels), so the patient sees what led to the decision."""
+    fallback = dict(text=template_explanation(level, reasons, language, reported), source='template')
     if not interviewer.enabled:
         return fallback
     lang = language if language in LEVEL_NAMES else 'fr'
@@ -485,7 +495,7 @@ def explain_decision(interviewer, level, reasons, history, language):
         "has ALREADY decided the urgency level. Your ONLY job: explain this decision to the patient, kindly and simply.\n"
         "Strict rules:\n"
         f"- State the level exactly as given (\"{LEVEL_NAMES[lang][level]}\"). Never change it, soften it or question it.\n"
-        "- Explain why using ONLY the reasons provided (you may relate them to what the patient said). Do not add "
+        "- Say briefly what the patient reported, then explain why using ONLY the reasons provided. Do not add "
         "diagnoses, causes, medicines or advice that are not in the next step.\n"
         "- End with the next step provided, in your own words.\n"
         + ("- This is an emergency: the message MUST tell them to call 190 now.\n" if level == 'EMERGENCY' else "") +
@@ -496,6 +506,7 @@ def explain_decision(interviewer, level, reasons, history, language):
     transcript = '\n'.join(f"{'Patient' if h['role'] == 'patient' else 'Assistant'}: {h['text']}" for h in history[-12:])
     user = (f"Conversation:\n{transcript}\n\nDecided level: {LEVEL_NAMES[lang][level]}\n"
             f"Reasons from the system: {'; '.join(reasons) if reasons else '(no specific warning sign)'}\n"
+            f"Symptoms the patient reported: {', '.join(reported) if reported else '(see conversation)'}\n"
             f"Next step: {NEXT_STEP[lang][level]}")
     try:
         content = interviewer._complete(system, user)
@@ -510,3 +521,45 @@ def explain_decision(interviewer, level, reasons, history, language):
 
 MED_ADVICE = re.compile(r"diagnos|take (?:paracetamol|ibuprofen|aspirin)|prenez (?:du|de l|un|une)|doliprane|paracétamol|ibuprof", re.I)
 REASSURE = re.compile(r"pas grave|rien de grave|not serious|nothing serious|don.t worry|ne vous inquiétez pas|ma tkhafch|ما تخافش", re.I)
+
+
+# ---- Confirming a critical sign that rests only on a "Yes" to our own question ------------------------
+CONFIRM = {
+    'R-NEURO-01': {
+        'fr': 'Pour être sûr : ce problème (parole, visage ou bras) a-t-il commencé brutalement, dans les dernières heures ?',
+        'en': 'To be sure: did this problem (speech, face or arm) start suddenly, in the last few hours?',
+        'ar': 'للتأكد: هل بدأت هذه المشكلة (الكلام أو الوجه أو الذراع) فجأة خلال الساعات الأخيرة؟',
+        'darija_arabic': 'باش نتأكد: المشكلة هذي (الكلام، الوجه ولا اليد) بدات فجأة في السوايع الأخيرة؟',
+        'darija_latin': 'Bech net2akked: el mochkla hedhi (el klem, el wejh walla el yed) bdet faj2a fi e-swaye3 lekhrin?'},
+    None: {
+        'fr': 'Pour être sûr : est-ce que cela se passe maintenant, ou a commencé récemment ?',
+        'en': 'To be sure: is this happening now, or did it start recently?',
+        'ar': 'للتأكد: هل يحدث هذا الآن أو بدأ مؤخرًا؟',
+        'darija_arabic': 'باش نتأكد: الحاجة هذي صايرة توا ولا بدات قريب؟',
+        'darija_latin': 'Bech net2akked: el 7aja hedhi sayra tawa walla bdet 9rib?'},
+}
+CONFIRM_OPTIONS = {
+    'fr': ["Oui, c'est récent", "Non, c'est ancien", 'Je ne sais pas'],
+    'en': ["Yes, it's recent", "No, it's been there a long time", 'Not sure'],
+    'ar': ['نعم، حديث', 'لا، قديم', 'لا أعرف'],
+    'darija_arabic': ['إي، جديدة', 'لا، قديمة', 'مانعرفش'],
+    'darija_latin': ['Ey, jdida', 'Le, 9dima', 'Ma na3rafch'],
+}
+POLAR_YES = re.compile(r"^\s*(yes|yeah|yep|y|oui|ouais|ey+|eyh|ah|aye|إي|اي|ايه|نعم|أيوه|wah)\b", re.I)
+SAYS_OLD = re.compile(r"^\s*(non|no|nope|le|lé|la|لا)\b|ancien|depuis longtemps|depuis des|long time|for years|قديم|من زمان|9dim|zman", re.I)
+
+
+def confirm_question(rule_id, language, message):
+    key = reply_key(language, message)
+    texts = CONFIRM.get(rule_id) or CONFIRM[None]
+    return texts[key], CONFIRM_OPTIONS[key]
+
+
+def answer_rules_out(answer, language, message):
+    """True when the confirmation answer says the sign is old / not current."""
+    options = CONFIRM_OPTIONS[reply_key(language, message)]
+    if answer.strip() == options[1]:
+        return True
+    if answer.strip() in (options[0], options[2]):
+        return False
+    return bool(SAYS_OLD.search(answer))
