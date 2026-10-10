@@ -1,7 +1,9 @@
 # Sahhanito — patient app
 
 Expo (SDK 57) + expo-router patient app for Sahhanito, AI emergency triage across Grand Tunis hospitals.
-Languages: French, Arabic, Tunisian Darija (Arabic script and Arabizi), English, with RTL.
+UI languages: French, Arabic, Tunisian Darija and English, with RTL. The clinical extractor supports English, Arabic-script Darija and Arabizi.
+
+The default now connects to the local AI bridge. Start `python serve.py` in `../ai/` first. Read [SAHHANITO.md](SAHHANITO.md) for the actual integration, Hassanito states, tests and limitations. The hospital flows below describe the original **mock mode**, enabled with `EXPO_PUBLIC_API_MODE=mock`; they are not connected services.
 
 ## Run (web)
 
@@ -14,7 +16,7 @@ Add `?lang=fr|ar|darija|en` to the URL to force a language.
 
 ## Mock backend
 
-Screens only talk to `src/lib/api.ts` (`PatientApi`). The mock implementation is in `src/mock/` and persists to AsyncStorage, so a reload keeps the case. Switching to the real API is a one-file change.
+Screens talk to `src/lib/api.ts` (`PatientApi`). It selects `src/lib/ai-api.ts` by default, or the original `src/mock/` implementation when explicitly configured. Mock cases persist to AsyncStorage; local AI cases are memory-only.
 
 Settings → **Test mode**:
 - **demo**: the assistant answers every message with a demo reply.
