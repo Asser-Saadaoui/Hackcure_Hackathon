@@ -1,0 +1,4 @@
+# Optional FP32 semantic proposals; no Torch/Transformers runtime required.
+onnxruntime==1.31.0
+tokenizers==0.22.2
+huggingface-hub==0.36.2

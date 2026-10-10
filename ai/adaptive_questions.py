@@ -33,7 +33,19 @@ def candidates(state):
     current=[f for f in state.get('facts',[]) if f['experiencer']==target and f['kind']=='symptom' and f['status'] in ('confirmed','uncertain') and f['temporality']=='current']
     complaints={f['name'] for f in current}
     known={(f['kind'],f['name']):f for f in state.get('facts',[]) if f['experiencer']==target}
-    asked={q['field'] for q in state.get('asked_questions',[])};result=[]
+    asked={q['field'] for q in state.get('asked_questions',[]) if q.get('answered',True)};result=[]
+    retry=state.get('clarification_target')
+    if retry:
+        result.append(dict(field=retry['field'],priority=111,templates=retry['templates'],
+                           reason='Previous answer did not establish the requested fact; clarify without guessing.'))
+    for f in current:
+        field='symptom.'+f['name']
+        if f['status']!='uncertain' or field in asked:continue
+        label={'chest':'chest pain','breath':'difficulty breathing','speech':'difficulty speaking'}.get(f['name'],f['name'].replace('_',' '))
+        result.append(dict(field=field,priority=110,reason='Confirm the uncertain symptom before asking its attributes.',
+                           templates={'en':'Are you experiencing '+label+' right now?',
+                                      'tn_arabizi':'El kelma "'+f['text']+'": t7ess biha taw? Fasser aktar.',
+                                      'tn_arabic':'تقصد بعبارة «'+f['text']+'» إحساس عندك توا؟ فسر أكثر.'}))
     for field,relevant,priority,en,arabizi,arabic in TEMPLATES:
         if not complaints.intersection(relevant):continue
         pieces=field.split('.');f=known.get(tuple(pieces[:2]))
@@ -42,8 +54,8 @@ def candidates(state):
         if not missing or field in asked:continue
         result.append(dict(field=field,priority=priority,reason='Clarify uncertainty' if f and f['status']=='uncertain' else 'Relevant missing clinical information',
                            templates={'en':en,'tn_arabizi':arabizi,'tn_arabic':arabic}))
-    if not state.get('facts') and state.get('turns') and None not in asked:
-        result.append(dict(field=None,priority=10,reason='Clinical complaint not understood; request clarification without inferring a diagnosis.',
+    if state.get('nlp_requires_clarification',not state.get('facts')) and state.get('turns') and None not in asked:
+        result.append(dict(field=None,priority=105,reason='Clinical complaint not understood; request clarification without inferring a diagnosis.',
                            templates={'en':'Please describe what is bothering you and where you feel it.',
                                       'tn_arabizi':'Fasser chnowa m9al9ek w win t7ess bih.',
                                       'tn_arabic':'فسر شنوة مقلقك ووين تحس بيه.'}))
