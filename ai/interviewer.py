@@ -349,6 +349,8 @@ def ask_intake(interviewer, field, history, language, message):
 
 MAX_INTAKE = 5
 TOPICS = {
+    'intake.context': 'how it happened / circumstances',
+    'intake.red_flags': 'warning signs specific to this complaint that would change urgency (e.g. bleeding, wound, numbness, inability to move, loss of consciousness, chest pain, breathing difficulty)',
     'intake.onset': 'when it started / how long',
     'intake.severity': 'how strong it is (0-10)',
     'intake.warning_signs': 'other warning signs (fever, vomiting, breathing difficulty, fainting, bleeding)',
@@ -357,12 +359,26 @@ TOPICS = {
 }
 
 
-def intake_open(answered, interviewer):
-    """True while intake questions remain: at most MAX_INTAKE, adaptive (LLM) or the fixed list."""
-    return len(answered) < MAX_INTAKE and (interviewer.enabled or next_intake(answered) is not None)
+def intake_open(answered, interviewer, limit=MAX_INTAKE):
+    """True while intake questions remain: at most `limit`, adaptive (LLM) or the fixed list."""
+    return len(answered) < limit and (interviewer.enabled or next_intake(answered) is not None)
 
 
-def ask_adaptive_intake(interviewer, answered, history, language, message):
+PURPOSE = {
+    'uncertain': ("The triage system could not yet understand this patient well enough. Your ONLY job: ask the ONE next "
+                  "question that will help most, then note what the patient said.\n"
+                  "- If the main complaint is still vague, ask what exactly is wrong and where (topic \"clarify\"). "
+                  "Otherwise pick the most useful remaining topic.\n"),
+    'followup': ("The triage system has a preliminary, NOT final, picture of the complaint. Your ONLY job: ask the ONE "
+                 "follow-up question that best completes it before the final decision, then note what the patient said.\n"
+                 "- Prefer questions whose answer could change the urgency for THIS complaint (topic \"intake.red_flags\": "
+                 "e.g. for an injury: open wound or bone visible, bleeding, numbness, can they move it; for pain: chest pain, "
+                 "breathing difficulty, fainting), then how it happened, intensity, age, history and medicines "
+                 "(e.g. blood thinners).\n"),
+}
+
+
+def ask_adaptive_intake(interviewer, answered, history, language, message, purpose='uncertain'):
     """Next intake question. With the LLM: chosen from the conversation (clarify the complaint, or the
     most useful missing topic) with matching quick replies. Otherwise: the next fixed question."""
     fallback_field = next_intake(answered)
@@ -377,18 +393,14 @@ def ask_adaptive_intake(interviewer, answered, history, language, message):
         return fixed()
     remaining = {k: v for k, v in TOPICS.items() if k not in answered}
     system = (
-        "You are the intake assistant of Sahhanito, a Tunisian emergency triage app. The triage system could not "
-        "yet understand this patient well enough. Your ONLY job: ask the ONE next question that will help most, then "
-        "note what the patient said.\n"
+        "You are the intake assistant of Sahhanito, a Tunisian emergency triage app. " + PURPOSE[purpose] +
         "Strict rules:\n"
-        "- Never assess urgency, never diagnose, never reassure, never give advice or medication.\n"
-        "- If the main complaint is still vague, ask what exactly is wrong and where (topic \"clarify\"). Otherwise "
-        "pick the most useful remaining topic.\n"
+        "- Never assess urgency, never mention a level or a hospital, never diagnose, never reassure, never give advice or medication.\n"
         "- One short question (max 25 words), adapted to what the patient already said; never repeat a question "
         "already asked.\n"
         "- Up to 4 short quick replies (max 4 words each) the patient can tap, in the same language.\n"
         f"- Write in {LANG_NAMES.get(language, 'French')}.\n"
-        "- JSON only: {\"topic\": one of " + json.dumps(['clarify', *remaining]) + ", \"question\": string, "
+        "- JSON only: {\"topic\": one of " + json.dumps((['clarify'] if purpose == 'uncertain' else []) + list(remaining)) + ", \"question\": string, "
         "\"quick_replies\": [string], \"collected\": {\"age\": number|null, \"onset\": string|null, \"severity\": string|null, "
         "\"symptoms\": [string], \"conditions\": [string], \"medications\": [string], \"other\": string|null}}"
     )
@@ -405,7 +417,7 @@ def ask_adaptive_intake(interviewer, answered, history, language, message):
     quick = [q.strip() for q in (out.get('quick_replies') or []) if isinstance(q, str) and 0 < len(q.strip()) <= 40][:4]
     if not question or len(question) > 300 or not re.search(r'[?؟]', question) or UNSAFE.search(question):
         return fixed()
-    if topic == 'clarify':
+    if topic == 'clarify' and purpose == 'uncertain':
         field = f"intake.clarify.{sum(k.startswith('intake.clarify') for k in answered) + 1}"
     elif topic in remaining:
         field = topic

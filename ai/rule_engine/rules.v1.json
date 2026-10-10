@@ -1,5 +1,5 @@
 {
-  "version": "sahhanito-rules-3",
+  "version": "sahhanito-rules-4",
   "validation_status": "unvalidated_prototype: wording, thresholds and weights must be reviewed by a clinician before any real use",
   "severity_policy": {
     "critical": {
@@ -154,8 +154,8 @@
       "سنتروم|دواء\\s*يميع\\s*الدم"
     ],
     "open_fracture": [
-      "(?:see|seeing|visible)\\s+(?:the\\s+)?bone|bone\\s+(?:is\\s+)?(?:sticking|coming|poking)\\s+out|open\\s+fracture",
-      "l.os\\s+(?:sort|est\\s+visible|depasse|dépasse)|fracture\\s+ouverte|on\\s+voit\\s+l.os",
+      "(?:see|seeing|visible)\\s+(?:the\\s+)?bone|bone\\s+(?:is\\s+)?(?:sticking|coming|poking)\\s+out|open\\s+fracture|\\bbones?\\s+(?:is\\s+|are\\s+)?(?:visible|showing|out)\\b|(?:open|deep)\\s+wound\\s+(?:with|and)\\s+(?:the\\s+)?bone",
+      "l.os\\s+(?:sort|est\\s+visible|depasse|dépasse)|fracture\\s+ouverte|on\\s+voit\\s+l.os|\\bos\\s+(?:visible|apparent)|plaie\\s+avec\\s+l.os",
       "(?:el\\s*)?3dh?am\\s*(?:ba?yen|5arej|kharej|dhaher|dhahra)|nchouf\\s*(?:fel\\s*|el\\s*)?3dh?am",
       "العظم\\s*(?:ظاهر|خارج|بارز|باين)|كسر\\s*مفتوح|نشوف\\s*في\\s*العظم"
     ],

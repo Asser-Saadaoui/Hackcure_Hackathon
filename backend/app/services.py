@@ -573,7 +573,7 @@ def concept_label(f):
     return text if text and not YES_NO.match(text) else f['name'].replace('_', ' ')
 
 
-INTAKE_LABELS = {'intake.onset': 'Depuis', 'intake.severity': 'Intensité (/10)', 'intake.warning_signs': 'Autres signes',
+INTAKE_LABELS = {'intake.context': 'Circonstances', 'intake.red_flags': 'Signes recherchés', 'intake.onset': 'Depuis', 'intake.severity': 'Intensité (/10)', 'intake.warning_signs': 'Autres signes',
                  'intake.age': 'Âge', 'intake.history': 'Antécédents / grossesse / traitements'}
 
 

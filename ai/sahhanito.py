@@ -20,6 +20,7 @@ from triage_pipeline import process_turn
 
 VERSION = 'sahhanito-turn-0.1'
 MAX_QUESTIONS = 5
+MIN_QUESTIONS = 3   # before a non-emergency final decision, at least this many questions in total
 
 EMERGENCY_MESSAGE = {
     'fr': "Ceci peut être une urgence. Appelez le 190 (SAMU) maintenant. Nous prévenons l'hôpital le plus adapté.",
@@ -103,11 +104,9 @@ def triage_turn(state, message, previous_question_id=None, *, language='fr', mod
         meta['llm_notes'].update(asked_reply.get('collected') or {})
         reply = dict(text=asked_reply['text'], quick_replies=asked_reply['quick_replies'],
                      question_id=question['id'], field=question['field'], source=asked_reply['source'])
-    elif (decided['level'] == 'UNCERTAIN' and mode == 'interview'
-          and interviewer_module.intake_open(meta['intake'], interviewer or default_interviewer())
-          and (asked_reply := interviewer_module.ask_adaptive_intake(interviewer or default_interviewer(), meta['intake'],
-                                                                    _history(st), language, message))):
-        # Not enough to decide: collect what a clinician needs before review (adaptive with the LLM).
+    elif mode == 'interview' and (asked_reply := _intake_question(st, meta, decided, asked, language, message, interviewer)):
+        # Before deciding: UNCERTAIN collects what a clinician needs (up to 5); HIGH / LOW ask follow-ups until
+        # at least MIN_QUESTIONS in total. Every answer goes back through the NLP and the rules.
         status = 'question'
         field = asked_reply['field']
         meta['pending_intake'] = field
@@ -145,6 +144,20 @@ def triage_turn(state, message, previous_question_id=None, *, language='fr', mod
                       decision=decision_policy.VERSION, interviewer=interviewer_module.VERSION,
                       nlp_model=r['ml'].get('model_version')),
     )
+
+
+def _intake_question(st, meta, decided, asked, language, message, interviewer):
+    itv = interviewer or default_interviewer()
+    total = asked + len(meta['intake'])
+    if decided['level'] == 'UNCERTAIN':
+        purpose, limit = 'uncertain', interviewer_module.MAX_INTAKE
+    elif decided['level'] in ('HIGH', 'LOW') and total < MIN_QUESTIONS:
+        purpose, limit = 'followup', len(meta['intake']) + (MIN_QUESTIONS - total)
+    else:
+        return None
+    if not interviewer_module.intake_open(meta['intake'], itv, limit):
+        return None
+    return interviewer_module.ask_adaptive_intake(itv, meta['intake'], _history(st), language, message, purpose)
 
 
 def _history(state):
