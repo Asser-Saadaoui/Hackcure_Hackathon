@@ -53,6 +53,8 @@ export const api = {
   chat: (id: string, text: string, kind: "TEXT" | "QUESTION" | "INSTRUCTION", options?: string[]) =>
     call<ChatMessage>("POST", `/staff/referrals/${id}/chat`, { text, kind, options }),
   hospital: () => call<Hospital>("GET", "/staff/hospital"),
+  savedReplies: () => call<{ replies: string[]; updatedBy: string | null }>("GET", "/staff/hospital/replies"),
+  setSavedReplies: (replies: string[]) => call<{ replies: string[]; updatedBy: string | null }>("PUT", "/staff/hospital/replies", { replies }),
   setAvailability: (body: Record<string, unknown>) => call<Hospital>("PUT", "/staff/hospital/availability", body),
   clearAvailability: () => call<Hospital>("DELETE", "/staff/hospital/availability"),
   hospitals: () => call<{ simulator: { ok: boolean }; hospitals: Hospital[] }>("GET", "/staff/hospitals"),

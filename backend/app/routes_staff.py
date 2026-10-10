@@ -12,7 +12,7 @@ from app import config, hospitals, services
 from app.db import get_db
 from app.deps import clinician, hospital_staff, staff
 from app.events import sse
-from app.models import AvailabilityOverride, Case, Referral, StaffSession, StaffUser
+from app.models import AvailabilityOverride, Case, HospitalSettings, Referral, StaffSession, StaffUser
 from app.security import new_token, token_hash, verify_password
 
 router = APIRouter(prefix='/api/v1/staff')
@@ -221,6 +221,37 @@ def clear_availability(user: StaffUser = Depends(hospital_staff), db: Session = 
         services.audit(db, user.email, 'availability.cleared', None, hospital=user.hospital_key)
         db.commit()
     return hospital_view(db, user.hospital_key)
+
+
+DEFAULT_REPLIES = [
+    "Ne mangez pas et ne buvez pas avant d'être examiné.",
+    "Présentez-vous à l'accueil des urgences avec ce code de dossier.",
+    "Restez allongé et ne restez pas seul.",
+    "Apportez vos médicaments ou leur liste.",
+    "Si votre état s'aggrave, appelez le 190 immédiatement.",
+]
+
+
+class RepliesIn(BaseModel):
+    replies: list[str] = Field(max_length=30)
+
+
+@router.get('/hospital/replies')
+def saved_replies(user: StaffUser = Depends(hospital_staff), db: Session = Depends(get_db)):
+    s = db.get(HospitalSettings, user.hospital_key)
+    return dict(replies=s.saved_replies if s and s.saved_replies is not None else DEFAULT_REPLIES,
+                updatedBy=s.updated_by if s else None)
+
+
+@router.put('/hospital/replies')
+def set_saved_replies(body: RepliesIn, user: StaffUser = Depends(hospital_staff), db: Session = Depends(get_db)):
+    replies = [r.strip()[:500] for r in body.replies if r.strip()]
+    s = db.get(HospitalSettings, user.hospital_key) or HospitalSettings(hospital_key=user.hospital_key)
+    s.saved_replies, s.updated_by, s.updated_at = replies, user.name, datetime.now(timezone.utc)
+    db.merge(s)
+    services.audit(db, user.email, 'settings.saved_replies', None, hospital=user.hospital_key, count=len(replies))
+    db.commit()
+    return dict(replies=replies, updatedBy=user.name)
 
 
 @router.get('/hospitals')

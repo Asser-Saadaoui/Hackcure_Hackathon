@@ -642,6 +642,61 @@ def report_pdf(db, case, audience='patient', referral=None):
         'Content-Disposition': f'inline; filename="{pdf.filename(report, audience)}"', 'Cache-Control': 'no-store'})
 
 
+LEVEL_FR = {'EMERGENCY': 'Urgence vitale', 'HIGH': 'Urgent', 'LOW': 'Peu urgent', 'UNCERTAIN': 'À vérifier'}
+CONFIDENCE_FR = {'LOW': ('élevée', 'Les signaux concordent.'), 'MEDIUM': ('moyenne', 'À confirmer cliniquement.'),
+                 'HIGH': ('faible', 'Informations insuffisantes : jugement clinique nécessaire.')}
+
+
+def explanation(case):
+    """Plain-French reasons for the level, for ED staff (the raw scores stay available as technical details)."""
+    a, d, ai = case.assessment or {}, case.decision or {}, case.ai_decision or {}
+    level = case.level or 'UNCERTAIN'
+    points = []
+    for r in a.get('triggered_rules', []):
+        why = (r.get('rationale') or {}).get('fr') or r['name']
+        words = ', '.join(r.get('evidence') or [])
+        kind = {'critical': 'signe d\'alerte majeur', 'high': 'signe de gravité', 'moderate': 'facteur de risque'}.get(r['severity'], '')
+        points.append(f"{why} ({kind})" + (f" — le patient a écrit « {words} »" if words else ''))
+    p = a.get('p_nlp')
+    if p is None:
+        points.append("Le modèle de langage n'a pas compris le message : le niveau repose sur les règles de sécurité.")
+    elif p >= 0.5:
+        points.append('Le modèle de langage estime aussi un risque élevé.')
+    elif p < 0.1 and not a.get('triggered_rules'):
+        points.append("Le modèle de langage n'a pas détecté de signe de gravité.")
+    else:
+        points.append('Le modèle de langage estime un risque modéré.')
+    if ai.get('basis') == 'rule_floor':
+        points.append('Le niveau minimum imposé par les règles de sécurité s\'applique.')
+    if case.review:
+        points.append(f"Vérifié par {case.review['by']}" + (f" : {case.review['note']}" if case.review.get('note') else '.'))
+    rationale = (ai.get('rationale_all') or {}).get('fr') or d.get('rationale') or ''
+    conf, conf_note = CONFIDENCE_FR.get(a.get('uncertainty') or 'HIGH', CONFIDENCE_FR['HIGH'])
+    return dict(headline=f"{LEVEL_FR.get(level, level)} : {rationale}".strip(' :'), points=points,
+                confidence=conf, confidenceNote=conf_note)
+
+
+def patient_age(case):
+    state = case.ai_state or {}
+    fact = next((f for f in reversed(state.get('facts', [])) if f.get('kind') == 'demographic' and f.get('name') == 'age'
+                 and isinstance(f.get('value'), (int, float))), None)
+    if fact:
+        return f"{int(fact['value'])} ans"
+    meta = state.get('sahhanito') or {}
+    age = (meta.get('llm_notes') or {}).get('age') or (meta.get('intake') or {}).get('intake.age')
+    return f"{age} ans" if isinstance(age, (int, float)) else age
+
+
+def unread_for_staff(db, r):
+    """Patient messages since the last staff message."""
+    msgs = db.scalars(select(ChatMessage).where(ChatMessage.referral_id == r.id, ChatMessage.sender != 'SYSTEM')
+                      .order_by(ChatMessage.created_at)).all()
+    n = 0
+    for m in msgs:
+        n = 0 if m.sender == 'STAFF' else n + 1
+    return n
+
+
 def staff_case_view(db, r):
     case = db.get(Case, r.case_id)
     a = case.assessment or {}
@@ -656,6 +711,8 @@ def staff_case_view(db, r):
                                   contributions=a.get('contributions'), triggeredRules=a.get('triggered_rules', [])),
                   actions=(case.ai_decision or {}).get('actions', [])),
         transcript=[turn_view(x) for x in case.turns],
+        explanation=explanation(case),
+        patientAge=patient_age(case),
         journey=journey(case),
         report=structured_report(case),
         chat=[chat_view(m) for m in chat],
@@ -684,7 +741,7 @@ def referral_row(db, r):
                 pFinal=d.get('pFinal'), uncertainty=d.get('uncertainty'), suggestedSpecialty=d.get('suggestedSpecialty'),
                 redFlags=[x['name'] for x in d.get('triggeredRules', []) if x.get('severity') == 'critical'],
                 etaMinutes=r.eta_minutes, distanceKm=r.distance_km, createdAt=iso(r.created_at),
-                lastMessage=chat_view(last) if last else None)
+                lastMessage=chat_view(last) if last else None, unread=unread_for_staff(db, r), patientAge=patient_age(case))
 
 
 def expire_overrides_now():

@@ -140,7 +140,7 @@ def triage_turn(state, message, previous_question_id=None, *, language='fr', mod
         missing_info=r['relevant_missing_information'],
         assessment=dict(
             **assessment,
-            triggered_rules=[dict(id=x['id'], name=x['name'], severity=x['severity'], weight=x['weight'],
+            triggered_rules=[dict(id=x['id'], name=x['name'], severity=x['severity'], weight=x['weight'], rationale=x['rationale'],
                                   evidence=[e.get('text') for e in x['evidence'] if e.get('text')])
                              for x in rules['triggered_rules']],
         ),
