@@ -19,7 +19,9 @@ export function ChatPanel({ referralId, messages, disabled, onSent }: { referral
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const end = useRef<HTMLDivElement>(null);
-  useEffect(() => end.current?.scrollIntoView({ behavior: "smooth" }), [messages.length]);
+  useEffect(() => {
+    end.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages.length]);
 
   async function send(body: { text: string; kind: "TEXT" | "QUESTION" | "INSTRUCTION"; options?: string[] }) {
     setBusy(true);

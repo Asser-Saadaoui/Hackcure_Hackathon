@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Bell, ClipboardCheck, Gauge, Inbox, LogOut, Network } from "lucide-react";
 import { Brand } from "@/components/Brand";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AvailabilityView } from "@/components/AvailabilityView";
 import { CaseView } from "@/components/CaseView";
 import { IncomingView } from "@/components/IncomingView";
@@ -147,6 +148,7 @@ export default function App() {
       </header>
 
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+        <ErrorBoundary key={`${view}:${openId ?? ""}`} onReset={() => setOpenId(null)}>
         {view === "incoming" && !openId && <IncomingView rows={rows} scope={scope} onScope={setScope} onOpen={setOpenId} error={error} />}
         {view === "incoming" && openId && (detail
           ? <CaseView detail={detail} onBack={() => setOpenId(null)} onChanged={() => { loadDetail(); loadRows(); }} />
@@ -154,6 +156,7 @@ export default function App() {
         {view === "availability" && hospital && <AvailabilityView hospital={hospital} onChanged={setHospital} />}
         {view === "network" && <NetworkView hospitals={network.hospitals} simulatorOk={network.ok} />}
         {view === "reviews" && <ReviewView items={reviews} onDone={() => loadReviews()} />}
+        </ErrorBoundary>
       </main>
     </div>
   );
