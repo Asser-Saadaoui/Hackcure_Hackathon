@@ -115,7 +115,7 @@ export function IncomingView({ rows, scope, onScope, onOpen, error }: Props) {
                     </span>
                     {r.arrivalMode === "AMBULANCE" && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground"><Ambulance className="h-3.5 w-3.5" /> ambulance (simulée)</span>}
                   </div>
-                  <p className="truncate text-sm font-medium" dir="auto">« {r.chiefComplaint} »</p>
+                  <p className="truncate text-sm font-medium" dir="auto">{r.chiefComplaint}</p>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                     {r.redFlags.length > 0 && <span className="inline-flex items-center gap-1 text-red-700"><ShieldAlert className="h-3.5 w-3.5" />{r.redFlags.join(" · ")}</span>}
                     {r.patientAge && <span className="inline-flex items-center gap-1"><User className="h-3.5 w-3.5" />{r.patientAge}</span>}

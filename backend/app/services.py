@@ -564,15 +564,38 @@ FR_CONCEPTS = {
     'asthma': 'Asthme', 'copd': 'BPCO', 'diabetes': 'Diabète', 'hypertension': 'Hypertension', 'stroke': 'AVC', 'heart_attack': 'Infarctus',
     'pregnancy': 'Grossesse', 'epilepsy': 'Épilepsie', 'cancer': 'Cancer', 'kidney_disease': 'Maladie rénale', 'heart_failure': 'Insuffisance cardiaque',
     'atrial_fibrillation': 'Fibrillation atriale', 'anxiety': 'Anxiété', 'migraine': 'Migraine',
+    'bleeding': 'Saignement', 'bleeding_heavily': 'Saignement abondant', 'heavy_bleeding': 'Saignement abondant',
+    'bleed_severe': 'Saignement abondant', 'uncontrolled_bleeding': 'Saignement non contrôlé', 'unconscious': 'Perte de connaissance',
+    'unresponsive': 'Ne répond pas', 'cannot_breathe': 'Impossibilité de respirer', 'face_drooping': 'Visage affaissé',
+    'itching': 'Démangeaisons', 'one_side': 'Faiblesse d\'un côté du corps',
 }
 YES_NO = re.compile(r'^\s*(yes|no|not sure|oui|non|ey|le|إي|لا|نعم)\b', re.I)
 
 
 def concept_label(f):
+    """French clinical label of an extracted concept. Reports never quote the patient's messages."""
+    for name in [f['name'], *(f.get('concept_aliases') or [])]:
+        if name in FR_CONCEPTS:
+            return FR_CONCEPTS[name]
     text = (f.get('text') or '').strip()
-    if f['name'] in FR_CONCEPTS:
-        return FR_CONCEPTS[f['name']] + ('' if not text or YES_NO.match(text) or len(text) > 60 else f' (« {text} »)')
     return text if text and not YES_NO.match(text) else f['name'].replace('_', ' ')
+
+
+def rule_label(r):
+    return (r.get('rationale') or {}).get('fr', '').rstrip('.') or r['name']
+
+
+def chief_complaint(case):
+    """Reason for the visit from what triage recognized (warning signs, then symptoms), never the raw first message."""
+    a = case.assessment or {}
+    rules = sorted(a.get('triggered_rules', []), key=lambda r: {'critical': 0, 'high': 1, 'moderate': 2}.get(r['severity'], 3))
+    labels = list(dict.fromkeys(rule_label(r) for r in rules))[:2]
+    if not labels:
+        state = case.ai_state or {}
+        labels = list(dict.fromkeys(concept_label(f) for f in state.get('facts', [])
+                                    if f.get('kind') == 'symptom' and f.get('status') == 'confirmed'
+                                    and f.get('temporality') == 'current'))[:3]
+    return ' · '.join(labels) if labels else 'Plainte non précisée'
 
 
 INTAKE_LABELS = {'intake.context': 'Circonstances', 'intake.red_flags': 'Signes recherchés', 'intake.onset': 'Depuis', 'intake.severity': 'Intensité (/10)', 'intake.warning_signs': 'Autres signes',
@@ -580,32 +603,39 @@ INTAKE_LABELS = {'intake.context': 'Circonstances', 'intake.red_flags': 'Signes 
 
 
 def structured_report(case):
-    """Deterministic report from stored data: the transcript, the facts the NLP extracted, the rules that
-    fired with the patient's words, and the LLM interviewer's notes (shown as reported, never as findings)."""
+    """Deterministic report from stored data: the facts the NLP extracted (in French clinical terms), the rules
+    that fired, the answers collected and the routing events. It does not contain the message history."""
     level = case.level or 'UNCERTAIN'
     d = case.decision or {}
     a = case.assessment or {}
     state = case.ai_state or {}
-    facts = [f for f in state.get('facts', []) if f.get('experiencer', 'patient') == state.get('patient_experiencer', 'patient')]
+    facts = [f for f in state.get('facts', []) if f.get('experiencer', 'patient') == state.get('patient_experiencer', 'patient')
+             and f.get('temporality', 'current') == 'current']
     positives = sorted({concept_label(f) for f in facts if f.get('kind') == 'symptom' and f.get('status') == 'confirmed'})
-    negatives = sorted({concept_label(f) for f in facts if f.get('kind') == 'symptom' and f.get('status') == 'negated'})
+    negatives = sorted({concept_label(f) for f in facts if f.get('kind') == 'symptom' and f.get('status') == 'negated'} - set(positives))
     history = sorted({concept_label(f) for f in facts if f.get('kind') == 'condition' and f.get('status') == 'confirmed'})
     meds = sorted({f.get('text') or f['name'] for f in facts if f.get('kind') == 'medication' and f.get('status') == 'confirmed'})
     notes = (state.get('sahhanito') or {}).get('llm_notes') or {}
     meds = sorted(set(meds) | {str(m) for m in notes.get('medications', []) or []})
-    said = [x.text for x in case.turns if x.role == 'PATIENT']
-    red_flags = [f"{r['name']} — « {', '.join(r.get('evidence') or [])} »" if r.get('evidence') else r['name']
-                 for r in a.get('triggered_rules', [])]
-    r = current_referral(case)
-    timeline = [dict(at=iso(x.created_at), event=('Patient : ' if x.role == 'PATIENT' else 'Assistant : ') + x.text)
-                for x in case.turns if x.role != 'SYSTEM'][-10:]
-    if r:
-        timeline.append(dict(at=iso(r.created_at), event=f"Dossier envoyé à {hospitals.FACILITIES[r.facility_key]['name']}"))
+    red_flags = list(dict.fromkeys(rule_label(r) for r in a.get('triggered_rules', [])))
     reported = [f"{FIELD_LABELS.get(k, k)} : {v}" for k, v in notes.items() if k in FIELD_LABELS and v]
     intake = (state.get('sahhanito') or {}).get('intake') or {}
     reported += [f"{INTAKE_LABELS.get(k) or ('Précision' if k.startswith('intake.clarify') else k)} : {v}" for k, v in intake.items() if v]
-    missing = (state.get('sahhanito') or {}).get('missing') or []
-    summary = f"Motif : « {said[0] if said else '—'} ». Niveau : {level}"
+
+    # Timeline of events (no messages): triage, level, referrals, review.
+    timeline = [dict(at=iso(case.created_at), event='Début du triage')]
+    last_patient = next((x for x in reversed(case.turns) if x.role == 'PATIENT'), None)
+    if case.level:
+        timeline.append(dict(at=iso(last_patient.created_at if last_patient else case.created_at), event=f"Niveau évalué : {LEVEL_FR.get(case.level, case.level)}"))
+    for j in journey(case):
+        timeline.append(dict(at=j['sentAt'], event=f"Dossier envoyé à {j['facilityName']}"))
+        if j['decidedAt'] and j['status'] not in ('SENT', 'INFO_REQUESTED'):
+            timeline.append(dict(at=j['decidedAt'], event=f"{j['statusLabel']} · {j['facilityName']}"))
+    if case.review:
+        timeline.append(dict(at=case.review['at'], event=f"Vérifié par {case.review['by']}"))
+
+    complaint = chief_complaint(case)
+    summary = f"Motif : {complaint}. Niveau : {LEVEL_FR.get(level, level)}"
     if d.get('pFinal') is not None:
         summary += f" (p={d['pFinal']:.2f})"
     # Reports are in French for every reader; the AI keeps the rationale in all four languages.
@@ -613,8 +643,9 @@ def structured_report(case):
     summary += f". {rationale_fr}".rstrip()
     if case.review:
         summary += f" Vérifié par {case.review['by']}."
-    return dict(summary=summary, chiefComplaint=said[0] if said else '—', timeline=timeline,
-                positives=positives or said[:3], negatives=negatives, history=history + reported, medications=meds,
+    missing = (state.get('sahhanito') or {}).get('missing') or []
+    return dict(summary=summary, chiefComplaint=complaint, timeline=timeline,
+                positives=positives, negatives=negatives, history=history + reported, medications=meds,
                 redFlags=red_flags, risk=dict(level=level, pFinal=d.get('pFinal'), uncertainty=d.get('uncertainty', 'HIGH')),
                 recommendedActions=ACTIONS[level], openQuestions=missing or ['Durée exacte des symptômes', 'Traitements en cours'],
                 disclaimer='Triage assisté par IA. Les décisions cliniques appartiennent à l’équipe qui reçoit le patient.')
@@ -751,7 +782,7 @@ def referral_row(db, r):
     d = case.decision or {}
     last = db.scalars(select(ChatMessage).where(ChatMessage.referral_id == r.id).order_by(ChatMessage.created_at.desc()).limit(1)).first()
     return dict(id=r.id, caseId=case.id, referenceCode=case.reference_code, level=case.level, status=r.status,
-                arrivalMode=r.arrival_mode, chiefComplaint=next((x.text for x in case.turns if x.role == 'PATIENT'), ''),
+                arrivalMode=r.arrival_mode, chiefComplaint=chief_complaint(case),
                 pFinal=d.get('pFinal'), uncertainty=d.get('uncertainty'), suggestedSpecialty=d.get('suggestedSpecialty'),
                 redFlags=[x['name'] for x in d.get('triggeredRules', []) if x.get('severity') == 'critical'],
                 etaMinutes=r.eta_minutes, distanceKm=r.distance_km, createdAt=iso(r.created_at),

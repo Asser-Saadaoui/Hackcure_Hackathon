@@ -273,7 +273,7 @@ def all_hospitals(user: StaffUser = Depends(staff), db: Session = Depends(get_db
 def reviews(user: StaffUser = Depends(clinician), db: Session = Depends(get_db)):
     cases = db.scalars(select(Case).where(Case.status == 'UNDER_REVIEW').order_by(Case.created_at))
     return [dict(caseId=c.id, referenceCode=c.reference_code, createdAt=services.iso(c.created_at), language=c.language,
-                 chiefComplaint=next((x.text for x in c.turns if x.role == 'PATIENT'), ''), decision=c.decision,
+                 chiefComplaint=services.chief_complaint(c), decision=c.decision,
                  assessment=c.assessment, transcript=[services.turn_view(x) for x in c.turns],
                  report=services.structured_report(c)) for c in cases]
 

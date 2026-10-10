@@ -89,7 +89,7 @@ export function CaseView({ detail, onBack, onChanged }: { detail: CaseDetail; on
           {r.arrivalMode && <Fact icon={r.arrivalMode === "AMBULANCE" ? Ambulance : Footprints}>{r.arrivalMode === "AMBULANCE" ? "Ambulance (simulée)" : "Vient seul"}</Fact>}
           <span className="text-xs text-muted-foreground">reçu {ago(r.createdAt)} · {LANG[c.language] ?? c.language}</span>
         </div>
-        <p className="truncate text-base font-semibold" dir="auto">« {report.chiefComplaint} »</p>
+        <p className="truncate text-base font-semibold" dir="auto">{report.chiefComplaint}</p>
         {criticalFlags.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {criticalFlags.map((x) => (

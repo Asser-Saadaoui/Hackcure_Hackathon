@@ -2,7 +2,7 @@
 
 Two versions from the same stored data:
   patient: summary, warning signs, what was reported, assigned hospital, recommendations, QR to the case page
-  staff:   + how the level was decided, the hospital journey, the full triage transcript and the ED chat
+  staff:   + how the level was decided, the hospital journey and the FHIR codes (no message history)
 
 Patient words in Arabic script are shaped and reordered (arabic-reshaper + python-bidi) so they render
 correctly with the embedded DejaVu font. Nothing is invented: every field comes from the case record.
@@ -170,19 +170,6 @@ def build(case, report, referral, audience='patient', staff_view=None, fhir_summ
                 [f"{j['facilityName']} · {j['statusLabel']} · {local(j['sentAt'])}" + (f" · {j['decidedBy']}" if j['decidedBy'] else '')
                  + (f" — {j['reason']}" if j['reason'] else '') for j in staff_view['journey']])))
 
-        transcript = [Paragraph(f"<font color='#6B7280'>{local(t['createdAt'])[-5:]}</font> <b>{'Patient' if t['role'] == 'PATIENT' else 'Assistant' if t['role'] == 'ASSISTANT' else 'Système'} :</b> {txt(t['text'])}", base)
-                      for t in staff_view['transcript']]
-        story.append(Paragraph('Conversation de triage', h2))
-        story += transcript or [Paragraph('—', small)]
-
-        chat = [m for m in staff_view['chat'] if m['sender'] != 'SYSTEM' or m['kind'] == 'RED_FLAG']
-        if chat:
-            story.append(Paragraph('Échanges avec les urgences', h2))
-            who = {'PATIENT': 'Patient', 'STAFF': 'Urgences', 'SYSTEM': 'Alerte'}
-            for m in chat:
-                name = m.get('senderName') or who[m['sender']]
-                story.append(Paragraph(f"<font color='#6B7280'>{local(m['createdAt'])[-5:]}</font> <b>{txt(name)} :</b> {txt(m['text'])}"
-                                       + (f" <font color='#6B7280'>(choix : {txt(' / '.join(m['options']))})</font>" if m.get('options') else ''), base))
 
     if fhir_summary and audience == 'staff':
         counts = ', '.join(f'{n} {k}' for k, n in fhir_summary['counts'].items())

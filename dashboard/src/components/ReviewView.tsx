@@ -31,7 +31,7 @@ export function ReviewView({ items, onDone }: { items: ReviewItem[]; onDone: () 
       {items.map((it) => (
         <Card key={it.caseId}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base" dir="auto">« {it.chiefComplaint} »</CardTitle>
+            <CardTitle className="text-base" dir="auto">{it.chiefComplaint}</CardTitle>
             <p className="text-xs text-muted-foreground">{it.referenceCode} · {ago(it.createdAt)} · {LANG[it.language] ?? it.language}
               {it.assessment && <> · p_nlp {pct(it.assessment.p_nlp)} · s_rule {pct(it.assessment.s_rule)} · p_final {pct(it.assessment.p_final)}</>}</p>
           </CardHeader>

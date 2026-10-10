@@ -120,8 +120,7 @@ def build_bundle(case, report, referral, journey=None):
                 'resourceType': 'Observation', 'id': _id(cid, 'obs', f['name']), 'status': 'preliminary',
                 'category': [_coding(OBS_CATEGORY, 'survey', 'Survey')],
                 'code': _concept(SNOMED_FINDINGS, f['name'], concept_label(f)),
-                'subject': subject, 'encounter': encounter, 'valueBoolean': f['status'] == 'confirmed',
-                'note': [{'text': f"Rapporté par le patient : « {f.get('text')} »"}] if f.get('text') else []})
+                'subject': subject, 'encounter': encounter, 'valueBoolean': f['status'] == 'confirmed'})
         elif f.get('kind') == 'condition' and f.get('status') == 'confirmed':
             conditions.append({
                 'resourceType': 'Condition', 'id': _id(cid, 'cond', f['name']),
