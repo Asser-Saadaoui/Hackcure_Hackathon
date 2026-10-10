@@ -143,6 +143,14 @@ def report_pdf(referral_id: str, user: StaffUser = Depends(hospital_staff), db: 
     return services.report_pdf(db, db.get(Case, r.case_id), 'staff', referral=r)
 
 
+@router.get('/referrals/{referral_id}/fhir')
+def fhir_export(referral_id: str, user: StaffUser = Depends(hospital_staff), db: Session = Depends(get_db)):
+    r = my_referral(db, user, referral_id)
+    services.audit(db, user.email, 'export.fhir', r.case_id)
+    db.commit()
+    return services.fhir_response(db.get(Case, r.case_id), r)
+
+
 @router.get('/referrals/{referral_id}/alternatives')
 def alternatives(referral_id: str, user: StaffUser = Depends(hospital_staff), db: Session = Depends(get_db)):
     r = my_referral(db, user, referral_id)

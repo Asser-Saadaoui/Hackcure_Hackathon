@@ -1,6 +1,6 @@
 import { useState } from "react";
 import {
-  Ambulance, ArrowLeft, ArrowRightLeft, Check, ChevronDown, Clock, FileText, Footprints, Hospital, MapPin, ShieldAlert,
+  Ambulance, ArrowLeft, ArrowRightLeft, Check, ChevronDown, Clock, FileJson, FileText, Footprints, Hospital, MapPin, ShieldAlert,
   TriangleAlert, User, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ChatPanel } from "@/components/ChatPanel";
 import { LevelBadge } from "@/components/LevelBadge";
 import { ReroutePanel } from "@/components/ReroutePanel";
-import { api, openReportPdf } from "@/api";
+import { api, downloadFhir, openReportPdf } from "@/api";
 import { AMBULANCE, ago, EQUIPMENT, LANG, pct, STATUS, time } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { CaseDetail } from "@/types";
@@ -70,9 +70,15 @@ export function CaseView({ detail, onBack, onChanged }: { detail: CaseDetail; on
       <div className="sticky top-0 z-20 -mx-4 space-y-2 border-b bg-background/95 px-4 pb-3 pt-2 backdrop-blur sm:-mx-6 sm:px-6">
         <div className="flex items-center justify-between">
           <button onClick={onBack} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /> Patients</button>
-          <Button variant="outline" size="sm" onClick={() => openReportPdf(r.id).catch((err) => setError((err as Error).message))}>
-            <FileText className="mr-1.5 h-4 w-4" />Rapport PDF
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" title="HL7 FHIR R4 (Bundle document) à importer dans le dossier patient de l'hôpital"
+              onClick={() => downloadFhir(r.id, c.referenceCode).catch((err) => setError((err as Error).message))}>
+              <FileJson className="mr-1.5 h-4 w-4" />Export FHIR
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => openReportPdf(r.id).catch((err) => setError((err as Error).message))}>
+              <FileText className="mr-1.5 h-4 w-4" />Rapport PDF
+            </Button>
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <LevelBadge level={c.level} className="text-sm" />

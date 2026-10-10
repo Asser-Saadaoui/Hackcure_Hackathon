@@ -88,7 +88,7 @@ def qr(link, size=26 * mm):
     return d
 
 
-def build(case, report, referral, audience='patient', staff_view=None):
+def build(case, report, referral, audience='patient', staff_view=None, fhir_summary=None):
     """report = services.report_view(case); referral = current referral or None; staff_view = services.staff_case_view."""
     buf = io.BytesIO()
     generated = datetime.now(timezone.utc).astimezone(TZ).strftime('%d/%m/%Y à %H:%M')
@@ -184,8 +184,25 @@ def build(case, report, referral, audience='patient', staff_view=None):
                 story.append(Paragraph(f"<font color='#6B7280'>{local(m['createdAt'])[-5:]}</font> <b>{txt(name)} :</b> {txt(m['text'])}"
                                        + (f" <font color='#6B7280'>(choix : {txt(' / '.join(m['options']))})</font>" if m.get('options') else ''), base))
 
+    if fhir_summary and audience == 'staff':
+        counts = ', '.join(f'{n} {k}' for k, n in fhir_summary['counts'].items())
+        rows = [[Paragraph('<b>Ressource</b>', small), Paragraph('<b>Système</b>', small), Paragraph('<b>Code</b>', small), Paragraph('<b>Libellé</b>', small)]]
+        rows += [[Paragraph(txt(res), small), Paragraph(txt(sys_), small), Paragraph(txt(code), small), Paragraph(txt(disp), small)]
+                 for res, sys_, code, disp in fhir_summary['codes']]
+        t = Table(rows, colWidths=[36 * mm, 34 * mm, 26 * mm, 78 * mm], repeatRows=1)
+        t.setStyle(TableStyle([('LINEBELOW', (0, 0), (-1, 0), 0.6, TEAL), ('LINEBELOW', (0, 1), (-1, -2), 0.3, BORDER),
+                               ('VALIGN', (0, 0), (-1, -1), 'TOP'), ('LEFTPADDING', (0, 0), (-1, -1), 2)]))
+        story.append(section('Données structurées HL7 FHIR R4', [
+            Paragraph(f"Bundle de type <b>document</b> · identifiant <font face='DejaVu'>{txt(fhir_summary['id'])}</font>", base),
+            Paragraph(f"Composition LOINC 34111-5 « Emergency department Note » · ressources : {txt(counts)}", base),
+            Paragraph("Codes : SNOMED CT (symptômes, antécédents, signes d'alerte), LOINC (document, sections, triage), "
+                      "HL7 v3 ActCode / ActPriority (rencontre urgente, priorité). Export JSON disponible depuis le tableau de bord.", small),
+            Spacer(1, 2 * mm), t]))
+
     story += [Spacer(1, 6 * mm), Paragraph(txt(r['disclaimer']), small),
               Paragraph(f"Dossier en ligne : {txt(report['caseLink'])}", small)]
+    if fhir_summary:
+        story.append(Paragraph(f"Document structuré HL7 FHIR R4 (Composition LOINC 34111-5) · identifiant {txt(fhir_summary['id'])}", small))
     doc.build(story, onFirstPage=frame, onLaterPages=frame)
     return buf.getvalue()
 

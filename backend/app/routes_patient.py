@@ -113,6 +113,11 @@ def report_pdf(case_id: str, s: PatientSession = Depends(patient), db: Session =
     return services.report_pdf(db, own_case(db, s, case_id), 'patient')
 
 
+@router.get('/cases/{case_id}/fhir')
+def fhir_export(case_id: str, s: PatientSession = Depends(patient), db: Session = Depends(get_db)):
+    return services.fhir_response(own_case(db, s, case_id))
+
+
 @router.get('/cases/{case_id}/tracking')
 def tracking(case_id: str, s: PatientSession = Depends(patient), db: Session = Depends(get_db)):
     return services.tracking_view(db, own_case(db, s, case_id))

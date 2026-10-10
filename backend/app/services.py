@@ -630,14 +630,28 @@ def report_view(case):
                 report=structured_report(case))
 
 
+def fhir_bundle(case, referral=None):
+    """HL7 FHIR R4 document Bundle for the case (see app/fhir.py)."""
+    from app import fhir
+    return fhir.build_bundle(case, structured_report(case), referral or current_referral(case))
+
+
+def fhir_response(case, referral=None):
+    from fastapi.responses import JSONResponse
+    bundle = fhir_bundle(case, referral)
+    return JSONResponse(bundle, media_type='application/fhir+json', headers={
+        'Content-Disposition': f'attachment; filename="sahhanito-{case.reference_code}-fhir.json"', 'Cache-Control': 'no-store'})
+
+
 def report_pdf(db, case, audience='patient', referral=None):
     """French PDF: patient version, or staff version (decision details, journey, transcript, ED chat)."""
     from fastapi.responses import Response
-    from app import pdf
+    from app import fhir, pdf
     report = report_view(case)
     r = referral or current_referral(case)
     staff_view = staff_case_view(db, r) if audience == 'staff' and r else None
-    content = pdf.build(case_view(case), report, referral_view(r) if r else None, audience, staff_view)
+    fhir_summary = fhir.summary(fhir_bundle(case, r))
+    content = pdf.build(case_view(case), report, referral_view(r) if r else None, audience, staff_view, fhir_summary)
     return Response(content, media_type='application/pdf', headers={
         'Content-Disposition': f'inline; filename="{pdf.filename(report, audience)}"', 'Cache-Control': 'no-store'})
 

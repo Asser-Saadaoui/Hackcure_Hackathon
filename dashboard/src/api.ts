@@ -72,6 +72,18 @@ export async function openReportPdf(referralId: string): Promise<void> {
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
+/** HL7 FHIR R4 document Bundle of the case, downloaded as JSON for import into the hospital's own system. */
+export async function downloadFhir(referralId: string, referenceCode: string): Promise<void> {
+  const resp = await fetch(`${BASE}/api/v1/staff/referrals/${referralId}/fhir`, { headers: { Authorization: `Bearer ${session.get() ?? ""}` } });
+  if (!resp.ok) throw new ApiError(`Erreur ${resp.status}`, resp.status);
+  const url = URL.createObjectURL(await resp.blob());
+  const link = Object.assign(document.createElement("a"), { href: url, download: `sahhanito-${referenceCode}-fhir.json` });
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
 /** Live events (SSE). EventSource reconnects by itself; the token goes in the query string. */
 export function subscribe(onEvent: (e: { type: string; [k: string]: unknown }) => void): () => void {
   const token = session.get();
