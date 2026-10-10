@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dental Triage Blueprint</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: single reading column, each diagram a full-width plate with a numbered caption; triage colors are semantic only */
+:root {
+  --bg: #f5f7f8;
+  --surface: #ffffff;
+  --fg: #16202a;
+  --muted: #5a6875;
+  --line: #d9e0e5;
+  --accent: #0f6e7a;
+  --red: #b42318; --red-bg: #fde8e6;
+  --amber: #b45309; --amber-bg: #fdf0dc;
+  --green: #1d7a4a; --green-bg: #e3f4ea;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1519; --surface: #172026; --fg: #e4eaee; --muted: #93a2ad; --line: #2a363e; --accent: #4fb8c4;
+    --red: #f2877c; --red-bg: #3a1c19; --amber: #f0b45e; --amber-bg: #36280f; --green: #6fcf97; --green-bg: #15301f;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1519; --surface: #172026; --fg: #e4eaee; --muted: #93a2ad; --line: #2a363e; --accent: #4fb8c4;
+  --red: #f2877c; --red-bg: #3a1c19; --amber: #f0b45e; --amber-bg: #36280f; --green: #6fcf97; --green-bg: #15301f;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.6 var(--body); margin: 0; }
+.wrap { max-width: 1080px; margin: 0 auto; padding-inline: 20px; padding-block: 40px 72px; display: grid; gap: 48px; }
+header { display: grid; gap: 10px; }
+.eyebrow { font: 500 12px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+h1 { font: 700 clamp(30px, 5vw, 44px)/1.08 var(--display); margin: 0; text-wrap: balance; letter-spacing: -.01em; }
+.lede { color: var(--muted); max-width: 64ch; margin: 0; }
+.levels { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.pill { font: 500 13px/1 var(--body); padding: 7px 11px; border-radius: 999px; border: 1px solid currentColor; }
+.pill.r { color: var(--red); background: var(--red-bg); }
+.pill.a { color: var(--amber); background: var(--amber-bg); }
+.pill.g { color: var(--green); background: var(--green-bg); }
+section { display: grid; gap: 14px; min-width: 0; }
+.sec-head { display: flex; align-items: baseline; gap: 12px; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+.num { font: 500 13px/1 var(--mono); color: var(--accent); }
+h2 { font: 600 22px/1.2 var(--display); margin: 0; text-wrap: balance; }
+.note { color: var(--muted); margin: 0; max-width: 72ch; }
+.plate { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; overflow-x: auto; }
+.plate pre.mermaid { margin: 0; background: transparent; display: flex; justify-content: center; min-width: 640px; }
+.callout { border-left: 3px solid var(--red); background: var(--red-bg); padding: 12px 16px; border-radius: 0 8px 8px 0; max-width: 72ch; }
+.callout strong { color: var(--red); }
+.table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 14px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 600 12px/1.3 var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+td:first-child { font-weight: 600; white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+.y { color: var(--green); font-weight: 600; }
+.n { color: var(--muted); }
+code { font: 13px var(--mono); }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">HackCure · Dental emergency platform</span>
+    <h1>Dental Triage Blueprint</h1>
+    <p class="lede">Architecture and user flows for an AI triage platform that connects patients with subscribed dental clinics. It has four roles: patient, dentist, clinic admin and super admin. Each case gets one of three outcomes:</p>
+    <div class="levels">
+      <span class="pill r">RED · ER / ambulance now</span>
+      <span class="pill a">ORANGE · Same-day dentist</span>
+      <span class="pill g">GREEN · Home care + routine booking</span>
+    </div>
+  </header>
+
+  <section>
+    <div class="sec-head"><span class="num">1</span><h2>System architecture</h2></div>
+    <p class="note">All four roles reach the backend through one login and permission layer. The triage service always runs the red-flag rules <em>before</em> asking the AI model. Red cases go straight to emergency services. Orange and green cases go to the matching engine, which only considers subscribed clinics. Every AI call goes through one AI gateway, which handles retries, caching and switching between providers.</p>
+    <div class="plate">
+<pre class="mermaid">
+flowchart LR
+  subgraph C["Clients"]
+    P["Patient<br/>web app · WhatsApp"]
+    D["Dentist<br/>dashboard"]
+    CA["Clinic admin<br/>portal"]
+    SA["Super admin<br/>console"]
+  end
+  subgraph B["Backend API"]
+    AUTH["Auth + roles"]
+    TRI["Triage service"]
+    RF["Red-flag<br/>rules engine"]
+    NLP["Symptom extractor<br/>text → JSON"]
+    VIS["Photo analysis<br/>swelling tracker"]
+    MATCH["Matching engine"]
+    NOTIF["Real-time<br/>notifications"]
+    FU["Follow-up<br/>scheduler"]
+    GW["AI gateway<br/>retry · cache · fallback"]
+  end
+  subgraph DATA["Data"]
+    DB[("PostgreSQL<br/>users · clinics · cases")]
+    OBJ[("Photo storage<br/>encrypted")]
+    Q[("Job queue")]
+  end
+  subgraph AI["AI providers"]
+    GROQ["Groq API<br/>free tier"]
+    OLL["Ollama<br/>local model"]
+  end
+  subgraph EXT["External services"]
+    STT["Speech-to-text"]
+    MAPS["Maps API"]
+    MSG["SMS · WhatsApp"]
+    ER["ER · 112"]
+  end
+  P -->|chat, voice, photos| AUTH
+  D -->|accept · override| AUTH
+  CA -->|hours · on-call slots| AUTH
+  SA -->|rules · plans · clinics| AUTH
+  AUTH --> TRI
+  TRI -->|1 · check first| RF
+  TRI -->|2 · extract symptoms| NLP
+  TRI -->|photos| VIS
+  TRI -->|voice notes| STT
+  NLP --> GW
+  VIS --> GW
+  GW -->|first choice| GROQ
+  GW -->|rate limited · down| OLL
+  VIS --> OBJ
+  RF -->|red override| ER
+  TRI -->|orange · green| MATCH
+  MATCH -->|distance · open now| MAPS
+  MATCH --> NOTIF
+  NOTIF -->|case alert| D
+  NOTIF --> MSG
+  TRI --> DB
+  MATCH --> DB
+  FU --> Q
+  FU -->|getting worse · re-triage| TRI
+  classDef red fill:#fde8e6,stroke:#b42318,color:#7a1810
+  class RF,ER red
+</pre>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">2</span><h2>AI provider fallback</h2></div>
+    <p class="note">How the AI gateway handles Groq's free-tier rate limit. Every request first tries Groq, then the local Ollama model, then a rules-only mode with fixed questions and answer buttons. The red-flag rules never depend on the AI, so triage keeps working even if every AI service is unavailable.</p>
+    <div class="plate">
+<pre class="mermaid">
+flowchart TD
+  REQ["AI request<br/>extract symptoms · analyze photo"] --> CACHE{"Same input<br/>seen before?"}
+  CACHE -->|yes| HIT["Return cached JSON"]
+  CACHE -->|no| SEM["Wait for a free slot<br/>max parallel calls"]
+  SEM --> G["Call Groq"]
+  G -->|OK| VAL{"Valid JSON<br/>matches schema?"}
+  G -->|"429 rate limit"| W["Wait retry-after<br/>or 1s · 2s · 4s"]
+  W -->|retries left| G
+  W -->|retries used up| O["Call Ollama<br/>local model"]
+  G -->|timeout · down| O
+  O -->|OK| VAL
+  O -->|fails| RO["Rules-only mode<br/>fixed questions + buttons"]
+  VAL -->|yes| OUT["Send to triage rules<br/>+ save in cache"]
+  VAL -->|no, retry once| G
+  RO --> OUT2["Triage continues<br/>without AI"]
+  classDef amber fill:#fdf0dc,stroke:#b45309,color:#6b3306
+  classDef green fill:#e3f4ea,stroke:#1d7a4a,color:#0f4a2b
+  class W,O amber
+  class OUT,OUT2,HIT green
+</pre>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">3</span><h2>Patient triage flow</h2></div>
+    <p class="note">This is the patient's path from first message to outcome. The follow-up loop sends worsening cases back through the red-flag check. That is how the swelling tracker catches an infection that is spreading.</p>
+    <div class="plate">
+<pre class="mermaid">
+flowchart TD
+  A["Patient opens chat<br/>text, voice or WhatsApp"] --> B["Describes problem<br/>+ optional photo"]
+  B --> C["AI follow-up questions<br/>pain 0-10 · swelling · fever · trauma · duration"]
+  C --> D{"Red flag?"}
+  D -->|"yes: swelling to eye or neck, trouble<br/>swallowing or breathing, jaw fracture,<br/>heavy bleeding"| R["RED · Go to ER or call 112<br/>summary sent ahead"]
+  D -->|no| E{"Knocked-out<br/>permanent tooth?"}
+  E -->|yes| T["Tooth Rescue mode<br/>60-min countdown + first aid"]
+  T --> O
+  E -->|no| F{"Triage score"}
+  F -->|urgent| O["ORANGE · Same-day dentist<br/>matching engine finds a clinic"]
+  F -->|routine| G["GREEN · Home care advice<br/>+ routine booking"]
+  O --> H["Dentist accepts<br/>patient gets directions"]
+  H --> FU["Follow-up check-ins<br/>6h · 24h · 48h + photo"]
+  G --> FU
+  FU -->|worse · swelling spreading| D
+  FU -->|better| Z["Case closed<br/>rating + feedback"]
+  classDef red fill:#fde8e6,stroke:#b42318,color:#7a1810
+  classDef amber fill:#fdf0dc,stroke:#b45309,color:#6b3306
+  classDef green fill:#e3f4ea,stroke:#1d7a4a,color:#0f4a2b
+  class R red
+  class O,T amber
+  class G green
+</pre>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">4</span><h2>Orange case dispatch</h2></div>
+    <p class="note">This is how an urgent case reaches a dentist in the network. If a clinic doesn't respond within 10 minutes, the case moves to the next clinic, so no patient is left waiting on one clinic.</p>
+    <div class="plate">
+<pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor P as Patient
+  participant T as Triage service
+  participant M as Matching engine
+  participant A as Clinic A dentist
+  participant B as Clinic B dentist
+  P->>T: Symptoms + photo
+  T->>T: Red-flag check, then AI score
+  T-->>P: ORANGE · same-day dentist
+  T->>M: Case + location + urgency
+  M->>M: Filter subscribed clinics<br/>open now · free slot · specialty
+  M->>A: Alert with AI summary
+  Note over M,A: 10-minute timeout
+  A--xM: No response
+  M->>B: Alert with AI summary
+  B->>M: Accept
+  M-->>P: Confirmed · Clinic B · directions
+  B-->>P: Pre-visit instructions
+</pre>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">5</span><h2>Case lifecycle</h2></div>
+    <p class="note">These are the states a <code>TriageCase</code> moves through. The dentist dashboard and the admin statistics both read these states.</p>
+    <div class="plate">
+<pre class="mermaid">
+stateDiagram-v2
+  [*] --> Triage
+  Triage --> Emergency: red flag
+  Triage --> Pending: orange
+  Triage --> SelfCare: green
+  Pending --> Offered: clinic alerted
+  Offered --> Pending: timeout or declined
+  Offered --> Accepted: dentist accepts
+  Accepted --> Treated: visit done
+  Treated --> FollowUp
+  SelfCare --> FollowUp: check-in due
+  FollowUp --> Triage: getting worse
+  FollowUp --> Closed: resolved
+  Emergency --> Closed: handed to ER
+  Closed --> [*]
+</pre>
+    </div>
+    <div class="callout"><strong>Safety rule:</strong> red cases always leave the network and go to the ER or 112, whether or not a subscribed clinic is nearby. Paying clinics never get priority over patient safety.</div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">6</span><h2>Who can do what</h2></div>
+    <p class="note">These are the role-based permissions the login and permission layer enforces. For the hackathon, the clinic admin and super admin can share one console.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Capability</th><th>Patient</th><th>Dentist</th><th>Clinic admin</th><th>Super admin</th></tr></thead>
+        <tbody>
+          <tr><td>Run triage, upload photos</td><td class="y">Yes</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
+          <tr><td>See own case history</td><td class="y">Own</td><td class="y">Assigned cases</td><td class="y">Clinic's cases</td><td class="y">All (anonymized)</td></tr>
+          <tr><td>Accept / decline cases</td><td class="n">—</td><td class="y">Yes</td><td class="y">Yes</td><td class="n">—</td></tr>
+          <tr><td>Override AI urgency</td><td class="n">—</td><td class="y">Yes</td><td class="n">—</td><td class="n">Review only</td></tr>
+          <tr><td>Manage dentists, hours, on-call</td><td class="n">—</td><td class="n">Own status</td><td class="y">Yes</td><td class="y">Yes</td></tr>
+          <tr><td>Edit red-flag and triage rules</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="y">Yes, versioned</td></tr>
+          <tr><td>Onboard clinics, subscriptions</td><td class="n">—</td><td class="n">—</td><td class="n">Own billing</td><td class="y">Yes</td></tr>
+          <tr><td>Coverage map, global analytics</td><td class="n">—</td><td class="n">—</td><td class="n">Clinic stats</td><td class="y">Yes</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  mermaid.initialize({ startOnLoad: true, theme: dark ? "dark" : "default", fontFamily: "IBM Plex Sans, system-ui, sans-serif" });
+</script>
+</body>
+</html>
