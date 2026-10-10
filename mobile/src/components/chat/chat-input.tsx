@@ -5,12 +5,12 @@ import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Colors, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useI18n } from '@/i18n';
 
-type Props = { onSend: (text: string) => void; disabled?: boolean };
+type Props = { onSend: (text: string) => void; disabled?: boolean; onActivity?: (active: boolean) => void };
 
 const MAX_LENGTH = 1000;
 
 /** shadcn-style textarea + icon send button. Enter sends on web; Shift+Enter makes a new line. */
-export function ChatInput({ onSend, disabled }: Props) {
+export function ChatInput({ onSend, disabled, onActivity }: Props) {
   const { t, rtl } = useI18n();
   const [text, setText] = useState('');
   const [focused, setFocused] = useState(false);
@@ -20,6 +20,7 @@ export function ChatInput({ onSend, disabled }: Props) {
     if (!canSend) return;
     onSend(text.trim());
     setText('');
+    onActivity?.(false);
   };
 
   return (
@@ -27,9 +28,9 @@ export function ChatInput({ onSend, disabled }: Props) {
       <TextInput
         style={[styles.input, focused && styles.inputFocused, { textAlign: rtl ? 'right' : 'left' }]}
         value={text}
-        onChangeText={setText}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
+        onChangeText={(value) => { setText(value); onActivity?.(value.length > 0); }}
+        onFocus={() => { setFocused(true); onActivity?.(true); }}
+        onBlur={() => { setFocused(false); onActivity?.(false); }}
         placeholder={t('chatPlaceholder')}
         placeholderTextColor={Colors.mutedFg}
         multiline

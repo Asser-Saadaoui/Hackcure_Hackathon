@@ -1,5 +1,4 @@
-import { Activity } from 'lucide-react-native';
-import { StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 
 import { Colors, Radius } from '@/constants/theme';
 
@@ -7,7 +6,7 @@ import { Colors, Radius } from '@/constants/theme';
 export function AssistantAvatar() {
   return (
     <View style={styles.tile}>
-      <Activity size={14} color={Colors.primaryFg} strokeWidth={2.5} />
+      <Image source={require('../../../assets/images/hassanito.png')} style={{ width: 26, height: 26 }} />
     </View>
   );
 }
