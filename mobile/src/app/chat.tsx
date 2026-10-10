@@ -28,7 +28,6 @@ import type { Turn, TurnResult } from '@/lib/types';
  *   under_review → a clinician is reviewing → Result screen (review state)
  *   result       → Result screen
  *   degraded     → AI unavailable: safe message + call 190
- * In demo mode the mock always answers `question` with a demo reply.
  */
 
 type Item = {
@@ -63,7 +62,7 @@ export default function ChatScreen() {
         setItems(c.turns.map((tr) => ({ id: tr.id, role: tr.role, text: tr.text, time: timeOf(tr.createdAt) })));
         setQuickReplies(c.turns.at(-1)?.quickReplies ?? []);
       } catch {
-        await remove(Keys.currentCase); // unknown case (e.g. mock data lost on reload) → start fresh
+        await remove(Keys.currentCase); // unknown case on the server → start fresh
       }
     });
   }, []);

@@ -1,15 +1,13 @@
 import { Mascot } from 'page-mascot';
 import { Asset } from 'expo-asset';
-import { useState } from 'react';
 import { useI18n } from '@/i18n';
-import { MASCOT_STATES, mascotCopy, resolveMascotState, type MascotProps, type MascotState } from './hassanito-state';
+import { mascotCopy, resolveMascotState, type MascotProps } from './hassanito-state';
 
 const directions = Asset.fromModule(require('../../assets/mascots/sahhanito-directions.webp')).uri;
 const reactions = Asset.fromModule(require('../../assets/mascots/sahhanito-reactions.webp')).uri;
 export function Hassanito({ state = 'idle', compact = false }: MascotProps) {
   const { language, rtl } = useI18n();
-  const [preview, setPreview] = useState<MascotState>();
-  const active = resolveMascotState(state, preview);
+  const active = resolveMascotState(state);
   const size = compact ? 64 : 112;
   return <section className={`hassanito hassanito-${active}`} dir={rtl ? 'rtl' : 'ltr'} aria-label="Hassanito">
     <style>{`
@@ -21,17 +19,10 @@ export function Hassanito({ state = 'idle', compact = false }: MascotProps) {
       .hassanito-thinking .hassanito-figure{animation:hassanito-breathe 2s ease-in-out infinite}
       @keyframes hassanito-breathe{50%{opacity:.7}}
       @media(prefers-reduced-motion:reduce){.hassanito *{animation:none!important;transition:none!important}}
-      .hassanito-debug{width:100%;font-size:11px;color:#526a66}
     `}</style>
     {active === 'alert' ? <div className="hassanito-figure" role="img" aria-label="Hassanito, calm and still"
       style={{ width: size, height: size, backgroundImage: `url(${directions})`, backgroundSize: '300% 300%', backgroundPosition: '50% 50%' }} />
       : <Mascot directions={directions} reactions={reactions} size={size} label="Hassanito, Sahhanito’s owl companion" className="hassanito-figure" />}
     <div className="hassanito-bubble" role={active === 'alert' ? 'alert' : 'status'}>{mascotCopy(language, active)}</div>
-    {__DEV__ && !compact && <label className="hassanito-debug">Mascot preview (development only):{' '}
-      <select aria-label="Mascot state preview" value={preview ?? ''} disabled={state === 'alert'}
-        onChange={event => setPreview(event.target.value ? event.target.value as MascotState : undefined)}>
-        <option value="">Follow app</option>{MASCOT_STATES.map(s => <option key={s} value={s}>{s}</option>)}
-      </select>
-    </label>}
   </section>;
 }

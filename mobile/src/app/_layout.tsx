@@ -9,7 +9,6 @@ import { BrandTitle } from '@/components/brand-title';
 import { ConnectionBanner } from '@/components/connection-banner';
 import { Colors } from '@/constants/theme';
 import { LanguageProvider, useI18n } from '@/i18n';
-import { loadTestMode } from '@/lib/test-mode';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -28,7 +27,6 @@ function Navigator() {
           contentStyle: { backgroundColor: Colors.background },
         }}>
         <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="hub" options={{ headerTitle: () => <BrandTitle section="Dev hub" /> }} />
         <Stack.Screen name="welcome" />
         <Stack.Screen name="chat" />
         <Stack.Screen name="emergency" options={{ headerShown: false, gestureEnabled: false }} />
@@ -40,7 +38,6 @@ function Navigator() {
         <Stack.Screen name="report" />
         <Stack.Screen name="history" />
         <Stack.Screen name="settings" />
-        <Stack.Screen name="dev" options={{ headerTitle: () => <BrandTitle section="Mock backend" /> }} />
       </Stack>
     </View>
   );
@@ -48,8 +45,6 @@ function Navigator() {
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold });
-
-  useEffect(() => { loadTestMode(); }, []);
 
   useEffect(() => {
     if (fontsLoaded || fontError) SplashScreen.hideAsync();
