@@ -26,3 +26,6 @@ web-build/
 .idea/
 .vscode/
 .DS_Store
+
+# Local databases
+*.db
