@@ -17,7 +17,7 @@ from zoneinfo import ZoneInfo
 import arabic_reshaper
 from bidi.algorithm import get_display
 from reportlab.graphics.barcode.qr import QrCodeWidget
-from reportlab.graphics.shapes import Drawing, Rect, String
+from reportlab.graphics.shapes import Drawing
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
@@ -81,38 +81,6 @@ def two_columns(left_title, left, right_title, right):
     return t
 
 
-LOGOS = ASSETS / 'hospital-logos'
-
-
-def hospital_emblem(short, size=16 * mm):
-    """Neutral emblem: teal tile, white medical cross, the hospital's short name. Not an official logo."""
-    d = Drawing(size, size)
-    d.add(Rect(0, 0, size, size, rx=3 * mm, ry=3 * mm, fillColor=TEAL, strokeColor=None))
-    arm, thick, cx, cy = size * 0.36, size * 0.12, size / 2, size * 0.60
-    d.add(Rect(cx - thick / 2, cy - arm / 2, thick, arm, fillColor=colors.white, strokeColor=None))
-    d.add(Rect(cx - arm / 2, cy - thick / 2, arm, thick, fillColor=colors.white, strokeColor=None))
-    label = (short or 'H')[:5]
-    d.add(String(cx, size * 0.13, label, fontName='DejaVu-Bold', fontSize=7 if len(label) > 3 else 8,
-                 fillColor=colors.white, textAnchor='middle'))
-    return d
-
-
-def hospital_logo(referral, size=16 * mm):
-    """The receiving hospital's logo if provided in assets/hospital-logos/<key>.png, otherwise its emblem."""
-    if not referral:
-        return hospital_emblem('', size)
-    key = referral['facilityId']
-    path = LOGOS / f'{key}.png'
-    if path.exists():
-        img = Image(str(path))
-        ratio = img.imageHeight / float(img.imageWidth or 1)
-        img.drawWidth, img.drawHeight = (size, size * ratio) if ratio <= 1 else (size / ratio, size)
-        return img
-    f = hospitals.FACILITIES.get(key, {})
-    short = f.get('shortName') or ''.join(w[0] for w in re.findall(r"[A-Za-zÀ-ÿ]+", f.get('name', 'H')) if w[0].isupper())[:4]
-    return hospital_emblem(short, size)
-
-
 def qr(link, size=26 * mm):
     w = QrCodeWidget(link)
     x1, y1, x2, y2 = w.getBounds()
@@ -141,15 +109,14 @@ def build(case, report, referral, audience='patient', staff_view=None, fhir_summ
                             title=f"Sahhanito {report['referenceCode']}", author='Sahhanito', subject='Rapport de triage')
     story = []
 
-    # Header: logo, title, case code, QR to the case page
+    # Header: hospital name, title, case code, QR to the case page (no logo)
     head = Table([[
-        hospital_logo(referral),
         [Paragraph(txt(referral['facilityName']) if referral else 'Rapport de triage', hospital_name if referral else h1),
          *([Paragraph('Rapport de triage · urgences', h1)] if referral else []),
          Paragraph(f"Dossier <b>{txt(report['referenceCode'])}</b> · ouvert le {local(case['createdAt'])}", base),
          Paragraph('Version patient' if audience == 'patient' else 'Version équipe soignante · confidentiel', small)],
         qr(report['caseLink']),
-    ]], colWidths=[20 * mm, 128 * mm, 28 * mm])
+    ]], colWidths=[148 * mm, 28 * mm])
     head.setStyle(TableStyle([('VALIGN', (0, 0), (-1, -1), 'MIDDLE'), ('LEFTPADDING', (0, 0), (-1, -1), 0)]))
     story += [head, Spacer(1, 4 * mm)]
 
