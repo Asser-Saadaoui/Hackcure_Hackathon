@@ -73,6 +73,11 @@ async function call<T>(method: string, path: string, body?: unknown, retry = tru
   }
 }
 
+/** Image source of a chat photo, with the session header (no token in the URL). */
+export async function chatImageSource(referralId: string, messageId: string) {
+  return { uri: `${API_URL}/api/v1/referrals/${referralId}/chat/${messageId}/image`, headers: { authorization: `Bearer ${await token()}` } };
+}
+
 // ---------- live updates ----------
 
 function subscribeSse(caseId: string, onEvent: (e: PatientEvent) => void) {
@@ -138,6 +143,7 @@ export const httpApi: PatientApi = {
   getReport: (caseId) => call('GET', `/cases/${caseId}/report`),
   getChat: (referralId) => call('GET', `/referrals/${referralId}/chat`),
   sendChat: (referralId, text, kind = 'TEXT', questionId) => call('POST', `/referrals/${referralId}/chat`, { text, kind, questionId }),
+  sendChatImage: (referralId, data, caption = '') => call('POST', `/referrals/${referralId}/chat/image`, { data, caption }),
   getTracking: (caseId) => call('GET', `/cases/${caseId}/tracking`),
   subscribe: (caseId, onEvent) => (hasEventSource ? subscribeSse(caseId, onEvent) : subscribePolling(caseId, onEvent)),
 };

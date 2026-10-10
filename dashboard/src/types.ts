@@ -6,7 +6,7 @@ export interface StaffUser { id: string; email: string; name: string; role: Role
 
 export interface ChatMessage {
   id: string; referralId: string; sender: "PATIENT" | "STAFF" | "SYSTEM"; senderName?: string;
-  kind: "TEXT" | "QUESTION" | "ANSWER" | "INSTRUCTION" | "WORSE" | "SYSTEM" | "RED_FLAG";
+  kind: "TEXT" | "QUESTION" | "ANSWER" | "INSTRUCTION" | "WORSE" | "SYSTEM" | "RED_FLAG" | "IMAGE";  // IMAGE: text = optional caption
   text: string; options?: string[]; replyTo?: string; createdAt: string;
 }
 

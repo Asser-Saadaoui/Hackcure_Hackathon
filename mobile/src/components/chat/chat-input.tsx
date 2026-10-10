@@ -1,4 +1,4 @@
-import { Mic, Square, SendHorizontal } from 'lucide-react-native';
+import { Camera, Mic, Square, SendHorizontal } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
@@ -6,12 +6,18 @@ import { Colors, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useI18n } from '@/i18n';
 import { startDictation, voiceSupported } from '@/lib/voice';
 
-type Props = { onSend: (text: string) => void; disabled?: boolean; onActivity?: (active: boolean) => void };
+type Props = {
+  onSend: (text: string) => void;
+  disabled?: boolean;
+  onActivity?: (active: boolean) => void;
+  /** Shows a photo button (ED chat only: the triage AI does not read images). */
+  onAttach?: () => void;
+};
 
 const MAX_LENGTH = 1000;
 
 /** shadcn-style textarea + icon send button. Enter sends on web; Shift+Enter makes a new line. */
-export function ChatInput({ onSend, disabled, onActivity }: Props) {
+export function ChatInput({ onSend, disabled, onActivity, onAttach }: Props) {
   const { t, rtl, language } = useI18n();
   const [text, setText] = useState('');
   const [focused, setFocused] = useState(false);
@@ -41,6 +47,16 @@ export function ChatInput({ onSend, disabled, onActivity }: Props) {
 
   return (
     <View style={styles.bar}>
+      {onAttach && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('attachPhoto')}
+          onPress={onAttach}
+          disabled={disabled}
+          style={({ pressed }) => [styles.mic, disabled && styles.sendDisabled, pressed && styles.pressed]}>
+          <Camera size={20} color={Colors.primary} strokeWidth={2.25} />
+        </Pressable>
+      )}
       <TextInput
         style={[styles.input, focused && styles.inputFocused, { textAlign: rtl ? 'right' : 'left' }]}
         value={text}

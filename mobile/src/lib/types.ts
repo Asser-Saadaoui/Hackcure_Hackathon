@@ -110,7 +110,7 @@ export interface Referral {
   createdAt: string;
 }
 
-export type ChatKind = 'TEXT' | 'QUESTION' | 'ANSWER' | 'INSTRUCTION' | 'WORSE' | 'SYSTEM' | 'RED_FLAG';
+export type ChatKind = 'TEXT' | 'QUESTION' | 'ANSWER' | 'INSTRUCTION' | 'WORSE' | 'SYSTEM' | 'RED_FLAG' | 'IMAGE';
 
 export interface ChatMessage {
   id: string;
@@ -121,6 +121,7 @@ export interface ChatMessage {
   text: string;
   options?: string[];         // QUESTION: answer choices (empty = free text)
   replyTo?: string;           // ANSWER: id of the QUESTION it answers
+                              // IMAGE: text is the optional caption; the photo is at chatImageSource()
   createdAt: string;
 }
 

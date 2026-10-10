@@ -86,6 +86,13 @@ export async function openReportPdf(referralId: string): Promise<void> {
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
+/** Photo sent by the patient in the chat, fetched with the session header (no token in the URL). Caller revokes the URL. */
+export async function chatImageUrl(referralId: string, messageId: string): Promise<string> {
+  const resp = await fetch(`${BASE}/api/v1/staff/referrals/${referralId}/chat/${messageId}/image`, { headers: { Authorization: `Bearer ${session.get() ?? ""}` } });
+  if (!resp.ok) throw new ApiError(`Erreur ${resp.status}`, resp.status);
+  return URL.createObjectURL(await resp.blob());
+}
+
 /** HL7 FHIR R4 document Bundle of the case, downloaded as JSON for import into the hospital's own system. */
 export async function downloadFhir(referralId: string, referenceCode: string): Promise<void> {
   const resp = await fetch(`${BASE}/api/v1/staff/referrals/${referralId}/fhir`, { headers: { Authorization: `Bearer ${session.get() ?? ""}` } });
