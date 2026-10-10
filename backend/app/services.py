@@ -532,7 +532,7 @@ def structured_report(case):
         timeline.append(dict(at=iso(r.created_at), event=f"Dossier envoyé à {hospitals.FACILITIES[r.facility_key]['name']}"))
     reported = [f"{FIELD_LABELS.get(k, k)} : {v}" for k, v in notes.items() if k in FIELD_LABELS and v]
     intake = (state.get('sahhanito') or {}).get('intake') or {}
-    reported += [f"{INTAKE_LABELS.get(k, k)} : {v}" for k, v in intake.items() if v]
+    reported += [f"{INTAKE_LABELS.get(k) or ('Précision' if k.startswith('intake.clarify') else k)} : {v}" for k, v in intake.items() if v]
     missing = (state.get('sahhanito') or {}).get('missing') or []
     summary = f"Motif : « {said[0] if said else '—'} ». Niveau : {level}"
     if d.get('pFinal') is not None:

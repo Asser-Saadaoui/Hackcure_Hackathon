@@ -1,10 +1,17 @@
 {
-  "version": "sahhanito-rules-1",
+  "version": "sahhanito-rules-2",
   "validation_status": "unvalidated_prototype: wording, thresholds and weights must be reviewed by a clinician before any real use",
   "severity_policy": {
-    "critical": { "level_floor": "EMERGENCY", "score": 1.0 },
-    "high": { "level_floor": "HIGH" },
-    "moderate": { "level_floor": null }
+    "critical": {
+      "level_floor": "EMERGENCY",
+      "score": 1.0
+    },
+    "high": {
+      "level_floor": "HIGH"
+    },
+    "moderate": {
+      "level_floor": null
+    }
   },
   "negation_cues": [
     "\\b(?:no|not|without|never|denies|denied|don.?t|doesn.?t|didn.?t|isn.?t)\\b",
@@ -145,227 +152,1019 @@
       "sintrom|previscan|anticoagulant\\w*|kardegic|aspegic",
       "dwa\\s*mta3\\s*e?dam|ymaye3\\s*e?dam",
       "سنتروم|دواء\\s*يميع\\s*الدم"
+    ],
+    "open_fracture": [
+      "(?:see|seeing|visible)\\s+(?:the\\s+)?bone|bone\\s+(?:is\\s+)?(?:sticking|coming|poking)\\s+out|open\\s+fracture",
+      "l.os\\s+(?:sort|est\\s+visible|depasse|dépasse)|fracture\\s+ouverte|on\\s+voit\\s+l.os",
+      "(?:el\\s*)?3dh?am\\s*(?:ba?yen|5arej|kharej|dhaher|dhahra)|nchouf\\s*(?:fel\\s*|el\\s*)?3dh?am",
+      "العظم\\s*(?:ظاهر|خارج|بارز|باين)|كسر\\s*مفتوح|نشوف\\s*في\\s*العظم"
+    ],
+    "fracture": [
+      "\\bbroke(?:n)?\\s+(?:my|his|her|a)?\\s*(?:leg|arm|wrist|ankle|hip|bone|knee|shoulder|foot|hand|rib)|fractur\\w*",
+      "fractur\\w*|(?:je\\s+me\\s+suis|il\\s+s.est|elle\\s+s.est)\\s+cass\\w*|(?:jambe|bras|poignet|cheville|hanche|genou|epaule|pied|main)\\s+cass\\w*",
+      "t?k[ae]ss?[ae]r(?:et|it|ou)?\\b|m(?:e)?k[ae]ss?(?:ou)?r[ae]?\\b|(?:sa9|ydi|yedi|rjel|kraa?)\\w*\\s*t?k[ae]ss?r",
+      "تكسرت|تكسر|مكسورة|مكسور|انكسرت|انكسر|كسر\\s*في"
+    ],
+    "severe_pain_score": [
+      "\\b(?:7|8|9|10)\\s*/\\s*10\\b|\\b7\\s*[–-]\\s*10\\b|hurts?\\s+so\\s+(?:much|bad)|worst\\s+pain",
+      "\\b(?:7|8|9|10)\\s*sur\\s*10\\b|tres\\s+tres\\s+mal|douleur\\s+(?:tres\\s+)?(?:forte|intense)",
+      "y?o?[jg][ae3]+(?:ni)?\\s*barcha\\s*barcha|wji3a\\s*9wiya\\s*barcha",
+      "توجع\\s*برشة|يوجع\\s*برشة|وجيعة\\s*قوية"
     ]
   },
   "rules": [
     {
-      "id": "R-CARD-01", "name": "Chest pain with breathing difficulty", "severity": "critical",
-      "when": { "any": [
-        { "screen": "chest_dyspnea" },
-        { "all": [ { "any": [ { "fact": { "kind": "symptom", "name": ["chest"] } }, { "text": "chest_pain" } ] },
-                   { "any": [ { "fact": { "kind": "symptom", "name": ["breath", "breath_severe", "cannot_breathe"] } }, { "text": "cannot_breathe" } ] } ] }
-      ] },
-      "specialty": "CARDIO", "equipment": ["CATH_LAB"],
-      "rationale": { "fr": "Douleur thoracique avec difficulté à respirer.", "en": "Chest pain with breathing difficulty.", "ar": "ألم في الصدر مع صعوبة في التنفس.", "darija": "وجيعة في الصدر مع صعوبة في التنفس." }
+      "id": "R-CARD-01",
+      "name": "Chest pain with breathing difficulty",
+      "severity": "critical",
+      "when": {
+        "any": [
+          {
+            "screen": "chest_dyspnea"
+          },
+          {
+            "all": [
+              {
+                "any": [
+                  {
+                    "fact": {
+                      "kind": "symptom",
+                      "name": [
+                        "chest"
+                      ]
+                    }
+                  },
+                  {
+                    "text": "chest_pain"
+                  }
+                ]
+              },
+              {
+                "any": [
+                  {
+                    "fact": {
+                      "kind": "symptom",
+                      "name": [
+                        "breath",
+                        "breath_severe",
+                        "cannot_breathe"
+                      ]
+                    }
+                  },
+                  {
+                    "text": "cannot_breathe"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "specialty": "CARDIO",
+      "equipment": [
+        "CATH_LAB"
+      ],
+      "rationale": {
+        "fr": "Douleur thoracique avec difficulté à respirer.",
+        "en": "Chest pain with breathing difficulty.",
+        "ar": "ألم في الصدر مع صعوبة في التنفس.",
+        "darija": "وجيعة في الصدر مع صعوبة في التنفس."
+      }
     },
     {
-      "id": "R-RESP-01", "name": "Severe breathing difficulty", "severity": "critical",
-      "when": { "any": [ { "screen": "severe_breathing" }, { "text": "cannot_breathe" } ] },
-      "specialty": "PNEUMO", "equipment": ["ICU"],
-      "rationale": { "fr": "Difficulté respiratoire sévère.", "en": "Severe breathing difficulty.", "ar": "صعوبة شديدة في التنفس.", "darija": "صعوبة كبيرة في التنفس." }
+      "id": "R-RESP-01",
+      "name": "Severe breathing difficulty",
+      "severity": "critical",
+      "when": {
+        "any": [
+          {
+            "screen": "severe_breathing"
+          },
+          {
+            "text": "cannot_breathe"
+          }
+        ]
+      },
+      "specialty": "PNEUMO",
+      "equipment": [
+        "ICU"
+      ],
+      "rationale": {
+        "fr": "Difficulté respiratoire sévère.",
+        "en": "Severe breathing difficulty.",
+        "ar": "صعوبة شديدة في التنفس.",
+        "darija": "صعوبة كبيرة في التنفس."
+      }
     },
     {
-      "id": "R-NEURO-01", "name": "Stroke signs", "severity": "critical",
-      "when": { "any": [ { "screen": "stroke_signs" }, { "text": "stroke_signs" } ] },
-      "specialty": "NEURO", "equipment": ["CT"],
-      "rationale": { "fr": "Signes possibles d'AVC (visage, bras, parole).", "en": "Possible stroke signs (face, arm, speech).", "ar": "علامات محتملة لجلطة دماغية (الوجه، الذراع، الكلام).", "darija": "علامات تنجم تكون جلطة (الوجه، اليد، الكلام)." }
+      "id": "R-NEURO-01",
+      "name": "Stroke signs",
+      "severity": "critical",
+      "when": {
+        "any": [
+          {
+            "screen": "stroke_signs"
+          },
+          {
+            "text": "stroke_signs"
+          }
+        ]
+      },
+      "specialty": "NEURO",
+      "equipment": [
+        "CT"
+      ],
+      "rationale": {
+        "fr": "Signes possibles d'AVC (visage, bras, parole).",
+        "en": "Possible stroke signs (face, arm, speech).",
+        "ar": "علامات محتملة لجلطة دماغية (الوجه، الذراع، الكلام).",
+        "darija": "علامات تنجم تكون جلطة (الوجه، اليد، الكلام)."
+      }
     },
     {
-      "id": "R-NEURO-02", "name": "Unconscious or unresponsive", "severity": "critical",
-      "when": { "any": [ { "screen": "unresponsive" }, { "text": "unconscious" } ] },
-      "specialty": "EMERG", "equipment": ["ICU"],
-      "rationale": { "fr": "Personne inconsciente ou qui ne répond pas.", "en": "Person unconscious or unresponsive.", "ar": "شخص فاقد للوعي أو لا يستجيب.", "darija": "شخص فاقد الوعي ولا ما يجاوبش." }
+      "id": "R-NEURO-02",
+      "name": "Unconscious or unresponsive",
+      "severity": "critical",
+      "when": {
+        "any": [
+          {
+            "screen": "unresponsive"
+          },
+          {
+            "text": "unconscious"
+          }
+        ]
+      },
+      "specialty": "EMERG",
+      "equipment": [
+        "ICU"
+      ],
+      "rationale": {
+        "fr": "Personne inconsciente ou qui ne répond pas.",
+        "en": "Person unconscious or unresponsive.",
+        "ar": "شخص فاقد للوعي أو لا يستجيب.",
+        "darija": "شخص فاقد الوعي ولا ما يجاوبش."
+      }
     },
     {
-      "id": "R-NEURO-03", "name": "Seizure", "severity": "critical",
-      "when": { "any": [ { "fact": { "kind": "symptom", "name": ["seizure"] } }, { "text": "seizure" } ] },
-      "specialty": "NEURO", "equipment": ["CT"],
-      "rationale": { "fr": "Crise convulsive.", "en": "Seizure.", "ar": "نوبة تشنج.", "darija": "نوبة تشنج." }
+      "id": "R-NEURO-03",
+      "name": "Seizure",
+      "severity": "critical",
+      "when": {
+        "any": [
+          {
+            "fact": {
+              "kind": "symptom",
+              "name": [
+                "seizure"
+              ]
+            }
+          },
+          {
+            "text": "seizure"
+          }
+        ]
+      },
+      "specialty": "NEURO",
+      "equipment": [
+        "CT"
+      ],
+      "rationale": {
+        "fr": "Crise convulsive.",
+        "en": "Seizure.",
+        "ar": "نوبة تشنج.",
+        "darija": "نوبة تشنج."
+      }
     },
     {
-      "id": "R-BLEED-01", "name": "Heavy or uncontrolled bleeding", "severity": "critical",
-      "when": { "any": [ { "screen": "heavy_bleeding" }, { "text": "heavy_bleeding" } ] },
-      "specialty": "SURG", "equipment": ["ICU"],
-      "rationale": { "fr": "Saignement abondant ou qui ne s'arrête pas.", "en": "Heavy or uncontrolled bleeding.", "ar": "نزيف قوي أو لا يتوقف.", "darija": "نزيف قوي ولا ما حبش يوقف." }
+      "id": "R-BLEED-01",
+      "name": "Heavy or uncontrolled bleeding",
+      "severity": "critical",
+      "when": {
+        "any": [
+          {
+            "screen": "heavy_bleeding"
+          },
+          {
+            "text": "heavy_bleeding"
+          }
+        ]
+      },
+      "specialty": "SURG",
+      "equipment": [
+        "ICU"
+      ],
+      "rationale": {
+        "fr": "Saignement abondant ou qui ne s'arrête pas.",
+        "en": "Heavy or uncontrolled bleeding.",
+        "ar": "نزيف قوي أو لا يتوقف.",
+        "darija": "نزيف قوي ولا ما حبش يوقف."
+      }
     },
     {
-      "id": "R-INF-01", "name": "Possible meningitis cluster", "severity": "critical",
-      "when": { "screen": "neurologic_infection_cluster" },
-      "specialty": "NEURO", "equipment": ["CT"],
-      "rationale": { "fr": "Association fièvre, maux de tête, raideur de nuque ou confusion.", "en": "Combination of fever, headache, stiff neck or confusion.", "ar": "اجتماع حمى وصداع وتصلب الرقبة أو تشوش.", "darija": "سخانة مع وجيعة راس، رقبة يابسة ولا تخلويض." }
+      "id": "R-INF-01",
+      "name": "Possible meningitis cluster",
+      "severity": "critical",
+      "when": {
+        "screen": "neurologic_infection_cluster"
+      },
+      "specialty": "NEURO",
+      "equipment": [
+        "CT"
+      ],
+      "rationale": {
+        "fr": "Association fièvre, maux de tête, raideur de nuque ou confusion.",
+        "en": "Combination of fever, headache, stiff neck or confusion.",
+        "ar": "اجتماع حمى وصداع وتصلب الرقبة أو تشوش.",
+        "darija": "سخانة مع وجيعة راس، رقبة يابسة ولا تخلويض."
+      }
     },
     {
-      "id": "R-VITAL-01", "name": "Extreme heart rate", "severity": "critical",
-      "when": { "screen": "extreme_heart_rate" },
-      "specialty": "CARDIO", "equipment": ["ICU"],
-      "rationale": { "fr": "Fréquence cardiaque extrême (<50 ou >150).", "en": "Extreme heart rate (<50 or >150).", "ar": "نبض قلب شديد الانحراف (<50 أو >150).", "darija": "نبض القلب برشة ولا شوية برشة (<50 ولا >150)." }
+      "id": "R-VITAL-01",
+      "name": "Extreme heart rate",
+      "severity": "critical",
+      "when": {
+        "screen": "extreme_heart_rate"
+      },
+      "specialty": "CARDIO",
+      "equipment": [
+        "ICU"
+      ],
+      "rationale": {
+        "fr": "Fréquence cardiaque extrême (<50 ou >150).",
+        "en": "Extreme heart rate (<50 or >150).",
+        "ar": "نبض قلب شديد الانحراف (<50 أو >150).",
+        "darija": "نبض القلب برشة ولا شوية برشة (<50 ولا >150)."
+      }
     },
     {
-      "id": "R-VITAL-02", "name": "Very low oxygen saturation", "severity": "critical",
-      "when": { "vital": "oxygen_saturation", "lt": 90 },
-      "specialty": "PNEUMO", "equipment": ["ICU"],
-      "rationale": { "fr": "Saturation en oxygène inférieure à 90 %.", "en": "Oxygen saturation below 90%.", "ar": "نسبة الأكسجين أقل من 90٪.", "darija": "نسبة الأكسجين تحت 90٪." }
+      "id": "R-VITAL-02",
+      "name": "Very low oxygen saturation",
+      "severity": "critical",
+      "when": {
+        "vital": "oxygen_saturation",
+        "lt": 90
+      },
+      "specialty": "PNEUMO",
+      "equipment": [
+        "ICU"
+      ],
+      "rationale": {
+        "fr": "Saturation en oxygène inférieure à 90 %.",
+        "en": "Oxygen saturation below 90%.",
+        "ar": "نسبة الأكسجين أقل من 90٪.",
+        "darija": "نسبة الأكسجين تحت 90٪."
+      }
     },
     {
-      "id": "R-ALLERGY-01", "name": "Possible anaphylaxis", "severity": "critical",
-      "when": { "any": [
-        { "text": "anaphylaxis" },
-        { "fact": { "kind": "condition", "name": ["anaphylaxis"] } },
-        { "all": [ { "fact": { "kind": "symptom", "name": ["rash"] } }, { "fact": { "kind": "symptom", "name": ["breath", "breath_severe", "wheeze"] } } ] }
-      ] },
-      "specialty": "EMERG", "equipment": ["ICU"],
-      "rationale": { "fr": "Réaction allergique grave possible (gonflement de la gorge, gêne respiratoire).", "en": "Possible severe allergic reaction (throat swelling, breathing trouble).", "ar": "حساسية شديدة محتملة (انتفاخ الحلق، صعوبة التنفس).", "darija": "حساسية قوية تنجم تكون (حلق منفوخ، صعوبة في التنفس)." }
+      "id": "R-ALLERGY-01",
+      "name": "Possible anaphylaxis",
+      "severity": "critical",
+      "when": {
+        "any": [
+          {
+            "text": "anaphylaxis"
+          },
+          {
+            "fact": {
+              "kind": "condition",
+              "name": [
+                "anaphylaxis"
+              ]
+            }
+          },
+          {
+            "all": [
+              {
+                "fact": {
+                  "kind": "symptom",
+                  "name": [
+                    "rash"
+                  ]
+                }
+              },
+              {
+                "fact": {
+                  "kind": "symptom",
+                  "name": [
+                    "breath",
+                    "breath_severe",
+                    "wheeze"
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "specialty": "EMERG",
+      "equipment": [
+        "ICU"
+      ],
+      "rationale": {
+        "fr": "Réaction allergique grave possible (gonflement de la gorge, gêne respiratoire).",
+        "en": "Possible severe allergic reaction (throat swelling, breathing trouble).",
+        "ar": "حساسية شديدة محتملة (انتفاخ الحلق، صعوبة التنفس).",
+        "darija": "حساسية قوية تنجم تكون (حلق منفوخ، صعوبة في التنفس)."
+      }
     },
     {
-      "id": "R-OBST-01", "name": "Pregnancy with bleeding or severe abdominal pain", "severity": "critical",
-      "when": { "all": [
-        { "any": [ { "fact": { "kind": "condition", "name": ["pregnancy"] } }, { "text": "pregnancy" } ] },
-        { "any": [ { "text": "pregnancy_bleeding" }, { "text": "heavy_bleeding" },
-                   { "fact": { "kind": "symptom", "name": ["abdominal_pain"], "severity": ["severe", "extreme", "unbearable", "excruciating", "worst", "intense"] } } ] }
-      ] },
-      "specialty": "OBGYN", "equipment": [],
-      "rationale": { "fr": "Grossesse avec saignement ou douleur abdominale forte.", "en": "Pregnancy with bleeding or severe abdominal pain.", "ar": "حمل مع نزيف أو ألم شديد في البطن.", "darija": "حمل مع دم ولا وجيعة قوية في الكرش." }
+      "id": "R-OBST-01",
+      "name": "Pregnancy with bleeding or severe abdominal pain",
+      "severity": "critical",
+      "when": {
+        "all": [
+          {
+            "any": [
+              {
+                "fact": {
+                  "kind": "condition",
+                  "name": [
+                    "pregnancy"
+                  ]
+                }
+              },
+              {
+                "text": "pregnancy"
+              }
+            ]
+          },
+          {
+            "any": [
+              {
+                "text": "pregnancy_bleeding"
+              },
+              {
+                "text": "heavy_bleeding"
+              },
+              {
+                "fact": {
+                  "kind": "symptom",
+                  "name": [
+                    "abdominal_pain"
+                  ],
+                  "severity": [
+                    "severe",
+                    "extreme",
+                    "unbearable",
+                    "excruciating",
+                    "worst",
+                    "intense"
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "specialty": "OBGYN",
+      "equipment": [],
+      "rationale": {
+        "fr": "Grossesse avec saignement ou douleur abdominale forte.",
+        "en": "Pregnancy with bleeding or severe abdominal pain.",
+        "ar": "حمل مع نزيف أو ألم شديد في البطن.",
+        "darija": "حمل مع دم ولا وجيعة قوية في الكرش."
+      }
     },
     {
-      "id": "R-PSY-01", "name": "Suicidal thoughts", "severity": "critical",
-      "when": { "text": "suicidal" },
-      "specialty": "PSY", "equipment": [],
-      "rationale": { "fr": "Idées suicidaires exprimées.", "en": "Suicidal thoughts expressed.", "ar": "التعبير عن أفكار انتحارية.", "darija": "عبّر على أفكار انتحار." }
+      "id": "R-PSY-01",
+      "name": "Suicidal thoughts",
+      "severity": "critical",
+      "when": {
+        "text": "suicidal"
+      },
+      "specialty": "PSY",
+      "equipment": [],
+      "rationale": {
+        "fr": "Idées suicidaires exprimées.",
+        "en": "Suicidal thoughts expressed.",
+        "ar": "التعبير عن أفكار انتحارية.",
+        "darija": "عبّر على أفكار انتحار."
+      }
     },
     {
-      "id": "R-TOX-01", "name": "Poisoning or overdose", "severity": "critical",
-      "when": { "text": "poisoning" },
-      "specialty": "EMERG", "equipment": ["ICU"],
-      "rationale": { "fr": "Intoxication ou surdose possible.", "en": "Possible poisoning or overdose.", "ar": "تسمم أو جرعة زائدة محتملة.", "darija": "تسمم ولا دواء برشة." }
+      "id": "R-TOX-01",
+      "name": "Poisoning or overdose",
+      "severity": "critical",
+      "when": {
+        "text": "poisoning"
+      },
+      "specialty": "EMERG",
+      "equipment": [
+        "ICU"
+      ],
+      "rationale": {
+        "fr": "Intoxication ou surdose possible.",
+        "en": "Possible poisoning or overdose.",
+        "ar": "تسمم أو جرعة زائدة محتملة.",
+        "darija": "تسمم ولا دواء برشة."
+      }
     },
     {
-      "id": "R-TRAUMA-01", "name": "Major trauma", "severity": "critical",
-      "when": { "text": "major_trauma" },
-      "specialty": "TRAUMA", "equipment": ["CT"],
-      "rationale": { "fr": "Traumatisme important (accident, chute de hauteur, plaie par arme).", "en": "Major trauma (accident, fall from height, weapon injury).", "ar": "إصابة خطيرة (حادث، سقوط من علو، جرح بسلاح).", "darija": "ضربة كبيرة (حادث، طيحة من الفوق، ضربة بموس)." }
+      "id": "R-TRAUMA-01",
+      "name": "Major trauma",
+      "severity": "critical",
+      "when": {
+        "text": "major_trauma"
+      },
+      "specialty": "TRAUMA",
+      "equipment": [
+        "CT"
+      ],
+      "rationale": {
+        "fr": "Traumatisme important (accident, chute de hauteur, plaie par arme).",
+        "en": "Major trauma (accident, fall from height, weapon injury).",
+        "ar": "إصابة خطيرة (حادث، سقوط من علو، جرح بسلاح).",
+        "darija": "ضربة كبيرة (حادث، طيحة من الفوق، ضربة بموس)."
+      }
     },
     {
-      "id": "R-CARD-02", "name": "Chest pain", "severity": "high", "weight": 0.7,
-      "when": { "any": [ { "fact": { "kind": "symptom", "name": ["chest"] } }, { "text": "chest_pain" } ] },
-      "specialty": "CARDIO", "equipment": ["CATH_LAB"],
-      "rationale": { "fr": "Douleur thoracique.", "en": "Chest pain.", "ar": "ألم في الصدر.", "darija": "وجيعة في الصدر." }
+      "id": "R-TRAUMA-02",
+      "name": "Open fracture (bone visible)",
+      "severity": "critical",
+      "when": {
+        "text": "open_fracture"
+      },
+      "specialty": "TRAUMA",
+      "equipment": [
+        "CT"
+      ],
+      "rationale": {
+        "fr": "Fracture ouverte : l'os est visible.",
+        "en": "Open fracture: bone visible.",
+        "ar": "كسر مفتوح: العظم ظاهر.",
+        "darija": "كسر مفتوح: العظم باين."
+      }
     },
     {
-      "id": "R-RESP-02", "name": "Breathing difficulty", "severity": "high", "weight": 0.6,
-      "when": { "fact": { "kind": "symptom", "name": ["breath", "breath_severe", "wheeze"] } },
-      "specialty": "PNEUMO", "equipment": [],
-      "rationale": { "fr": "Gêne respiratoire.", "en": "Breathing difficulty.", "ar": "صعوبة في التنفس.", "darija": "صعوبة في التنفس." }
+      "id": "R-CARD-02",
+      "name": "Chest pain",
+      "severity": "high",
+      "weight": 0.7,
+      "when": {
+        "any": [
+          {
+            "fact": {
+              "kind": "symptom",
+              "name": [
+                "chest"
+              ]
+            }
+          },
+          {
+            "text": "chest_pain"
+          }
+        ]
+      },
+      "specialty": "CARDIO",
+      "equipment": [
+        "CATH_LAB"
+      ],
+      "rationale": {
+        "fr": "Douleur thoracique.",
+        "en": "Chest pain.",
+        "ar": "ألم في الصدر.",
+        "darija": "وجيعة في الصدر."
+      }
     },
     {
-      "id": "R-NEURO-04", "name": "Sudden severe headache", "severity": "high", "weight": 0.7,
-      "when": { "any": [
-        { "text": "worst_headache" },
-        { "fact": { "kind": "symptom", "name": ["headache"], "severity": ["severe", "extreme", "unbearable", "excruciating", "worst"], "onset": ["sudden"] } }
-      ] },
-      "specialty": "NEURO", "equipment": ["CT"],
-      "rationale": { "fr": "Mal de tête brutal et intense.", "en": "Sudden, severe headache.", "ar": "صداع مفاجئ وشديد.", "darija": "وجيعة راس قوية جات فجأة." }
+      "id": "R-RESP-02",
+      "name": "Breathing difficulty",
+      "severity": "high",
+      "weight": 0.6,
+      "when": {
+        "fact": {
+          "kind": "symptom",
+          "name": [
+            "breath",
+            "breath_severe",
+            "wheeze"
+          ]
+        }
+      },
+      "specialty": "PNEUMO",
+      "equipment": [],
+      "rationale": {
+        "fr": "Gêne respiratoire.",
+        "en": "Breathing difficulty.",
+        "ar": "صعوبة في التنفس.",
+        "darija": "صعوبة في التنفس."
+      }
     },
     {
-      "id": "R-NEURO-05", "name": "Fainting", "severity": "high", "weight": 0.55,
-      "when": { "fact": { "kind": "symptom", "name": ["syncope"] } },
-      "specialty": "INTMED", "equipment": [],
-      "rationale": { "fr": "Perte de connaissance brève.", "en": "Fainting episode.", "ar": "إغماء.", "darija": "طاح مغشي عليه شوية." }
+      "id": "R-NEURO-04",
+      "name": "Sudden severe headache",
+      "severity": "high",
+      "weight": 0.7,
+      "when": {
+        "any": [
+          {
+            "text": "worst_headache"
+          },
+          {
+            "fact": {
+              "kind": "symptom",
+              "name": [
+                "headache"
+              ],
+              "severity": [
+                "severe",
+                "extreme",
+                "unbearable",
+                "excruciating",
+                "worst"
+              ],
+              "onset": [
+                "sudden"
+              ]
+            }
+          }
+        ]
+      },
+      "specialty": "NEURO",
+      "equipment": [
+        "CT"
+      ],
+      "rationale": {
+        "fr": "Mal de tête brutal et intense.",
+        "en": "Sudden, severe headache.",
+        "ar": "صداع مفاجئ وشديد.",
+        "darija": "وجيعة راس قوية جات فجأة."
+      }
     },
     {
-      "id": "R-NEURO-06", "name": "Head injury", "severity": "high", "weight": 0.6,
-      "when": { "text": "head_injury" },
-      "specialty": "NEUROSURG", "equipment": ["CT"],
-      "rationale": { "fr": "Choc à la tête.", "en": "Head injury.", "ar": "إصابة في الرأس.", "darija": "ضربة في الراس." }
+      "id": "R-NEURO-05",
+      "name": "Fainting",
+      "severity": "high",
+      "weight": 0.55,
+      "when": {
+        "fact": {
+          "kind": "symptom",
+          "name": [
+            "syncope"
+          ]
+        }
+      },
+      "specialty": "INTMED",
+      "equipment": [],
+      "rationale": {
+        "fr": "Perte de connaissance brève.",
+        "en": "Fainting episode.",
+        "ar": "إغماء.",
+        "darija": "طاح مغشي عليه شوية."
+      }
     },
     {
-      "id": "R-NEURO-07", "name": "Head injury on blood thinners", "severity": "critical",
-      "when": { "all": [ { "text": "head_injury" },
-                         { "any": [ { "text": "anticoagulant" }, { "fact": { "kind": "medication", "name": ["warfarin", "apixaban", "rivaroxaban", "heparin", "clopidogrel"] } } ] } ] },
-      "specialty": "NEUROSURG", "equipment": ["CT"],
-      "rationale": { "fr": "Choc à la tête sous anticoagulant.", "en": "Head injury while on blood thinners.", "ar": "إصابة في الرأس مع دواء مميع للدم.", "darija": "ضربة في الراس وهو ياخو دواء يميّع الدم." }
+      "id": "R-NEURO-06",
+      "name": "Head injury",
+      "severity": "high",
+      "weight": 0.6,
+      "when": {
+        "text": "head_injury"
+      },
+      "specialty": "NEUROSURG",
+      "equipment": [
+        "CT"
+      ],
+      "rationale": {
+        "fr": "Choc à la tête.",
+        "en": "Head injury.",
+        "ar": "إصابة في الرأس.",
+        "darija": "ضربة في الراس."
+      }
     },
     {
-      "id": "R-VITAL-03", "name": "High-risk vital signs", "severity": "high", "weight": 0.65,
-      "when": { "screen": "high_risk_vitals" },
-      "specialty": "INTMED", "equipment": [],
-      "rationale": { "fr": "Signes vitaux anormaux.", "en": "Abnormal vital signs.", "ar": "علامات حيوية غير طبيعية.", "darija": "العلامات الحيوية موش عادية." }
+      "id": "R-NEURO-07",
+      "name": "Head injury on blood thinners",
+      "severity": "critical",
+      "when": {
+        "all": [
+          {
+            "text": "head_injury"
+          },
+          {
+            "any": [
+              {
+                "text": "anticoagulant"
+              },
+              {
+                "fact": {
+                  "kind": "medication",
+                  "name": [
+                    "warfarin",
+                    "apixaban",
+                    "rivaroxaban",
+                    "heparin",
+                    "clopidogrel"
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "specialty": "NEUROSURG",
+      "equipment": [
+        "CT"
+      ],
+      "rationale": {
+        "fr": "Choc à la tête sous anticoagulant.",
+        "en": "Head injury while on blood thinners.",
+        "ar": "إصابة في الرأس مع دواء مميع للدم.",
+        "darija": "ضربة في الراس وهو ياخو دواء يميّع الدم."
+      }
     },
     {
-      "id": "R-GI-01", "name": "Vomiting or coughing blood, black stools", "severity": "high", "weight": 0.7,
-      "when": { "any": [ { "text": "blood_loss_gi" }, { "fact": { "kind": "symptom", "name": ["hemoptysis", "melena"] } } ] },
-      "specialty": "SURG", "equipment": [],
-      "rationale": { "fr": "Sang dans les vomissements, la toux ou les selles.", "en": "Blood in vomit, cough or stools.", "ar": "دم في القيء أو السعال أو البراز.", "darija": "دم في الترجيع ولا الكحة ولا الخروج." }
+      "id": "R-VITAL-03",
+      "name": "High-risk vital signs",
+      "severity": "high",
+      "weight": 0.65,
+      "when": {
+        "screen": "high_risk_vitals"
+      },
+      "specialty": "INTMED",
+      "equipment": [],
+      "rationale": {
+        "fr": "Signes vitaux anormaux.",
+        "en": "Abnormal vital signs.",
+        "ar": "علامات حيوية غير طبيعية.",
+        "darija": "العلامات الحيوية موش عادية."
+      }
     },
     {
-      "id": "R-ABD-01", "name": "Severe abdominal pain", "severity": "high", "weight": 0.6,
-      "when": { "any": [
-        { "fact": { "kind": "symptom", "name": ["abdominal_pain"], "severity": ["severe", "extreme", "unbearable", "excruciating", "worst", "intense"] } },
-        { "all": [ { "fact": { "kind": "symptom", "name": ["abdominal_pain"] } }, { "text": "unbearable_pain" } ] }
-      ] },
-      "specialty": "SURG", "equipment": ["CT"],
-      "rationale": { "fr": "Douleur abdominale intense.", "en": "Severe abdominal pain.", "ar": "ألم شديد في البطن.", "darija": "وجيعة قوية في الكرش." }
+      "id": "R-GI-01",
+      "name": "Vomiting or coughing blood, black stools",
+      "severity": "high",
+      "weight": 0.7,
+      "when": {
+        "any": [
+          {
+            "text": "blood_loss_gi"
+          },
+          {
+            "fact": {
+              "kind": "symptom",
+              "name": [
+                "hemoptysis",
+                "melena"
+              ]
+            }
+          }
+        ]
+      },
+      "specialty": "SURG",
+      "equipment": [],
+      "rationale": {
+        "fr": "Sang dans les vomissements, la toux ou les selles.",
+        "en": "Blood in vomit, cough or stools.",
+        "ar": "دم في القيء أو السعال أو البراز.",
+        "darija": "دم في الترجيع ولا الكحة ولا الخروج."
+      }
     },
     {
-      "id": "R-OBST-02", "name": "Pregnancy with symptoms or labour", "severity": "high", "weight": 0.6,
-      "when": { "any": [
-        { "text": "labour" },
-        { "all": [ { "any": [ { "fact": { "kind": "condition", "name": ["pregnancy"] } }, { "text": "pregnancy" } ] },
-                   { "fact": { "kind": "symptom", "name": ["abdominal_pain", "headache", "fever", "vomiting", "vision_loss", "edema", "dizziness"] } } ] }
-      ] },
-      "specialty": "OBGYN", "equipment": [],
-      "rationale": { "fr": "Grossesse avec symptômes, ou travail en cours.", "en": "Pregnancy with symptoms, or labour.", "ar": "حمل مع أعراض، أو بداية الولادة.", "darija": "حمل مع أعراض، ولا الطلق بدا." }
+      "id": "R-ABD-01",
+      "name": "Severe abdominal pain",
+      "severity": "high",
+      "weight": 0.6,
+      "when": {
+        "any": [
+          {
+            "fact": {
+              "kind": "symptom",
+              "name": [
+                "abdominal_pain"
+              ],
+              "severity": [
+                "severe",
+                "extreme",
+                "unbearable",
+                "excruciating",
+                "worst",
+                "intense"
+              ]
+            }
+          },
+          {
+            "all": [
+              {
+                "fact": {
+                  "kind": "symptom",
+                  "name": [
+                    "abdominal_pain"
+                  ]
+                }
+              },
+              {
+                "text": "unbearable_pain"
+              }
+            ]
+          }
+        ]
+      },
+      "specialty": "SURG",
+      "equipment": [
+        "CT"
+      ],
+      "rationale": {
+        "fr": "Douleur abdominale intense.",
+        "en": "Severe abdominal pain.",
+        "ar": "ألم شديد في البطن.",
+        "darija": "وجيعة قوية في الكرش."
+      }
     },
     {
-      "id": "R-OPH-01", "name": "Sudden vision loss", "severity": "high", "weight": 0.7,
-      "when": { "any": [ { "text": "vision_loss" }, { "fact": { "kind": "symptom", "name": ["vision_loss"] } } ] },
-      "specialty": "OPHTA", "equipment": [],
-      "rationale": { "fr": "Perte brutale de la vue.", "en": "Sudden vision loss.", "ar": "فقدان مفاجئ للبصر.", "darija": "ولّى ما يشوفش فجأة." }
+      "id": "R-OBST-02",
+      "name": "Pregnancy with symptoms or labour",
+      "severity": "high",
+      "weight": 0.6,
+      "when": {
+        "any": [
+          {
+            "text": "labour"
+          },
+          {
+            "all": [
+              {
+                "any": [
+                  {
+                    "fact": {
+                      "kind": "condition",
+                      "name": [
+                        "pregnancy"
+                      ]
+                    }
+                  },
+                  {
+                    "text": "pregnancy"
+                  }
+                ]
+              },
+              {
+                "fact": {
+                  "kind": "symptom",
+                  "name": [
+                    "abdominal_pain",
+                    "headache",
+                    "fever",
+                    "vomiting",
+                    "vision_loss",
+                    "edema",
+                    "dizziness"
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "specialty": "OBGYN",
+      "equipment": [],
+      "rationale": {
+        "fr": "Grossesse avec symptômes, ou travail en cours.",
+        "en": "Pregnancy with symptoms, or labour.",
+        "ar": "حمل مع أعراض، أو بداية الولادة.",
+        "darija": "حمل مع أعراض، ولا الطلق بدا."
+      }
     },
     {
-      "id": "R-BURN-01", "name": "Serious burn", "severity": "high", "weight": 0.75,
-      "when": { "text": "severe_burn" },
-      "specialty": "BURNS", "equipment": [],
-      "rationale": { "fr": "Brûlure importante.", "en": "Serious burn.", "ar": "حرق خطير.", "darija": "حرقة كبيرة." }
+      "id": "R-OPH-01",
+      "name": "Sudden vision loss",
+      "severity": "high",
+      "weight": 0.7,
+      "when": {
+        "any": [
+          {
+            "text": "vision_loss"
+          },
+          {
+            "fact": {
+              "kind": "symptom",
+              "name": [
+                "vision_loss"
+              ]
+            }
+          }
+        ]
+      },
+      "specialty": "OPHTA",
+      "equipment": [],
+      "rationale": {
+        "fr": "Perte brutale de la vue.",
+        "en": "Sudden vision loss.",
+        "ar": "فقدان مفاجئ للبصر.",
+        "darija": "ولّى ما يشوفش فجأة."
+      }
     },
     {
-      "id": "R-PED-01", "name": "Infant with fever", "severity": "high", "weight": 0.7,
-      "when": { "all": [
-        { "any": [ { "age": { "lt": 1 } }, { "text": "infant" } ] },
-        { "fact": { "kind": "symptom", "name": ["fever"] } }
-      ] },
-      "specialty": "PEDIA", "equipment": [],
-      "rationale": { "fr": "Nourrisson avec de la fièvre.", "en": "Infant with fever.", "ar": "رضيع مصاب بالحمى.", "darija": "بيبي عندو سخانة." }
+      "id": "R-BURN-01",
+      "name": "Serious burn",
+      "severity": "high",
+      "weight": 0.75,
+      "when": {
+        "text": "severe_burn"
+      },
+      "specialty": "BURNS",
+      "equipment": [],
+      "rationale": {
+        "fr": "Brûlure importante.",
+        "en": "Serious burn.",
+        "ar": "حرق خطير.",
+        "darija": "حرقة كبيرة."
+      }
     },
     {
-      "id": "R-CARD-03", "name": "Palpitations with dizziness", "severity": "high", "weight": 0.6,
-      "when": { "all": [
-        { "fact": { "kind": "symptom", "name": ["palpitations"] } },
-        { "fact": { "kind": "symptom", "name": ["dizziness", "syncope", "chest"] } }
-      ] },
-      "specialty": "CARDIO", "equipment": [],
-      "rationale": { "fr": "Palpitations avec vertiges.", "en": "Palpitations with dizziness.", "ar": "خفقان مع دوخة.", "darija": "قلبو يضرب بالزربة مع دوخة." }
+      "id": "R-PED-01",
+      "name": "Infant with fever",
+      "severity": "high",
+      "weight": 0.7,
+      "when": {
+        "all": [
+          {
+            "any": [
+              {
+                "age": {
+                  "lt": 1
+                }
+              },
+              {
+                "text": "infant"
+              }
+            ]
+          },
+          {
+            "fact": {
+              "kind": "symptom",
+              "name": [
+                "fever"
+              ]
+            }
+          }
+        ]
+      },
+      "specialty": "PEDIA",
+      "equipment": [],
+      "rationale": {
+        "fr": "Nourrisson avec de la fièvre.",
+        "en": "Infant with fever.",
+        "ar": "رضيع مصاب بالحمى.",
+        "darija": "بيبي عندو سخانة."
+      }
     },
     {
-      "id": "R-INF-02", "name": "High fever", "severity": "moderate", "weight": 0.35,
-      "when": { "vital": "temperature", "gte": 39.5 },
-      "specialty": "INTMED", "equipment": [],
-      "rationale": { "fr": "Fièvre élevée (≥ 39,5 °C).", "en": "High fever (≥ 39.5 °C).", "ar": "حمى مرتفعة (≥ 39.5 درجة).", "darija": "سخانة قوية (≥ 39.5)." }
+      "id": "R-CARD-03",
+      "name": "Palpitations with dizziness",
+      "severity": "high",
+      "weight": 0.6,
+      "when": {
+        "all": [
+          {
+            "fact": {
+              "kind": "symptom",
+              "name": [
+                "palpitations"
+              ]
+            }
+          },
+          {
+            "fact": {
+              "kind": "symptom",
+              "name": [
+                "dizziness",
+                "syncope",
+                "chest"
+              ]
+            }
+          }
+        ]
+      },
+      "specialty": "CARDIO",
+      "equipment": [],
+      "rationale": {
+        "fr": "Palpitations avec vertiges.",
+        "en": "Palpitations with dizziness.",
+        "ar": "خفقان مع دوخة.",
+        "darija": "قلبو يضرب بالزربة مع دوخة."
+      }
     },
     {
-      "id": "R-AGE-01", "name": "Older patient with fever, confusion or chest symptoms", "severity": "moderate", "weight": 0.35,
-      "when": { "all": [
-        { "age": { "gte": 65 } },
-        { "fact": { "kind": "symptom", "name": ["fever", "confusion", "chest", "breath", "dizziness", "abdominal_pain"] } }
-      ] },
-      "specialty": "INTMED", "equipment": [],
-      "rationale": { "fr": "Patient de 65 ans ou plus avec un symptôme à risque.", "en": "Patient aged 65 or over with a risk symptom.", "ar": "مريض عمره 65 سنة أو أكثر مع عرض خطير.", "darija": "مريض عمرو 65 ولا أكثر وعندو عرض خطير." }
+      "id": "R-INF-02",
+      "name": "High fever",
+      "severity": "moderate",
+      "weight": 0.35,
+      "when": {
+        "vital": "temperature",
+        "gte": 39.5
+      },
+      "specialty": "INTMED",
+      "equipment": [],
+      "rationale": {
+        "fr": "Fièvre élevée (≥ 39,5 °C).",
+        "en": "High fever (≥ 39.5 °C).",
+        "ar": "حمى مرتفعة (≥ 39.5 درجة).",
+        "darija": "سخانة قوية (≥ 39.5)."
+      }
     },
     {
-      "id": "R-GEN-01", "name": "Unbearable pain", "severity": "moderate", "weight": 0.3,
-      "when": { "any": [ { "text": "unbearable_pain" },
-                         { "fact": { "kind": "symptom", "severity": ["unbearable", "excruciating", "worst", "extreme"] } } ] },
-      "specialty": null, "equipment": [],
-      "rationale": { "fr": "Douleur insupportable.", "en": "Unbearable pain.", "ar": "ألم لا يحتمل.", "darija": "وجيعة ما تتحملش." }
+      "id": "R-AGE-01",
+      "name": "Older patient with fever, confusion or chest symptoms",
+      "severity": "moderate",
+      "weight": 0.35,
+      "when": {
+        "all": [
+          {
+            "age": {
+              "gte": 65
+            }
+          },
+          {
+            "fact": {
+              "kind": "symptom",
+              "name": [
+                "fever",
+                "confusion",
+                "chest",
+                "breath",
+                "dizziness",
+                "abdominal_pain"
+              ]
+            }
+          }
+        ]
+      },
+      "specialty": "INTMED",
+      "equipment": [],
+      "rationale": {
+        "fr": "Patient de 65 ans ou plus avec un symptôme à risque.",
+        "en": "Patient aged 65 or over with a risk symptom.",
+        "ar": "مريض عمره 65 سنة أو أكثر مع عرض خطير.",
+        "darija": "مريض عمرو 65 ولا أكثر وعندو عرض خطير."
+      }
+    },
+    {
+      "id": "R-GEN-01",
+      "name": "Unbearable pain",
+      "severity": "moderate",
+      "weight": 0.3,
+      "when": {
+        "any": [
+          {
+            "text": "unbearable_pain"
+          },
+          {
+            "fact": {
+              "kind": "symptom",
+              "severity": [
+                "unbearable",
+                "excruciating",
+                "worst",
+                "extreme"
+              ]
+            }
+          }
+        ]
+      },
+      "specialty": null,
+      "equipment": [],
+      "rationale": {
+        "fr": "Douleur insupportable.",
+        "en": "Unbearable pain.",
+        "ar": "ألم لا يحتمل.",
+        "darija": "وجيعة ما تتحملش."
+      }
+    },
+    {
+      "id": "R-TRAUMA-03",
+      "name": "Suspected fracture",
+      "severity": "high",
+      "weight": 0.65,
+      "when": {
+        "text": "fracture"
+      },
+      "specialty": "TRAUMA",
+      "equipment": [],
+      "rationale": {
+        "fr": "Fracture suspectée.",
+        "en": "Suspected fracture.",
+        "ar": "كسر مشتبه به.",
+        "darija": "يظهر فما كسر."
+      }
+    },
+    {
+      "id": "R-GEN-02",
+      "name": "Severe pain (7–10/10)",
+      "severity": "high",
+      "weight": 0.55,
+      "when": {
+        "text": "severe_pain_score"
+      },
+      "specialty": null,
+      "equipment": [],
+      "rationale": {
+        "fr": "Douleur sévère (7 à 10 sur 10).",
+        "en": "Severe pain (7 to 10 out of 10).",
+        "ar": "ألم شديد (من 7 إلى 10 من 10).",
+        "darija": "وجيعة قوية برشة (من 7 لـ10)."
+      }
     }
   ]
 }

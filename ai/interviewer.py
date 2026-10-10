@@ -260,3 +260,72 @@ def ask_intake(interviewer, field, history, language, message):
     if isinstance(out.get('collected'), dict):
         result['collected'] = {k: v for k, v in out['collected'].items() if v not in (None, '', [])}
     return result
+
+
+MAX_INTAKE = 5
+TOPICS = {
+    'intake.onset': 'when it started / how long',
+    'intake.severity': 'how strong it is (0-10)',
+    'intake.warning_signs': 'other warning signs (fever, vomiting, breathing difficulty, fainting, bleeding)',
+    'intake.age': 'age of the sick person',
+    'intake.history': 'known illnesses, pregnancy, current medicines',
+}
+
+
+def intake_open(answered, interviewer):
+    """True while intake questions remain: at most MAX_INTAKE, adaptive (LLM) or the fixed list."""
+    return len(answered) < MAX_INTAKE and (interviewer.enabled or next_intake(answered) is not None)
+
+
+def ask_adaptive_intake(interviewer, answered, history, language, message):
+    """Next intake question. With the LLM: chosen from the conversation (clarify the complaint, or the
+    most useful missing topic) with matching quick replies. Otherwise: the next fixed question."""
+    fallback_field = next_intake(answered)
+
+    def fixed():
+        if fallback_field is None:
+            return None
+        text, quick = intake_question(fallback_field, language, message)
+        return dict(text=text, quick_replies=quick, field=fallback_field, collected={}, source='template')
+
+    if not interviewer.enabled:
+        return fixed()
+    remaining = {k: v for k, v in TOPICS.items() if k not in answered}
+    system = (
+        "You are the intake assistant of Sahhanito, a Tunisian emergency triage app. The triage system could not "
+        "yet understand this patient well enough. Your ONLY job: ask the ONE next question that will help most, then "
+        "note what the patient said.\n"
+        "Strict rules:\n"
+        "- Never assess urgency, never diagnose, never reassure, never give advice or medication.\n"
+        "- If the main complaint is still vague, ask what exactly is wrong and where (topic \"clarify\"). Otherwise "
+        "pick the most useful remaining topic.\n"
+        "- One short question (max 25 words), adapted to what the patient already said; never repeat a question "
+        "already asked.\n"
+        "- Up to 4 short quick replies (max 4 words each) the patient can tap, in the same language.\n"
+        f"- Write in {LANG_NAMES.get(language, 'French')}.\n"
+        "- JSON only: {\"topic\": one of " + json.dumps(['clarify', *remaining]) + ", \"question\": string, "
+        "\"quick_replies\": [string], \"collected\": {\"age\": number|null, \"onset\": string|null, \"severity\": string|null, "
+        "\"symptoms\": [string], \"conditions\": [string], \"medications\": [string], \"other\": string|null}}"
+    )
+    transcript = '\n'.join(f"{'Patient' if h['role'] == 'patient' else 'Assistant'}: {h['text']}" for h in history[-14:])
+    user = (f"Conversation so far:\n{transcript}\n\nRemaining topics: "
+            + json.dumps({k: v for k, v in remaining.items()}) + f"\nQuestions already asked in intake: {len(answered)} of {MAX_INTAKE}.")
+    try:
+        content = interviewer._complete(system, user)
+        out = json.loads(re.search(r'\{.*\}', content, re.S).group())
+    except Exception:
+        return fixed()
+    question = (out.get('question') or '').strip()
+    topic = out.get('topic')
+    quick = [q.strip() for q in (out.get('quick_replies') or []) if isinstance(q, str) and 0 < len(q.strip()) <= 40][:4]
+    if not question or len(question) > 300 or not re.search(r'[?؟]', question) or UNSAFE.search(question):
+        return fixed()
+    if topic == 'clarify':
+        field = f"intake.clarify.{sum(k.startswith('intake.clarify') for k in answered) + 1}"
+    elif topic in remaining:
+        field = topic
+    else:
+        return fixed()
+    collected = out.get('collected') if isinstance(out.get('collected'), dict) else {}
+    return dict(text=question, quick_replies=quick, field=field, source='llm',
+                collected={k: v for k, v in collected.items() if v not in (None, '', [])})

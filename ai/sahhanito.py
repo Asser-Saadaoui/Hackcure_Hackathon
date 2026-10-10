@@ -100,11 +100,13 @@ def triage_turn(state, message, previous_question_id=None, *, language='fr', mod
         meta['llm_notes'].update(asked_reply.get('collected') or {})
         reply = dict(text=asked_reply['text'], quick_replies=asked_reply['quick_replies'],
                      question_id=question['id'], field=question['field'], source=asked_reply['source'])
-    elif decided['level'] == 'UNCERTAIN' and mode == 'interview' and interviewer_module.next_intake(meta['intake']):
-        # Not enough to decide: collect the basics before a clinician reviews the case.
+    elif (decided['level'] == 'UNCERTAIN' and mode == 'interview'
+          and interviewer_module.intake_open(meta['intake'], interviewer or default_interviewer())
+          and (asked_reply := interviewer_module.ask_adaptive_intake(interviewer or default_interviewer(), meta['intake'],
+                                                                    _history(st), language, message))):
+        # Not enough to decide: collect what a clinician needs before review (adaptive with the LLM).
         status = 'question'
-        field = interviewer_module.next_intake(meta['intake'])
-        asked_reply = interviewer_module.ask_intake(interviewer or default_interviewer(), field, _history(st), language, message)
+        field = asked_reply['field']
         meta['pending_intake'] = field
         meta['intake_turns'][str(len(st['turns']))] = asked_reply['text']
         meta['llm_notes'].update(asked_reply.get('collected') or {})
