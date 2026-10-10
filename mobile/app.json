@@ -1,0 +1,48 @@
+{
+  "expo": {
+    "name": "Sahhanito",
+    "slug": "sahhanito",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/sahhanito-icon.png",
+    "scheme": "sahhanito",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "icon": "./assets/images/sahhanito-icon.png"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#F1FAF5",
+        "foregroundImage": "./assets/images/hassanito.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "single",
+      "favicon": "./assets/images/sahhanito-icon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#F1FAF5",
+          "image": "./assets/images/hassanito.png",
+          "imageWidth": 112
+        }
+      ],
+      "expo-localization",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Sahhanito uses your location to find the nearest hospital that can treat you."
+        }
+      ],
+      "expo-asset"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}

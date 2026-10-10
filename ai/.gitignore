@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.venv/
+.env
+*.csv
+*.parquet
+*.sqlite*
+.ipynb_checkpoints/
+semantic_cache/
+*.onnx
+*.safetensors
