@@ -3,6 +3,7 @@ import type {
   PatientEvent, PatientReport, Session, TrackingView, TurnResult,
 } from '@/lib/types';
 import { mockApi } from '@/mock/mock-api';
+import { aiApi } from '@/lib/ai-api';
 
 /**
  * Everything the patient app needs from the backend.
@@ -41,8 +42,9 @@ export interface PatientApi {
   subscribe(caseId: string, onEvent: (e: PatientEvent) => void): () => void;
 }
 
-const MODE = process.env.EXPO_PUBLIC_API_MODE ?? 'mock';
+export const API_MODE = process.env.EXPO_PUBLIC_API_MODE ?? 'ai';
+if (!['mock', 'ai'].includes(API_MODE)) throw new Error('EXPO_PUBLIC_API_MODE must be ai or mock');
 
-export const api: PatientApi = MODE === 'mock'
+export const api: PatientApi = API_MODE === 'mock'
   ? mockApi
-  : mockApi; // Step 17: replace with httpApi (Next.js backend)
+  : aiApi;

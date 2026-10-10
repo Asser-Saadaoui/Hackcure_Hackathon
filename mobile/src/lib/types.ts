@@ -37,7 +37,7 @@ export interface TriggeredRule {
 export interface Decision {
   level: RiskLevel;
   uncertainty: Uncertainty;
-  pFinal: number;
+  pFinal: number | null;
   rationale: string;
   suggestedSpecialty: string | null;
   requiredEquipment: string[];
@@ -61,6 +61,8 @@ export interface CaseLocation {
 }
 
 export interface CaseDetail {
+  /** Raw prototype result: rich facts, independent rules, continuous scores/calibration. */
+  pipeline?: import('./ai-api').PipelineTurn;
   id: string;
   referenceCode: string;
   status: CaseStatus;
