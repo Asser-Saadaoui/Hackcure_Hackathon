@@ -61,9 +61,14 @@ NEGATION = re.compile(r"\b(?:no(?: evidence of)?|without|denies|denied|deny|neve
 UNCERTAIN = re.compile(r'\b(?:maybe|possibly|possible|suspected|suspect|not sure|unsure|might|may have|cannot rule out|can.t rule out|rule out|could be|worried about|afraid of|fear(?: of)?)\b', re.I)
 HYPOTHETICAL = re.compile(r'\b(?:if|what if|could .{0,25} cause|risk of|prevent|would|what are (?:the )?symptoms|article says|read that)\b', re.I)
 SEVERITY = re.compile(r'\b(?:mild|moderate|severe|extreme|unbearable|excruciating|intense|worst)\b|\b(\d{1,2})\s*/\s*10\b', re.I)
-NUMBER = r'\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|a|an|few|several'
+NUMBER = r'\d+(?:\.\d+)?|(?:twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)(?:[- ](?:one|two|three|four|five|six|seven|eight|nine))?|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|one|two|three|four|five|six|seven|eight|nine|ten|a|an|few|several'
 DURATION = re.compile(r'\b('+NUMBER+r')\s*[- ]?\s*(minutes?|hours?|days?|weeks?|months?|years?)\b', re.I)
 WORDS = dict(zip(['one','two','three','four','five','six','seven','eight','nine','ten','a','an'], [1,2,3,4,5,6,7,8,9,10,1,1]))
+WORDS.update(dict(zip(['eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'],range(11,20))))
+for _word,_number in zip(['twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'],range(20,100,10)):
+    WORDS[_word]=_number
+    for _unit in ['one','two','three','four','five','six','seven','eight','nine']:
+        for _separator in [' ','-']:WORDS[_word+_separator+_unit]=_number+WORDS[_unit]
 UNITS = {'minute': 60, 'hour': 3600, 'day': 86400, 'week': 604800, 'month': 2629800, 'year': 31557600}
 VITALS = {
     'oxygen_saturation': (r'\b(?:oxygen saturation|oxygen level|SpO2|O2 sat(?:uration)?|sats?)\s*(?:was|is|of|at|:|=)?\s*(\d{1,3}(?:\.\d+)?)\s*%?', '%', (0,100)),
@@ -102,7 +107,8 @@ def context(text, start, end, kind, inherited='patient'):
         a+=cue.start() if cue else actors[-1].start()
     # Local clauses stop at a new subject after the entity, too.
     next_actor=ACTOR.search(text,end,b)
-    if next_actor:b=next_actor.start()
+    activity_clause=next_actor and re.search(r'\bwhen\s*$',text[end:next_actor.start()],re.I) and re.match(r'I\s+(?:walk|run|exercise)\b',text[next_actor.start():],re.I)
+    if next_actor and not activity_clause:b=next_actor.start()
     prefix=text[a:start];suffix=text[end:b];local=text[a:b]
     reset=list(re.finditer(r'\b(?:and (?:have|has|feel|feels|developed)|now (?:have|has))\b',prefix,re.I))
     if reset:prefix=prefix[reset[-1].start():]
@@ -126,7 +132,7 @@ def context(text, start, end, kind, inherited='patient'):
     ongoing=bool(re.search(r"\b(?:still|currently|now|ongoing|have had|has had|have been|has been|I've had|I've been)\b",local,re.I))
     past=bool(re.search(r'\b(?:had|was|were|experienced|suffered)\b',prefix,re.I)) and not ongoing
     status='negated' if neg or (resolved and kind=='symptom') else 'uncertain' if uncertain else 'hypothetical' if hypothetical else 'confirmed'
-    temporal='resolved' if resolved else 'historical' if (historical or past) and not ongoing else 'episodic' if re.search(r'\b(?:sometimes|intermittent|recurring|recurrent|comes and goes|whenever|during (?:panic )?attacks)\b',local,re.I) and not ongoing else 'current'
+    temporal='resolved' if resolved else 'historical' if (historical or past) and not ongoing else 'episodic' if re.search(r'\b(?:sometimes|intermittent|recurring|recurrent|comes and goes|whenever|during (?:panic )?attacks|when I (?:walk|run|exercise))\b',local,re.I) and not ongoing else 'current'
     if hypothetical:temporal='hypothetical'
     acute=bool(re.search(r'\b(?:sudden(?:ly)?|new|just|started|began|today)\b',local,re.I)) and temporal=='current'
     recent=bool(re.search(r'\b(?:now|today|tonight|this morning|yesterday|last night|hours? ago|minutes? ago)\b',local,re.I)) and temporal not in ('historical','hypothetical')
@@ -171,6 +177,13 @@ def context(text, start, end, kind, inherited='patient'):
     if kind=='symptom' and temporal=='historical' and event_time is None:
         relative=re.search(r'\btoday\b',local,re.I)
         if relative:event_time=dict(seconds_ago=None,within_last_24_hours=True,start=a+relative.start(),end=a+relative.end(),text=relative.group())
+    onset_value=None if not onset else dict(value='relative_time' if onset.group().lower().startswith('since ') else 'sudden' if onset.group().lower().startswith('sudden') else 'gradual' if onset.group().lower().startswith('gradual') else onset.group().lower(),start=a+onset.start(),end=a+onset.end(),text=onset.group())
+    # A dated start is distinct from the duration of a symptom or its resolution.
+    if onset and not resolved:
+        dated=[d for d in durations if d['start']>=a+onset.end() and re.match(r'\s*ago\b',text[d['end']:b],re.I)]
+        if dated:
+            d=dated[0];onset_value.update(seconds_ago=d['seconds'],start=a+onset.start(),end=d['end']+len(re.match(r'\s*ago',text[d['end']:b],re.I).group()))
+            onset_value['text']=text[onset_value['start']:onset_value['end']]
     cues=[]
     for cue in [NEGATION,UNCERTAIN,HYPOTHETICAL]:
         for m in cue.finditer(text[a:b]):cues.append((a+m.start(),a+m.end()))
@@ -180,7 +193,7 @@ def context(text, start, end, kind, inherited='patient'):
         status='hypothetical';temporal='hypothetical';subject='generic'
     return dict(status=status,temporality=temporal,experiencer=subject,acute=acute,recent=recent,
                 severity=severity,duration=duration,resolution_time=resolution_time,event_time=event_time,
-                onset=None if not onset else dict(value='relative_time' if onset.group().lower().startswith('since ') else 'sudden' if onset.group().lower().startswith('sudden') else 'gradual' if onset.group().lower().startswith('gradual') else onset.group().lower(),start=a+onset.start(),end=a+onset.end(),text=onset.group()),
+                onset=onset_value,
                 context_start=a,context_end=b,cues=cues)
 
 def enrich(text, legacy, inherited='patient', turn_id=None):
@@ -395,6 +408,8 @@ def _update_patient_state_english(state, answer, question=None, field=None):
         if kind not in ('symptom','condition','medication'):raise ValueError('Yes/no cannot set a numeric slot.')
         f=copy.deepcopy(template) if template else dict(kind=kind,name=name,concept=name,acute=False,recent=False,severity=None,duration=None,onset=None,context_start=0,context_end=len(answer))
         f.update(status='uncertain' if short in ('not sure','unsure',"i don't know") else 'negated' if short.startswith('no') else 'confirmed',temporality='current',experiencer=target,text=answer,start=0,end=len(answer),extraction_confidence=.9,confidence_basis='single_question_target_and_explicit_answer')
+        f.pop('semantic_candidate',None)
+        f['extraction_provenance']='linked_patient_confirmation'
         # A positive linked answer may also carry a severity expression.
         answer_ctx=context(normalize(answer),len(answer),len(answer),kind,target)
         if f['status']=='confirmed' and answer_ctx.get('severity'):f['severity']=answer_ctx['severity']
@@ -488,10 +503,37 @@ def update_patient_state(state, answer, question=None, field=None):
     recognized=any(e.get('turn_id')==turn_id and e.get('source')=='answer' for f in updated['facts'] for e in f['evidence'])
     updated['turns'][-1].update(answer=answer,question=question,language=language_hint(answer),normalization=changes,
                                understanding_status='recognized_facts_with_limited_vocabulary' if recognized else 'no_clinical_fact_recognized')
+    primary=any(f['kind'] in ('symptom','condition','medication','vital') and f['experiencer']==updated['patient_experiencer']
+                and any(e.get('turn_id')==turn_id and e.get('source')=='answer' for e in f['evidence']) for f in updated['facts'])
+    routine=any(f['kind']=='context' and f['status']=='confirmed' and f['name'] in ('routine','planned_care','preventive_care','general_education','chronic_care') for f in updated['facts'])
+    updated['nlp_requires_clarification']=not primary and field is None and not routine
     for item in updated['unresolved_answers']:
         if item['turn_id']==turn_id:item.update(answer=answer,question=question)
     from clinical_state import facts_to_info
     updated.update({k:v for k,v in facts_to_info(updated['facts'],updated['patient_experiencer']).items() if k not in ('facts','schema_version','patient_experiencer')})
+    return updated
+
+def add_semantic_candidates(state,answer,semantic):
+    """Append uncertain transformer candidates to this turn, never overwrite facts.
+
+    Candidate observations are separate from confirmed facts; the ML adapter
+    does not receive them until a linked patient answer confirms the concept.
+    """
+    from multilingual_nlp import merge_semantic
+    updated=copy.deepcopy(state);turn=len(updated['turns'])-1;target=updated['patient_experiencer']
+    local=[f for f in updated['facts'] if any(e.get('turn_id')==turn and e.get('source')=='answer' for e in f['evidence'])]
+    info=merge_semantic(dict(facts=copy.deepcopy(local),observations=[],patient_experiencer=target),answer,semantic,target,turn)
+    additions=[f for f in info['facts'] if f.get('semantic_candidate')]
+    for f in additions:
+        key=(f['kind'],f['name'],f['experiencer'])
+        previous=next((p for p in updated['facts'] if (p['kind'],p['name'],p['experiencer'])==key),None)
+        if previous:
+            updated['history'].append(f);continue
+        updated['facts'].append(f)
+    updated['turns'][-1]['semantic_metadata']=info['semantic_metadata']
+    # An unfamiliar new complaint cannot be scored using only old known facts.
+    if additions and not local:updated['nlp_requires_clarification']=True
+    updated.update({k:v for k,v in facts_to_info(updated['facts'],target).items() if k not in ('facts','schema_version','patient_experiencer')})
     return updated
 
 def clinical_features(info):

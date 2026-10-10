@@ -104,18 +104,21 @@ def predict_from_state(patient_state,bundle=None):
     meaningful=any(f.get('kind') in {'symptom','condition','medication','vital'}
                    and f.get('experiencer')==target and f.get('temporality')=='current'
                    and f.get('status') in {'confirmed','negated'} for f in patient_state.get('facts',[]))
-    if not meaningful:
+    if not meaningful or patient_state.get('nlp_requires_clarification',False):
         return dict(status='insufficient_input',reason='No understood current clinical facts for the patient; clarification is required.',
                     emergency_label=None,prediction=None,model_score_emergency=None,model_score_non_emergency=None,
                     raw_score_emergency=None,raw_score_non_emergency=None,score_is_clinically_calibrated=False,
                     classification_threshold=getattr(bundle.get('model'),'threshold',None) if bundle else None,
                     model_version=bundle.get('model_version','caller_supplied') if bundle else None,
                     calibration_metadata=dict(clinical_validation=False,tunisian_validation=False))
-    if bundle is None:bundle=joblib.load(ARTIFACTS/'triage_model.joblib')
+    if bundle is None:bundle=_cached_state_model('experimental_v3')
     if bundle.get('feature_schema') not in (None,FEATURE_SCHEMA):raise ValueError('Unsupported ML feature schema.')
     if bundle['feature_signature']!=extraction_signature():
         _validate_state_adapter(bundle)
-    info=facts_to_info(patient_state['facts'],patient_state.get('patient_experiencer','patient'))
+    # General NER suggestions are clarification candidates, not established ML
+    # inputs. A linked answer replaces their assertion/provenance before use.
+    confirmed_facts=[f for f in patient_state['facts'] if not f.get('semantic_candidate')]
+    info=facts_to_info(confirmed_facts,patient_state.get('patient_experiencer','patient'))
     info['observations']=patient_state.get('observations',patient_state['facts'])
     features=to_features(info);model=bundle['model']
     # One ensemble pass supplies both raw and mapped scores.
@@ -165,7 +168,7 @@ def load_state_model(model_version='experimental_v3'):
     _validate_state_adapter(bundle)
     return bundle
 
-def process_turn(patient_state,patient_message,previous_question_id=None,*,model_version='experimental_v3',ml_bundle=None,language=None):
+def process_turn(patient_state,patient_message,previous_question_id=None,*,model_version='experimental_v3',ml_bundle=None,language=None,semantic=None,defer_ml_on_critical=True):
     """Prototype state -> independent ML and red flags, with rule interruption.
 
     The v3 experimental option is explicit in the API and output; it does not
@@ -189,13 +192,32 @@ def process_turn(patient_state,patient_message,previous_question_id=None,*,model
     # Without a question ID, a bare Yes/No cannot answer an unlinked prompt.
     state=update_patient_state(state,patient_message,question=question,field=field)
     rules=evaluate_rules(state)
+    semantic_status='not_requested'
+    # Literal critical facts return before any transformer/model load. The caller
+    # can request independent scores later with predict_from_state(state,bundle).
+    if semantic is not None and not rules['critical_flags_detected'] and field is None:
+        from clinical_state import add_semantic_candidates
+        try:
+            state=add_semantic_candidates(state,patient_message,semantic)
+            semantic_status='completed'
+        except (ValueError,RuntimeError,FileNotFoundError) as error:
+            semantic_status='unavailable: '+str(error)
+        rules=evaluate_rules(state)
+    elif semantic is not None and rules['critical_flags_detected']:semantic_status='skipped_critical_fast_path'
     relevant=candidates(state)
     next_question=select_next_question(state,rules,language)
     if next_question:state['pending_question']=next_question
     else:state.pop('pending_question',None)
     try:
-        bundle=ml_bundle if ml_bundle is not None else _cached_state_model(model_version)
-        ml=predict_from_state(state,bundle)
+        if defer_ml_on_critical and rules['critical_flags_detected']:
+            ml=dict(status='deferred_critical_fast_path',prediction=None,emergency_label=None,
+                    model_score_emergency=None,model_score_non_emergency=None,classification_threshold=None,
+                    model_version=model_version,reason='Critical findings returned immediately. Call predict_from_state with a loaded bundle for independent ML scores.',
+                    calibration_metadata=dict(clinical_validation=False,tunisian_validation=False))
+        elif state.get('nlp_requires_clarification',False):ml=predict_from_state(state,ml_bundle)
+        else:
+            bundle=ml_bundle if ml_bundle is not None else _cached_state_model(model_version)
+            ml=predict_from_state(state,bundle)
         ml.pop('extracted_info',None)
         ml.pop('adaptive_questions_enabled',None)  # Questions are a separate component.
         ml.setdefault('status','ok')
@@ -209,7 +231,8 @@ def process_turn(patient_state,patient_message,previous_question_id=None,*,model
     extracted=[f for f in state['facts'] if any(e.get('turn_id')==turn and e.get('source')=='answer' for e in f['evidence'])]
     return dict(patient_state=state,extracted_facts=extracted,ml=ml,rules=rules,
                 relevant_missing_information=[q['field'] for q in relevant],next_question=next_question,
-                questioning_interrupted=rules['critical_flags_detected'],final_decision_policy_implemented=False)
+                questioning_interrupted=rules['critical_flags_detected'],semantic_status=semantic_status,
+                final_decision_policy_implemented=False)
 
 from functools import lru_cache
 
