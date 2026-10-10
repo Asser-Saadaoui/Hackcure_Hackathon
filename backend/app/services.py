@@ -95,7 +95,8 @@ def turn_view(tr):
 def case_view(case):
     r = current_referral(case)
     return dict(id=case.id, referenceCode=case.reference_code, status=case.status, level=case.level,
-                decision=decision_view(case), turns=[turn_view(x) for x in case.turns], location=case.location,
+                decision=decision_view(case), explain=(case.assessment or {}).get('patient_explain'),
+                turns=[turn_view(x) for x in case.turns], location=case.location,
                 referral=referral_view(r) if r else None, createdAt=iso(case.created_at), closedAt=iso(case.closed_at))
 
 
@@ -193,6 +194,8 @@ def triage(db, case, message):
     explanation_turn = None
     if status in ('emergency', 'under_review', 'result') and (ai.get('reply') or {}).get('text'):
         explanation_turn = _add_turn(db, case, 'ASSISTANT', ai['reply']['text'])
+        if ai['reply'].get('explain'):
+            case.assessment = dict(case.assessment or {}, patient_explain=ai['reply']['explain'])
     if status == 'question':
         tr = _add_turn(db, case, 'ASSISTANT', ai['reply']['text'], ai['reply'].get('quick_replies') or None)
         db.commit()
@@ -209,6 +212,7 @@ def triage(db, case, message):
     if explanation_turn is not None:
         db.flush()
         result['turn'] = turn_view(explanation_turn)   # the assistant explains the decision in the chat
+        result['explain'] = (case.assessment or {}).get('patient_explain')
     db.commit()
     if case.status == 'UNDER_REVIEW':
         broker.publish('reviews', dict(type='review.new', caseId=case.id))

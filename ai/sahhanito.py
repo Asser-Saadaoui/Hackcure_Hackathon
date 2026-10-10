@@ -84,6 +84,7 @@ def triage_turn(state, message, previous_question_id=None, *, language='fr', mod
     rules = evaluate_rules(st, r['rules'])
     assessment = fusion.fuse(r['ml'], rules)
     assessment['nlp_explanation'] = _explain(st, r['ml'], ml_bundle)
+    meta['nlp_explanation'] = assessment['nlp_explanation']
     decided = decision_policy.decide(assessment, rules, language)
 
     asked = len(st.get('asked_questions', []))
@@ -167,7 +168,18 @@ def _decision_reply(state, rules, decided, language, interviewer):
         out = dict(text=interviewer_module.template_explanation('EMERGENCY', reasons, lang), source='template')
     else:
         out = interviewer_module.explain_decision(interviewer or default_interviewer(), decided['level'], reasons, _history(state), lang)
-    return dict(text=out['text'], quick_replies=[], source=out['source'], kind='decision', level=decided['level'])
+    return dict(text=out['text'], quick_replies=[], source=out['source'], kind='decision', level=decided['level'],
+                explain=_patient_explain(state, decided, reasons, lang))
+
+
+def _patient_explain(state, decided, reasons, lang):
+    """Explainability card for the patient's chat: the reasons + the main elements behind the NLP score."""
+    from explain_labels import label
+    exp = (state.get('sahhanito') or {}).get('nlp_explanation') or {}
+    factors = [dict(label=label(f['concept'], f.get('status'), lang), direction='up' if f['contribution'] > 0 else 'down',
+                    weight=round(abs(f['contribution']), 3))
+               for f in exp.get('factors', [])[:4]]
+    return dict(level=decided['level'], reasons=reasons, factors=factors, saturated=bool(exp.get('saturated')))
 
 
 def _explain(state, ml, ml_bundle):

@@ -10,6 +10,7 @@ import { Button } from '@/components/button';
 import { AnswerButtons } from '@/components/chat/answer-buttons';
 import { ChatBubble } from '@/components/chat/chat-bubble';
 import { ChatInput } from '@/components/chat/chat-input';
+import { ExplainCard } from '@/components/chat/explain-card';
 import { TypingIndicator } from '@/components/chat/typing-indicator';
 import { Hassanito } from '@/components/hassanito';
 import { PrototypeNotice } from '@/components/prototype-notice';
@@ -17,7 +18,7 @@ import { Colors, Fonts, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useI18n } from '@/i18n';
 import { api } from '@/lib/api';
 import { getJSON, Keys, remove, setJSON } from '@/lib/storage';
-import type { Turn, TurnResult } from '@/lib/types';
+import type { PatientExplain, Turn, TurnResult } from '@/lib/types';
 
 /**
  * Triage chat (Step 5).
@@ -52,6 +53,7 @@ export default function ChatScreen() {
   const [mascotState, setMascotState] = useState<'idle' | 'guiding' | 'alert' | 'happy'>('idle');
   // The decision is explained in the chat; the patient opens the decision page with a button.
   const [outcome, setOutcome] = useState<{ kind: 'emergency' | 'result' | 'under_review'; caseId: string } | null>(null);
+  const [explain, setExplain] = useState<PatientExplain | null>(null);
   const scrollRef = useRef<ScrollView>(null);
 
   // Resume the case in progress (if the backend still has it).
@@ -64,6 +66,7 @@ export default function ChatScreen() {
         setItems(c.turns.map((tr) => ({ id: tr.id, role: tr.role, text: tr.text, time: timeOf(tr.createdAt) })));
         setQuickReplies(c.turns.at(-1)?.quickReplies ?? []);
         if (c.status !== 'TRIAGING' && c.status !== 'CLOSED') {
+          setExplain(c.explain ?? null);
           setOutcome({ caseId: c.id, kind: c.status === 'EMERGENCY' || c.level === 'EMERGENCY' ? 'emergency' : c.status === 'UNDER_REVIEW' ? 'under_review' : 'result' });
           setMascotState(c.level === 'EMERGENCY' ? 'alert' : 'happy');
         }
@@ -93,7 +96,8 @@ export default function ChatScreen() {
         // The assistant explains the decision here; the button below opens the decision page.
         setMascotState(r.kind === 'emergency' ? 'alert' : r.kind === 'result' ? 'happy' : 'idle');
         if (r.turn) addItem({ id: r.turn.id, role: 'ASSISTANT', text: r.turn.text, time: timeOf(r.turn.createdAt) });
-        setOutcome({ kind: r.kind, caseId: r.caseId });
+        setExplain(r.explain ?? null);
+        setOutcome({ kind: r.kind, caseId: r.caseId });   // stays in the chat; the patient opens the decision page with the button
         break;
       case 'degraded':
         // Shown as a clear alert with "try again" + 190 below, not as a grey chat line.
@@ -135,6 +139,7 @@ export default function ChatScreen() {
     setDegraded(null);
     setMascotState('idle');
     setOutcome(null);
+    setExplain(null);
   };
 
   return (
@@ -189,6 +194,7 @@ export default function ChatScreen() {
                   )}
                 </View>
               ))}
+              {outcome && explain && !sending && <ExplainCard explain={explain} />}
               {sending && <TypingIndicator label={t('typing')} slowLabel={t('typingLong')} />}
               {degraded && !sending && (
                 <Alert variant="destructive" icon={ShieldAlert} title={t('aiUnavailableTitle')}>

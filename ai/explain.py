@@ -84,6 +84,6 @@ def explain_nlp(state, bundle, top=6, minimum=0.01):
         factors.append(dict(group=key, kind=kind, concept=concept, status=_status(names), contribution=round(delta, 4)))
     factors.sort(key=lambda f: -abs(f['contribution']))
     # Near 0 or 1, removing one element barely moves the score because the others agree (saturation).
-    saturated = not factors and (full > 0.97 or full < 0.03)
+    saturated = not factors   # several elements agree: removing any single one barely moves the score
     return dict(score=round(full, 4), factors=factors[:top], saturated=saturated, method=VERSION,
                 note='Leave-one-group-out on the model input; contributions are not additive or calibrated.')
