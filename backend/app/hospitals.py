@@ -80,6 +80,8 @@ def availability(key, override=None):
         staffShortage=sim.get('staffShortage'), waitingPatients=sim.get('waitingPatients'),
         accepting=True, source='simulator' if sim else 'unknown', simulated=bool(sim), override=None,
         updatedAt=sim.get('updatedAt'),
+        simulator=dict(bedsAvailable=sim.get('bedsAvailable'), icuAvailable=sim.get('icuAvailable'),
+                       waitMinutes=sim.get('waitMinutes'), equipmentDown=list(sim.get('equipmentDown') or [])) if sim else None,
     )
     if override is not None and override.expires_at.replace(tzinfo=override.expires_at.tzinfo or timezone.utc) > datetime.now(timezone.utc):
         for field, column in (('bedsAvailable', 'beds_available'), ('icuAvailable', 'icu_available'), ('waitMinutes', 'wait_minutes')):

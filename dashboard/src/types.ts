@@ -51,6 +51,7 @@ export interface Availability {
   equipmentDown: string[]; doctorsAvailable: number | null; doctorsTotal: number | null; nursesAvailable: number | null; nursesTotal: number | null;
   staffShortage: boolean | null; waitingPatients: number | null; accepting: boolean; source: "simulator" | "staff" | "unknown"; simulated: boolean;
   override: { updatedBy: string; updatedAt: string; expiresAt: string; note: string | null } | null; updatedAt: string | null;
+  simulator: { bedsAvailable: number | null; icuAvailable: number | null; waitMinutes: number | null; equipmentDown: string[] } | null;
 }
 
 export interface Hospital { key: string; name: string; nameAr?: string; type: string; lat: number; lng: number; specialties: string[]; equipment: string[]; availability: Availability }

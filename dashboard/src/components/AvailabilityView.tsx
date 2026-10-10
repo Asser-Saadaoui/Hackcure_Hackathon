@@ -1,110 +1,227 @@
-import { useEffect, useState } from "react";
-import { BedDouble, Clock, HeartPulse, RotateCcw, Save, Stethoscope, Users } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { BedDouble, Check, Clock, HeartPulse, Minus, Plus, RotateCcw, Stethoscope, Users, Wrench, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { api } from "@/api";
 import { ago, EQUIPMENT } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { Hospital } from "@/types";
 
-function Stat({ icon: Icon, label, value, total }: { icon: typeof BedDouble; label: string; value: number | null; total?: number | null }) {
+type Draft = { beds: number | null; icu: number | null; wait: number | null; down: string[]; accepting: boolean; note: string; hours: number };
+
+const DURATIONS = [1, 4, 8, 12];
+const WAIT_STEP = 10;
+
+function fromHospital(h: Hospital): Draft {
+  const a = h.availability;
+  return {
+    beds: a.bedsAvailable, icu: a.icuAvailable, wait: a.waitMinutes,
+    down: a.equipmentDown.filter((e) => h.equipment.includes(e)), accepting: a.accepting,
+    note: a.override?.note ?? "", hours: 4,
+  };
+}
+
+const same = (a: Draft, b: Draft) =>
+  a.beds === b.beds && a.icu === b.icu && a.wait === b.wait && a.accepting === b.accepting && a.note === b.note &&
+  [...a.down].sort().join() === [...b.down].sort().join();
+
+function Stepper({ icon: Icon, label, value, total, simulated, step = 1, unit, onChange }: {
+  icon: typeof BedDouble; label: string; value: number | null; total?: number | null; simulated?: number | null;
+  step?: number; unit?: string; onChange: (v: number) => void;
+}) {
+  const v = value ?? 0;
+  const changed = simulated != null && value != null && simulated !== value;
   return (
     <div className="rounded-xl border bg-card p-4">
       <div className="flex items-center gap-2 text-xs text-muted-foreground"><Icon className="h-4 w-4" />{label}</div>
-      <p className="mt-1 text-2xl font-semibold">{value ?? "?"}{total != null && <span className="text-base font-normal text-muted-foreground"> / {total}</span>}</p>
+      <div className="mt-2 flex items-center gap-2">
+        <button type="button" aria-label={`Diminuer ${label}`} onClick={() => onChange(Math.max(0, v - step))}
+          className="flex h-9 w-9 items-center justify-center rounded-lg border hover:bg-secondary disabled:opacity-40" disabled={v <= 0}>
+          <Minus className="h-4 w-4" />
+        </button>
+        <Input type="number" min={0} inputMode="numeric" aria-label={label} value={value ?? ""}
+          onChange={(e) => onChange(Math.max(0, Number(e.target.value) || 0))}
+          className="h-10 w-20 text-center text-xl font-semibold" />
+        <button type="button" aria-label={`Augmenter ${label}`} onClick={() => onChange(v + step)}
+          className="flex h-9 w-9 items-center justify-center rounded-lg border hover:bg-secondary">
+          <Plus className="h-4 w-4" />
+        </button>
+        <span className="text-sm text-muted-foreground">{total != null ? `/ ${total}` : unit}</span>
+      </div>
+      <p className={cn("mt-2 h-4 text-xs", changed ? "text-amber-700" : "text-muted-foreground")}>
+        {simulated != null ? `simulé : ${simulated}${unit ? ` ${unit}` : ""}` : ""}
+      </p>
+    </div>
+  );
+}
+
+function ReadOnly({ icon: Icon, label, value, total }: { icon: typeof BedDouble; label: string; value: number | null; total?: number | null }) {
+  return (
+    <div className="flex items-center gap-3 rounded-lg bg-secondary/60 px-3 py-2">
+      <Icon className="h-4 w-4 text-muted-foreground" />
+      <span className="text-sm text-muted-foreground">{label}</span>
+      <span className="ml-auto font-semibold">{value ?? "?"}{total != null && <span className="font-normal text-muted-foreground"> / {total}</span>}</span>
     </div>
   );
 }
 
 export function AvailabilityView({ hospital, onChanged }: { hospital: Hospital; onChanged: (h: Hospital) => void }) {
   const a = hospital.availability;
-  const [beds, setBeds] = useState("");
-  const [icu, setIcu] = useState("");
-  const [wait, setWait] = useState("");
-  const [down, setDown] = useState<string[]>([]);
-  const [accepting, setAccepting] = useState(true);
-  const [note, setNote] = useState("");
-  const [hours, setHours] = useState("4");
+  const saved = useMemo(() => fromHospital(hospital), [hospital]);
+  const [draft, setDraft] = useState<Draft>(saved);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [justSaved, setJustSaved] = useState(false);
+  const dirty = !same(draft, saved);
+
+  // Live refreshes update the screen, but never overwrite values the user is editing.
+  useEffect(() => {
+    if (!dirty) setDraft((d) => ({ ...saved, hours: d.hours }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [saved]);
 
   useEffect(() => {
-    setBeds(a.bedsAvailable?.toString() ?? "");
-    setIcu(a.icuAvailable?.toString() ?? "");
-    setWait(a.waitMinutes?.toString() ?? "");
-    setDown(a.equipmentDown.filter((e) => hospital.equipment.includes(e)));
-    setAccepting(a.accepting);
-    setNote(a.override?.note ?? "");
-    // Reset the form only when the source changes, not on every simulator tick.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [a.source, hospital.key]);
+    if (!justSaved) return;
+    const timer = setTimeout(() => setJustSaved(false), 3000);
+    return () => clearTimeout(timer);
+  }, [justSaved]);
+
+  const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
 
   async function run(fn: () => Promise<Hospital>) {
     setBusy(true);
     setError(null);
-    try { onChanged(await fn()); } catch (err) { setError((err as Error).message); } finally { setBusy(false); }
+    try {
+      const h = await fn();
+      onChanged(h);
+      setDraft({ ...fromHospital(h), hours: draft.hours });
+      setJustSaved(true);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
   }
-  const num = (s: string) => (s.trim() === "" ? null : Number(s));
+
+  const save = (patch: Partial<Draft> = {}) => {
+    const d = { ...draft, ...patch };
+    return run(() => api.setAvailability({ bedsAvailable: d.beds, icuAvailable: d.icu, waitMinutes: d.wait, equipmentDown: d.down,
+      accepting: d.accepting, note: d.note || null, hours: d.hours }));
+  };
+
+  function toggleAccepting() {
+    if (draft.accepting && !window.confirm("Suspendre la réception ? Aucun nouveau patient ne sera orienté vers votre hôpital.")) return;
+    save({ accepting: !draft.accepting });  // urgent: applied immediately, not staged
+  }
+
+  const sim = a.simulator;
+  const fromStaff = a.source === "staff" && a.override;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 pb-24">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">Disponibilité · {hospital.name}</h1>
-        <p className="text-sm text-muted-foreground">
-          {a.source === "staff" && a.override
-            ? `Valeurs saisies par ${a.override.updatedBy} ${ago(a.override.updatedAt)} · expirent ${new Date(a.override.expiresAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`
-            : a.source === "simulator" ? "Valeurs simulées (OpenHospital Sim), mises à jour en continu. Corrigez-les si elles ne reflètent pas la réalité."
-            : "Simulateur indisponible : saisissez les valeurs."}
-        </p>
+        <h1 className="text-xl font-semibold tracking-tight">Disponibilité</h1>
+        <p className="text-sm text-muted-foreground">Ces valeurs décident si Sahhanito vous oriente des patients. Corrigez-les dès qu'elles changent.</p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        <Stat icon={BedDouble} label="Lits urgences libres" value={a.bedsAvailable} total={a.bedsTotal} />
-        <Stat icon={HeartPulse} label="Réanimation libre" value={a.icuAvailable} total={a.icuTotal} />
-        <Stat icon={Clock} label="Attente estimée (min)" value={a.waitMinutes} />
-        <Stat icon={Stethoscope} label="Médecins présents" value={a.doctorsAvailable} total={a.doctorsTotal} />
-        <Stat icon={Users} label="Patients en attente" value={a.waitingPatients} />
-      </div>
-      <div className="flex flex-wrap gap-2 text-xs">
-        <span className={cn("rounded-full px-2.5 py-1 font-medium", a.source === "staff" ? "bg-primary text-primary-foreground" : "bg-amber-100 text-amber-800")}>
-          {a.source === "staff" ? "Saisie équipe" : a.source === "simulator" ? "Données simulées" : "Inconnu"}
-        </span>
-        {!a.accepting && <span className="rounded-full bg-red-100 px-2.5 py-1 font-medium text-red-800">Ne reçoit plus de patients</span>}
-        {a.staffShortage && <span className="rounded-full bg-orange-100 px-2.5 py-1 font-medium text-orange-800">Sous-effectif</span>}
-        {a.equipmentDown.map((e) => <span key={e} className="rounded-full bg-red-100 px-2.5 py-1 font-medium text-red-800">{EQUIPMENT[e] ?? e} indisponible</span>)}
-      </div>
-
-      <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-base">Corriger la disponibilité</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-4">
-            <div className="space-y-1.5"><Label>Lits urgences libres</Label><Input type="number" min={0} value={beds} onChange={(e) => setBeds(e.target.value)} /></div>
-            <div className="space-y-1.5"><Label>Réanimation libre</Label><Input type="number" min={0} value={icu} onChange={(e) => setIcu(e.target.value)} /></div>
-            <div className="space-y-1.5"><Label>Attente (min)</Label><Input type="number" min={0} value={wait} onChange={(e) => setWait(e.target.value)} /></div>
-            <div className="space-y-1.5"><Label>Valable pendant (h)</Label><Input type="number" min={1} max={48} value={hours} onChange={(e) => setHours(e.target.value)} /></div>
+      {/* Status: receiving or not, and where the numbers come from */}
+      <Card className={cn(!a.accepting && "border-red-300 bg-red-50/60")}>
+        <CardContent className="flex flex-wrap items-center gap-4 pt-5">
+          <button type="button" role="switch" aria-checked={a.accepting} aria-label="Recevoir de nouveaux patients" onClick={toggleAccepting} disabled={busy}
+            className={cn("relative h-7 w-12 shrink-0 rounded-full transition", a.accepting ? "bg-emerald-600" : "bg-red-600")}>
+            <span className={cn("absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all", a.accepting ? "left-6" : "left-1")} />
+          </button>
+          <div className="min-w-0 flex-1">
+            <p className={cn("font-semibold", a.accepting ? "text-emerald-700" : "text-red-700")}>
+              {a.accepting ? "Vous recevez de nouveaux patients" : "Réception suspendue : aucun patient ne vous est orienté"}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {fromStaff
+                ? `Valeurs de l'équipe (${a.override!.updatedBy}, ${ago(a.override!.updatedAt)}) · expirent à ${new Date(a.override!.expiresAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}, puis retour aux valeurs simulées`
+                : a.source === "simulator" ? "Valeurs simulées, mises à jour en continu. Corrigez-les si elles ne reflètent pas la réalité."
+                : "Simulateur indisponible : saisissez vos valeurs."}
+            </p>
           </div>
-          <div className="space-y-1.5">
-            <Label>Équipement indisponible</Label>
-            <div className="flex flex-wrap gap-1.5">
-              {hospital.equipment.map((e) => (
-                <button key={e} type="button" onClick={() => setDown((d) => (d.includes(e) ? d.filter((x) => x !== e) : [...d, e]))}
-                  className={cn("rounded-full border px-3 py-1 text-sm", down.includes(e) && "border-red-300 bg-red-50 text-red-800")}>{EQUIPMENT[e] ?? e}</button>
-              ))}
-            </div>
-          </div>
-          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={!accepting} onChange={(e) => setAccepting(!e.target.checked)} />
-            Suspendre la réception de nouveaux patients</label>
-          <div className="space-y-1.5"><Label>Note (visible par l'équipe)</Label><Input value={note} onChange={(e) => setNote(e.target.value)} maxLength={300} /></div>
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          <div className="flex flex-wrap gap-2">
-            <Button disabled={busy} onClick={() => run(() => api.setAvailability({ bedsAvailable: num(beds), icuAvailable: num(icu), waitMinutes: num(wait),
-              equipmentDown: down, accepting, note: note || null, hours: Number(hours) || 4 }))}><Save className="mr-2 h-4 w-4" />Enregistrer</Button>
-            {a.source === "staff" && <Button variant="outline" disabled={busy} onClick={() => run(() => api.clearAvailability())}><RotateCcw className="mr-2 h-4 w-4" />Revenir aux valeurs simulées</Button>}
-          </div>
+          <span className={cn("rounded-full px-2.5 py-1 text-xs font-medium", fromStaff ? "bg-primary text-primary-foreground" : "bg-amber-100 text-amber-800")}>
+            {fromStaff ? "Saisie équipe" : "Données simulées"}
+          </span>
+          {fromStaff && (
+            <Button variant="outline" size="sm" disabled={busy} onClick={() => run(() => api.clearAvailability())}>
+              <RotateCcw className="mr-1.5 h-4 w-4" />Revenir aux valeurs simulées
+            </Button>
+          )}
         </CardContent>
       </Card>
+
+      {/* Editable capacity */}
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Stepper icon={BedDouble} label="Lits urgences libres" value={draft.beds} total={a.bedsTotal}
+          simulated={fromStaff ? sim?.bedsAvailable : null} onChange={(v) => set({ beds: v })} />
+        <Stepper icon={HeartPulse} label="Réanimation libre" value={draft.icu} total={a.icuTotal}
+          simulated={fromStaff ? sim?.icuAvailable : null} onChange={(v) => set({ icu: v })} />
+        <Stepper icon={Clock} label="Attente estimée" value={draft.wait} unit="min" step={WAIT_STEP}
+          simulated={fromStaff ? sim?.waitMinutes : null} onChange={(v) => set({ wait: v })} />
+      </div>
+
+      {/* Equipment */}
+      <div className="space-y-2">
+        <p className="flex items-center gap-2 text-sm font-medium"><Wrench className="h-4 w-4 text-muted-foreground" />Plateau technique</p>
+        <div className="flex flex-wrap gap-2">
+          {hospital.equipment.map((e) => {
+            const isDown = draft.down.includes(e);
+            return (
+              <button key={e} type="button" aria-pressed={isDown}
+                onClick={() => set({ down: isDown ? draft.down.filter((x) => x !== e) : [...draft.down, e] })}
+                className={cn("inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition",
+                  isDown ? "border-red-300 bg-red-50 text-red-800" : "border-emerald-200 bg-emerald-50 text-emerald-800")}>
+                {isDown ? <X className="h-4 w-4" /> : <Check className="h-4 w-4" />}
+                <span className="font-medium">{EQUIPMENT[e] ?? e}</span>
+                <span className="text-xs opacity-80">{isDown ? "En panne" : "Disponible"}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Note */}
+      <div className="space-y-1.5">
+        <p className="text-sm font-medium">Note pour l'équipe <span className="font-normal text-muted-foreground">(facultatif)</span></p>
+        <Input value={draft.note} maxLength={300} placeholder="Ex. : scanner en maintenance jusqu'à 16 h" onChange={(e) => set({ note: e.target.value })} />
+      </div>
+
+      {/* Read-only activity from the simulator */}
+      <div className="space-y-2">
+        <p className="text-sm font-medium">Activité <span className="font-normal text-muted-foreground">(simulée)</span></p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <ReadOnly icon={Stethoscope} label="Médecins présents" value={a.doctorsAvailable} total={a.doctorsTotal} />
+          <ReadOnly icon={Users} label="Patients en attente" value={a.waitingPatients} />
+        </div>
+        {a.staffShortage && <p className="text-xs text-orange-700">Sous-effectif signalé par le simulateur.</p>}
+      </div>
+
+      {error && <p className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{error}</p>}
+      {justSaved && !dirty && <p className="text-sm text-emerald-700">Enregistré.</p>}
+
+      {/* Save bar: only when something changed */}
+      {dirty && (
+        <div className="fixed inset-x-0 bottom-0 z-10 border-t bg-card/95 shadow-lg backdrop-blur">
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
+            <span className="text-sm font-medium">Modifications non enregistrées</span>
+            <span className="text-sm text-muted-foreground">Valables</span>
+            <div className="flex gap-1 rounded-lg bg-secondary p-1">
+              {DURATIONS.map((h) => (
+                <button key={h} type="button" onClick={() => set({ hours: h })}
+                  className={cn("rounded-md px-2.5 py-1 text-sm", draft.hours === h ? "bg-card font-medium shadow-sm" : "text-muted-foreground")}>{h} h</button>
+              ))}
+            </div>
+            <div className="ml-auto flex gap-2">
+              <Button variant="ghost" disabled={busy} onClick={() => setDraft({ ...saved, hours: draft.hours })}>Annuler</Button>
+              <Button disabled={busy} onClick={() => save()}>{busy ? "Enregistrement…" : "Enregistrer"}</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
