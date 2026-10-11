@@ -10,6 +10,7 @@ import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { Chip } from '@/components/chip';
 import { Hassanito } from '@/components/hassanito';
+import { Highlighter } from '@/components/highlighter';
 import { Floating3DParticles } from '@/components/floating-3d-particles';
 import { Screen } from '@/components/screen';
 import { NetworkStatus } from '@/components/network-status';
@@ -71,7 +72,7 @@ export default function WelcomeScreen() {
         <AppText variant="small" style={styles.eyebrow}>SAHHANITO · صحة نيتو</AppText>
         <AppText variant="title" style={styles.welcomeTitle}>{copy.welcomeTitle}</AppText>
         <AppText style={styles.lead}>{copy.welcomeIntro}</AppText>
-        <AppText variant="small" style={styles.tagline}>{copy.workspaceTagline}</AppText>
+        <Highlighter color="#FF94A3" style={styles.tagline}>{copy.workspaceTagline}</Highlighter>
       </View>
       <Card><AppText variant="subtitle">{copy.howTitle}</AppText>
         {[copy.how1, copy.how2, copy.how3].map((step, i) => <View key={i} style={styles.step}><AppText style={styles.number}>{i + 1}</AppText><AppText style={{ flex: 1 }}>{step}</AppText></View>)}

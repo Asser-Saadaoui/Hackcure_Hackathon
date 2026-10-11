@@ -8,6 +8,7 @@ import { AppText } from './app-text';
 import { BrandTitle } from './brand-title';
 import { Button } from './button';
 import { Hassanito } from './hassanito';
+import { Highlighter } from './highlighter';
 import { Colors, Fonts } from '@/constants/theme';
 import { useI18n } from '@/i18n';
 import { EXPERIENCE } from '@/i18n/experience';
@@ -70,7 +71,7 @@ export function PlatformShell({ children }: { children: ReactNode }) {
     <View style={styles.workspace}>
       <View style={styles.topbar}>
         <AppText variant="subtitle">{title}</AppText>
-        <View style={styles.context}><AppText variant="small">{EXPERIENCE[language].workspaceTagline}</AppText>
+        <View style={styles.context}><Highlighter>{EXPERIENCE[language].workspaceTagline}</Highlighter>
           <Button label={t('call190')} variant="outline" size="sm" icon={Phone} onPress={() => Linking.openURL('tel:190')} />
         </View>
       </View>
