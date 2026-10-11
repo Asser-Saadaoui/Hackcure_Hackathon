@@ -10,6 +10,7 @@ import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { Chip } from '@/components/chip';
 import { Hassanito } from '@/components/hassanito';
+import { Floating3DParticles } from '@/components/floating-3d-particles';
 import { Screen } from '@/components/screen';
 import { NetworkStatus } from '@/components/network-status';
 import { EXPERIENCE } from '@/i18n/experience';
@@ -64,15 +65,19 @@ export default function WelcomeScreen() {
 
       <View style={[styles.layout, wide && styles.desktopLayout]}>
       <View style={styles.panel}>
+      <Floating3DParticles />
+      <View style={styles.foreground}>
       <View style={styles.intro}>
         <AppText variant="small" style={styles.eyebrow}>SAHHANITO · صحة نيتو</AppText>
         <AppText variant="title" style={styles.welcomeTitle}>{copy.welcomeTitle}</AppText>
         <AppText style={styles.lead}>{copy.welcomeIntro}</AppText>
+        <AppText variant="small" style={styles.tagline}>{copy.workspaceTagline}</AppText>
       </View>
       <Card><AppText variant="subtitle">{copy.howTitle}</AppText>
         {[copy.how1, copy.how2, copy.how3].map((step, i) => <View key={i} style={styles.step}><AppText style={styles.number}>{i + 1}</AppText><AppText style={{ flex: 1 }}>{step}</AppText></View>)}
       </Card>
       <Hassanito state={phase === 'starting' ? 'thinking' : 'idle'} presentation="hero" />
+      </View>
       </View>
 
       <View style={[styles.panel, styles.consentPanel]}>
@@ -115,12 +120,14 @@ const styles = StyleSheet.create({
   step: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
   number: { color: Colors.primary, fontWeight: '700', minWidth: 20 },
   desktopLayout: { flexDirection: 'row', alignItems: 'flex-start', paddingTop: Spacing.xxl },
-  panel: { flex: 1, gap: Spacing.lg, minWidth: 0, padding: 24, backgroundColor: '#E5F1FF', borderRadius: 28 },
+  panel: { flex: 1, gap: Spacing.lg, minWidth: 0, padding: 28, backgroundColor: Colors.navy, borderRadius: 28, overflow:'hidden', position:'relative' },
+  foreground: { gap:Spacing.lg, position:'relative', zIndex:1 },
   consentPanel: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: Colors.border },
-  eyebrow: { color: Colors.primary, fontSize: 11, letterSpacing: 1.5 },
-  welcomeTitle: { fontSize: 32, lineHeight: 40, fontFamily: 'Inter_700Bold', color: Colors.navy },
+  eyebrow: { color: '#B6D8FF', fontSize: 11, letterSpacing: 1.5 },
+  welcomeTitle: { fontSize: 36, lineHeight: 44, fontFamily: 'Inter_700Bold', color:'#FFFFFF' },
   intro: { gap: Spacing.sm, paddingTop: Spacing.lg },
-  lead: { color: Colors.mutedFg, fontSize: 15, lineHeight: 24 },
+  lead: { color:'#D8E6F7', fontSize: 15, lineHeight: 24 },
+  tagline: { color:'#B6D8FF', marginTop:8, marginBottom:8 },
   field: { gap: Spacing.sm, paddingTop: Spacing.sm },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   muted: { color: Colors.mutedFg },
