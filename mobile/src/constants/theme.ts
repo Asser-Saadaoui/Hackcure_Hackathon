@@ -1,31 +1,32 @@
 import type { RiskLevel } from '@/lib/types';
 
-/** Shared Sahhanito identity: deep blue, soft ice, and coral from the mascot pack. */
+/** Sahhanito palette: #95BFD1 soft blue, #185079 deep blue, #3885AB accent. */
 export const Colors = {
-  background: '#F2F6FC',
-  foreground: '#183455',
+  background: '#F3F8FA',
+  foreground: '#185079',
   card: '#FFFFFF',
-  primary: '#245CAF',
+  primary: '#185079',
   primaryFg: '#FFFFFF',
-  secondary: '#EAF0F8',
-  secondaryFg: '#304C70',
+  secondary: '#EAF3F6',
+  secondaryFg: '#185079',
   muted: '#F3F5F7',
-  mutedFg: '#56667C',        // darkened from #65758B for ≥ 4.5:1 contrast on the slate background        // hsl(215 16% 47%)
-  accent: '#E8F2FF',
-  accentFg: '#24518E',
-  coral: '#E85466',
-  navy: '#142D50',
+  mutedFg: '#56667C', // Readable secondary text on the light surfaces.
+  accent: '#E5F0F5',
+  accentFg: '#185079',
+  brandAccent: '#3885AB',
+  softBlue: '#95BFD1',
+  navy: '#185079',
   destructive: '#C52020',    // hsl(0 72% 45%)
   destructiveBg: '#FDF2F2',  // red-50
   destructiveBorder: '#F87171', // red-400 (alert left border)
   destructiveText: '#B91C1C',   // red-700
   warningBorder: '#FB923C',  // orange-400
   warningBg: '#FFF7ED',      // orange-50
-  border: '#DDE6F1',
-  input: '#D4DAE2',          // hsl(214 20% 86%)
+  border: '#D6E5EC',
+  input: '#C7DAE3',          // hsl(214 20% 86%)
 
   // aliases used by the screens
-  text: '#183455',
+  text: '#185079',
   textSecondary: '#65758B',
   surface: '#FFFFFF',
 } as const;
@@ -48,7 +49,7 @@ export const Fonts = {
 
 export const Spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 } as const;
 
-/** --radius: 0.65rem ≈ 10 px; cards use rounded-xl (12 px); chips are pills. */
+/** Cards use rounded corners; chips are pills. */
 export const Radius = { sm: 8, md: 12, lg: 16, xl: 20, pill: 999 } as const;
 
 /** shadow-sm */

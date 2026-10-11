@@ -20,8 +20,8 @@ export function CareNetwork() {
     <View style={styles.map}>
       <View style={StyleSheet.absoluteFill} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
         <Svg width="100%" height="100%" viewBox="0 0 300 240" preserveAspectRatio="none" style={rtl ? { transform:[{ scaleX:-1 }] } : undefined}>
-          <Path d="M 38 120 L 139 120" stroke="#C6D7ED" strokeWidth={2} />
-          {[30,90,150,210].map(y => <Path key={y} d={`M 139 120 Q 185 120 216 ${y}`} fill="none" stroke="#C6D7ED" strokeWidth={2} />)}
+          <Path d="M 38 120 L 139 120" stroke="#95BFD1" strokeWidth={2} />
+          {[30,90,150,210].map(y => <Path key={y} d={`M 139 120 Q 185 120 216 ${y}`} fill="none" stroke="#95BFD1" strokeWidth={2} />)}
         </Svg>
       </View>
       <View style={styles.person}><View style={styles.circle}><UserRound size={23} color={Colors.primary} /></View><AppText variant="small">{copy('careYou')}</AppText></View>
@@ -34,6 +34,6 @@ export function CareNetwork() {
 const styles = StyleSheet.create({
   card:{padding:18,borderRadius:24,borderWidth:1,borderColor:Colors.border,backgroundColor:Colors.card,gap:12},
   map:{minHeight:240,flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:12},
-  person:{flex:1,alignItems:'center',gap:8},circle:{width:48,height:48,borderRadius:24,backgroundColor:'#F0F6FF',borderWidth:1,borderColor:Colors.border,alignItems:'center',justifyContent:'center'},
+  person:{flex:1,alignItems:'center',gap:8},circle:{width:48,height:48,borderRadius:24,backgroundColor:'#EAF3F6',borderWidth:1,borderColor:Colors.border,alignItems:'center',justifyContent:'center'},
   options:{flex:1.4,gap:12},option:{height:48,flexDirection:'row',alignItems:'center',gap:6,padding:7,borderWidth:1,borderColor:Colors.border,borderRadius:12,backgroundColor:Colors.card},
 });

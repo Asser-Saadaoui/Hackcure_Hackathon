@@ -8,4 +8,4 @@ export type LocationMapProps = {
   youLabel: string;
 };
 
-export const YOU_COLOR = '#2563EB';
+export const YOU_COLOR = '#3885AB';

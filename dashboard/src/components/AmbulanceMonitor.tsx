@@ -25,7 +25,7 @@ function Gauge({ label, value, display, unit, min, max, alert }: { label: string
   return (
     <div className={cn("flex flex-col items-center gap-1 rounded-lg border p-2", alert ? "border-red-300 bg-red-50" : "bg-card")}>
       <AnimatedCircularProgressBar className="size-24 text-base" min={min} max={max} value={value ?? min}
-        gaugePrimaryColor={alert ? "#DC2626" : "#2563EB"} gaugeSecondaryColor={alert ? "#FECACA" : "#E2E8F0"}>
+        gaugePrimaryColor={alert ? "#DC2626" : "#3885AB"} gaugeSecondaryColor={alert ? "#FECACA" : "#E2E8F0"}>
         <span className={cn("font-mono text-lg font-semibold tabular-nums", alert && "text-red-700")}>{display ?? value ?? "?"}</span>
         <span className="text-[10px] font-normal text-muted-foreground">{unit}</span>
       </AnimatedCircularProgressBar>
@@ -78,7 +78,7 @@ export function AmbulanceMonitor({ referralId }: { referralId: string }) {
         </div>
         <div className="grid grid-cols-2 gap-4 text-xs text-muted-foreground">
           <div><p>{t("FC (5 dernières min)")}</p><Spark values={series("heartRate").slice(-60)} color="#DC2626" low={40} high={160} /></div>
-          <div><p>{t("SpO₂ (5 dernières min)")}</p><Spark values={series("spo2").slice(-60)} color="#2563EB" low={80} high={100} /></div>
+          <div><p>{t("SpO₂ (5 dernières min)")}</p><Spark values={series("spo2").slice(-60)} color="#3885AB" low={80} high={100} /></div>
         </div>
       </CardContent>
     </Card>

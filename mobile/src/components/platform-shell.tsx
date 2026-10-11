@@ -57,14 +57,14 @@ export function PlatformShell({ children }: { children: ReactNode }) {
         {links.map(({ path: target, Icon }, index) => <Pressable key={target} accessibilityRole="button" accessibilityLabel={labels[index]}
           accessibilityState={{ selected: path === target }} onPress={() => navigate(target)}
           style={({ pressed }) => [styles.link, path === target && styles.active, pressed && { opacity: .75 }]}>
-          <Icon size={17} color={path === target ? '#FFFFFF' : '#B8CCE5'} />
+          <Icon size={17} color={path === target ? '#FFFFFF' : '#DCEBF2'} />
           {!collapsed && <AppText style={[styles.linkText, path === target && { color: '#FFFFFF' }]}>{labels[index]}</AppText>}
         </Pressable>)}
       </View>
       <Pressable accessibilityRole="button" accessibilityLabel={collapsed ? 'Expand navigation' : 'Collapse navigation'}
         accessibilityState={{ expanded: !collapsed }} onPress={() => setCollapsed(value => !value)} style={[styles.link, { marginTop: 'auto' }]}>
-        {collapsed ? <ChevronRight size={20} color="#B8CCE5" /> : <ChevronLeft size={20} color="#B8CCE5" />}
-        {!collapsed && <AppText variant="small" style={{ color: '#B8CCE5' }}>{arabic ? 'تصغير القائمة' : language === 'fr' ? 'Réduire' : 'Collapse'}</AppText>}
+        {collapsed ? <ChevronRight size={20} color="#DCEBF2" /> : <ChevronLeft size={20} color="#DCEBF2" />}
+        {!collapsed && <AppText variant="small" style={{ color: '#DCEBF2' }}>{arabic ? 'تصغير القائمة' : language === 'fr' ? 'Réduire' : 'Collapse'}</AppText>}
       </Pressable>
       {!collapsed && <AppText variant="small" style={styles.footer}>Sahhanito · صحة نيتو</AppText>}
     </View>
@@ -85,12 +85,12 @@ const styles = StyleSheet.create({
   shell: { flex: 1, flexDirection: 'row', backgroundColor: Colors.background },
   sidebar: { width: 200, paddingHorizontal: 14, paddingVertical: 18, gap: 16, backgroundColor: Colors.navy },
   collapsed: { width: 64, paddingHorizontal: 10, alignItems: 'center' },
-  eyebrow: { fontSize: 9, fontFamily: Fonts.semibold, letterSpacing: 1.6, color: '#9DB5D3', marginTop: 4 },
+  eyebrow: { fontSize: 9, fontFamily: Fonts.semibold, letterSpacing: 1.6, color: '#95BFD1', marginTop: 4 },
   navigation: { gap: 4 },
   link: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9, paddingHorizontal: 10, borderRadius: 10 },
-  active: { backgroundColor: '#2B4C79', borderStartWidth: 3, borderColor: '#FF7C8C' },
-  linkText: { fontSize: 12.5, fontFamily: Fonts.medium, color: '#B8CCE5' },
-  footer: { color: '#9DB5D3', fontSize: 11 },
+  active: { backgroundColor: '#95BFD126', borderStartWidth: 3, borderColor: '#95BFD1' },
+  linkText: { fontSize: 12.5, fontFamily: Fonts.medium, color: '#DCEBF2' },
+  footer: { color: '#95BFD1', fontSize: 11 },
   workspace: { flex: 1, minWidth: 0 },
   topbar: { backgroundColor: '#FFFFFF', paddingHorizontal: 24, paddingVertical: 12, borderBottomWidth: 1, borderColor: Colors.border, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' },
   context: { flexDirection: 'row', alignItems: 'center', gap: 8 },

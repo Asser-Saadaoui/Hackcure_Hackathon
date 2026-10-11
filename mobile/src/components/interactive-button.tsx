@@ -43,7 +43,7 @@ export function InteractiveButton({ label, icon: Icon, iconRight: IconRight, var
   };
   const filled = variant === 'default' || variant === 'destructive';
   const fg = filled ? '#FFFFFF' : Colors.foreground;
-  const fill = variant === 'destructive' ? '#A81919' : variant === 'default' ? '#194987' : Colors.primary;
+  const fill = variant === 'destructive' ? '#A81919' : variant === 'default' ? '#185079' : Colors.primary;
   const labelStyle = [styles.label, { fontSize: size === 'lg' ? 16 : 14 }];
   const renderLabel = (color: string) => shiny
     ? <AnimatedShinyText color={color} enabled={!disabled} style={labelStyle}>{label}</AnimatedShinyText>

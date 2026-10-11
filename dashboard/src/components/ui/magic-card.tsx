@@ -6,7 +6,7 @@ interface MagicCardProps extends HTMLAttributes<HTMLDivElement> {
   gradientFrom?: string; gradientTo?: string;
 }
 export const MagicCard = forwardRef<HTMLDivElement, MagicCardProps>(function MagicCard({
-  className, children, gradientSize = 200, gradientColor = '#DCE8F7', gradientOpacity = 0.15,
+  className, children, gradientSize = 200, gradientColor = '#95BFD1', gradientOpacity = 0.15,
   gradientFrom, gradientTo, style, ...props
 }, ref) {
   return <div {...props} ref={ref} className={cn('magic-surface relative rounded-xl border bg-card shadow-sm', className)}

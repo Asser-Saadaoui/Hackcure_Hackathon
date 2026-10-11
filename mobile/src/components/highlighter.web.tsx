@@ -5,7 +5,7 @@ import { AppText } from './app-text';
 import { useI18n } from '@/i18n';
 
 /** Magic UI Highlighter, using Rough Notation directly instead of adding Motion. */
-export function Highlighter({ children, color='#E85466', style }: { children:string; color?:string; style?:TextProps['style'] }) {
+export function Highlighter({ children, color='#3885AB', style }: { children:string; color?:string; style?:TextProps['style'] }) {
   const elementRef=useRef<HTMLSpanElement>(null);
   const {rtl}=useI18n();
   useLayoutEffect(()=> {

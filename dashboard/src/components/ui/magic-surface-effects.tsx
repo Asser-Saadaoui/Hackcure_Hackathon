@@ -42,10 +42,10 @@ export function MagicSurfaceEffects() {
     };
   }, []);
   return <style>{`
-    :is(.magic-surface,[id^="magic-card-"]) { isolation:isolate; --magic-x:50%; --magic-y:50%; --magic-from:#2563EB; --magic-to:#FF7C8C; }
+    :is(.magic-surface,[id^="magic-card-"]) { isolation:isolate; --magic-x:50%; --magic-y:50%; --magic-from:#3885AB; --magic-to:#95BFD1; }
     .magic-surface:not([class*="sticky"]):not([class*="absolute"]):not([class*="fixed"]),[id^="magic-card-"] { position:relative; }
     :is(.magic-surface,[id^="magic-card-"])::before { content:""; position:absolute; inset:0; border-radius:inherit; padding:1px; background:radial-gradient(var(--magic-size,200px) circle at var(--magic-x) var(--magic-y),var(--magic-from),var(--magic-to),transparent 100%); -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); -webkit-mask-composite:xor; mask-composite:exclude; opacity:0; pointer-events:none; z-index:5; }
-    :is(.magic-surface,[id^="magic-card-"])::after { content:""; position:absolute; inset:1px; border-radius:inherit; background:radial-gradient(var(--magic-size,200px) circle at var(--magic-x) var(--magic-y),var(--magic-glow,#DCE8F7),transparent 100%); opacity:0; pointer-events:none; z-index:1; }
+    :is(.magic-surface,[id^="magic-card-"])::after { content:""; position:absolute; inset:1px; border-radius:inherit; background:radial-gradient(var(--magic-size,200px) circle at var(--magic-x) var(--magic-y),var(--magic-glow,#95BFD1),transparent 100%); opacity:0; pointer-events:none; z-index:1; }
     :is(.magic-surface,[id^="magic-card-"]):is([data-magic-active],:focus-within)::before { opacity:1; }
     :is(.magic-surface,[id^="magic-card-"]):is([data-magic-active],:focus-within)::after { opacity:var(--magic-opacity,.15); }
     :is(.magic-surface,[id^="magic-card-"])[role="alert"],.magic-surface[class*="destructive"],.magic-surface[class*="red-"],[id^="magic-card-danger-"] { --magic-from:#C52020; --magic-to:#F87171; }

@@ -6,7 +6,7 @@ type Particle = { angle:number; radius:number; y:number; size:number; speed:numb
 /** Adapted from the supplied Magic UI Floating 3D Particles (MIT).
  * Decorative welcome-only canvas; genuinely stops frame scheduling when hidden or motion is reduced.
  */
-export function Floating3DParticles({quantity=140,color='#9DC6FF',size=2.8,opacity=.3,drift=.15,depth=.35}:Props) {
+export function Floating3DParticles({quantity=140,color='#95BFD1',size=2.8,opacity=.3,drift=.15,depth=.35}:Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -14,7 +14,7 @@ export function Floating3DParticles({quantity=140,color='#9DC6FF',size=2.8,opaci
     if (!canvas || !ctx) return;
     const hex = color.replace('#','');
     const full = hex.length===3 ? [...hex].map(c=>c+c).join('') : hex;
-    const value = /^[\da-f]{6}$/i.test(full) ? parseInt(full,16) : 0x9dc6ff;
+    const value = /^[\da-f]{6}$/i.test(full) ? parseInt(full,16) : 0x95bfd1;
     const rgb = `${(value>>16)&255},${(value>>8)&255},${value&255}`;
     const t = Math.min(1,Math.max(0,depth));
     const fov=800-t*600, distance=100+t*700, depthRange=t*Math.min(400,fov+distance-1);
@@ -72,5 +72,5 @@ export function Floating3DParticles({quantity=140,color='#9DC6FF',size=2.8,opaci
       preference.removeEventListener('change',sync); document.removeEventListener('visibilitychange',sync); };
   },[quantity,color,size,opacity,drift,depth]);
   return <canvas ref={canvasRef} aria-hidden="true" className="sahhanito-welcome-particles" style={{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:'none',
-    background:'radial-gradient(ellipse at 85% 10%, #254D79 0%, #142D50 65%)'}} />;
+    background:'radial-gradient(ellipse at 85% 10%, #3885AB 0%, #185079 65%)'}} />;
 }

@@ -4,31 +4,31 @@
 
 @layer base {
   :root {
-    /* Shared Sahhanito palette, inspired by the supplied mascot pack. */
-    --background: 216 63% 97%;
-    --foreground: 213 56% 21%;
+    /* Shared Sahhanito palette: #95BFD1, #185079, #3885AB. */
+    --background: 197.143 41.176% 96.667%;
+    --foreground: 205.361 66.897% 28.431%;
 
     --card: 0 0% 100%;
-    --card-foreground: 215 25% 18%;
+    --card-foreground: 205.361 66.897% 28.431%;
 
-    --primary: 216 66% 41%;
+    --primary: 205.361 66.897% 28.431%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 214 50% 95%;
-    --secondary-foreground: 213 40% 31%;
+    --secondary: 195.000 40.000% 94.118%;
+    --secondary-foreground: 205.361 66.897% 28.431%;
 
     --muted: 210 20% 96%;
     --muted-foreground: 215 16% 47%;
 
-    --accent: 212 100% 95%;
-    --accent-foreground: 213 60% 35%;
+    --accent: 198.750 44.444% 92.941%;
+    --accent-foreground: 205.361 66.897% 28.431%;
 
     --destructive: 0 72% 45%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 213 42% 91%;
-    --input: 214 20% 86%;
-    --ring: 216 66% 41%;
+    --border: 199.091 36.667% 88.235%;
+    --input: 199.286 33.333% 83.529%;
+    --ring: 199.826 50.661% 44.510%;
 
     --radius: 0.9rem;
   }
@@ -57,7 +57,7 @@
 
 /* Magic UI expanding dot; red actions retain their emergency identity. */
 .interactive-action { position: relative; isolation: isolate; overflow: hidden; border-radius: 999px; --action-fill: hsl(var(--primary)); }
-.interactive-action[data-tone="default"] { --action-fill: #194987; }
+.interactive-action[data-tone="default"] { --action-fill: #185079; }
 .interactive-action[data-tone="destructive"] { --action-fill: #a81919; }
 .interactive-action .action-fill { position: absolute; z-index: -1; width: 8px; height: 8px; inset-inline-start: 18px; top: calc(50% - 4px); background: var(--action-fill); border-radius: 50%; transform: scale(1); transition: transform .3s ease; }
 .interactive-action .action-label, .interactive-action .action-overlay { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; transition: opacity .3s ease, transform .3s ease; }

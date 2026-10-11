@@ -19,7 +19,7 @@ export function AnimatedShinyText({ children, color, style, shimmerWidth = 100, 
     `}</style>
     <span className={`call-190-shiny${enabled ? ' is-shiny' : ''}`} style={{
       '--shiny-width':`${Math.max(1, shimmerWidth)}px`, '--shiny-base':color,
-      '--shiny-glare':color === '#FFFFFF' ? '#FCE5B1' : '#245CAF',
+      '--shiny-glare':color === '#FFFFFF' ? '#FCE5B1' : '#185079',
     } as CSSProperties}>{children}</span>
   </AppText>;
 }

@@ -10,7 +10,7 @@ type Props = { size?: number; squares?: [number, number][]; color?: string; fill
 
 const DEFAULT_SQUARES: [number, number][] = [[2, 1], [5, 4], [8, 2], [3, 7], [10, 6], [12, 9], [6, 11], [14, 3], [1, 13], [9, 14]];
 
-export function GridPattern({ size = 40, squares = DEFAULT_SQUARES, color = 'rgba(37, 99, 235, 0.10)', fill = 'rgba(37, 99, 235, 0.05)' }: Props) {
+export function GridPattern({ size = 40, squares = DEFAULT_SQUARES, color = 'rgba(56, 133, 171, 0.10)', fill = 'rgba(56, 133, 171, 0.05)' }: Props) {
   const id = useId().replace(/:/g, '');
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">

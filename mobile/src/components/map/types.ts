@@ -9,7 +9,7 @@ export type LiveMapProps = {
   labels: { you: string; ambulance: string };
 };
 
-export const MAP_COLORS = { hospital: '#177082', patient: '#2563EB', ambulance: '#DC2626', route: '#177082' } as const;
+export const MAP_COLORS = { hospital: '#177082', patient: '#3885AB', ambulance: '#DC2626', route: '#177082' } as const;
 
 /** All points that should be visible on the map. */
 export function allPoints(p: LiveMapProps): LatLng[] {

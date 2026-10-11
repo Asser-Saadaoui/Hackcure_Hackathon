@@ -15,7 +15,7 @@ type Props = {
  * Retains measured ref endpoints and quadratic paths. No animation for reduced-motion users.
  */
 export function AnimatedBeam({ containerRef, fromRef, toRef, curvature = 0, delay = 0,
-  duration = 5, gradientStartColor = '#245CAF', gradientStopColor = '#64B8D5' }: Props) {
+  duration = 5, gradientStartColor = '#185079', gradientStopColor = '#95BFD1' }: Props) {
   const id = `care-beam-${useId().replace(/:/g, '')}`;
   const [geometry, setGeometry] = useState({ width: 0, height: 0, path: '', reverse: false });
   const [reduced, setReduced] = useState(true);
@@ -47,7 +47,7 @@ export function AnimatedBeam({ containerRef, fromRef, toRef, curvature = 0, dela
   const { width, height, path, reverse } = geometry;
   return <svg aria-hidden="true" focusable="false" fill="none" width={width} height={height}
     viewBox={`0 0 ${width || 1} ${height || 1}`} style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-    <path d={path} stroke="#C6D7ED" strokeWidth="2" strokeLinecap="round" />
+    <path d={path} stroke="#95BFD1" strokeWidth="2" strokeLinecap="round" />
     {!reduced && <>
       <path d={path} stroke={`url(#${id})`} strokeWidth="2.5" strokeLinecap="round" />
       <defs><linearGradient id={id} gradientUnits="userSpaceOnUse" x1="0%" x2="0%" y1="0%" y2="0%">
