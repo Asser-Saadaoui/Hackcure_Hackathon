@@ -172,7 +172,7 @@ export default function App() {
               <button key={n.id} aria-current={view === n.id ? 'page' : undefined} onClick={() => { setView(n.id); setOpenId(null); setError(null); }}
                 className={cn("inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium", view === n.id ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground")}>
                 <n.icon className="h-4 w-4" />{t(n.label)}
-                {n.id === "reviews" && reviews.length > 0 && <span className="rounded-full bg-orange-500 px-1.5 text-xs text-white">{reviews.length}</span>}
+                {n.id === "reviews" && reviews.length > 0 && <span className="rounded-full bg-cream-500 px-1.5 text-xs text-white">{reviews.length}</span>}
               </button>
             ))}
           </nav>

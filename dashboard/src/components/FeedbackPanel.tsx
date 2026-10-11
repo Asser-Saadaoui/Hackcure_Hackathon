@@ -44,7 +44,7 @@ export function FeedbackPanel({ referralId, aiLevel, onDone, onCancel }: { refer
   }
 
   return (
-    <Card className="border-amber-300">
+    <Card className="border-cream-300">
       <CardContent className="space-y-4 pt-5">
         <div>
           <p className="flex items-center gap-2 font-semibold"><Flag className="h-4 w-4" />{t("Signaler une erreur de triage")}</p>

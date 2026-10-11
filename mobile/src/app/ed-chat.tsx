@@ -151,7 +151,7 @@ export default function EdChatScreen() {
               onPress={() => send(t('iFeelWorseDefault'), 'WORSE')}
               disabled={!referralId}
               style={({ pressed }) => [styles.worse, pressed && styles.pressed]}>
-              <AlertTriangle size={16} color="#C2410C" strokeWidth={2.5} />
+              <AlertTriangle size={16} color="#6B4F36" strokeWidth={2.5} />
               <AppText style={styles.worseText}>{t('iFeelWorse')}</AppText>
             </Pressable>
           </View>
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   column: { flex: 1, width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center' },
   top: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.lg, gap: Spacing.sm },
-  noticeText: { color: '#9A3412' },
+  noticeText: { color: '#6B4F36' },
   escalationText: { color: Colors.destructiveText, fontFamily: Fonts.semibold },
   messages: { padding: Spacing.lg, gap: Spacing.lg },
   error: { color: Colors.destructive, alignSelf: 'flex-end' },
@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm,
     minHeight: 44, borderRadius: Radius.md, borderWidth: 1.5, borderColor: Colors.warningBorder, backgroundColor: Colors.warningBg,
   },
-  worseText: { color: '#C2410C', fontFamily: Fonts.semibold },
+  worseText: { color: '#6B4F36', fontFamily: Fonts.semibold },
   pressed: { opacity: 0.85 },
   sending: { alignSelf: 'flex-end' },
 });

@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
   iconTile: { width: 40, height: 40, borderRadius: Radius.lg, backgroundColor: Colors.destructiveBg, alignItems: 'center', justifyContent: 'center' },
   iconTileTeal: { backgroundColor: Colors.accent },
   simPill: { backgroundColor: Colors.warningBg, borderColor: Colors.warningBorder, borderWidth: 1, borderRadius: Radius.pill, paddingHorizontal: Spacing.sm, paddingVertical: 2 },
-  simText: { color: '#9A3412', fontSize: 11, fontFamily: Fonts.semibold, letterSpacing: 0.6 },
+  simText: { color: '#6B4F36', fontSize: 11, fontFamily: Fonts.semibold, letterSpacing: 0.6 },
   eta: { fontSize: 28, lineHeight: 34, fontFamily: Fonts.bold, color: Colors.foreground, letterSpacing: -0.5 },
   steps: { gap: Spacing.sm, marginTop: Spacing.xs },
   stepRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },

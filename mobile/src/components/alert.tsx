@@ -9,7 +9,7 @@ type Props = { variant?: 'destructive' | 'warning'; icon?: LucideIcon; title?: s
 
 const TONES = {
   destructive: { border: Colors.destructiveBorder, bg: Colors.destructiveBg, fg: Colors.destructiveText },
-  warning: { border: Colors.warningBorder, bg: Colors.warningBg, fg: '#9A3412' },
+  warning: { border: Colors.warningBorder, bg: Colors.warningBg, fg: '#6B4F36' },
 };
 
 /** Left-border callout used for red flags / urgent notices (central-park case detail). */

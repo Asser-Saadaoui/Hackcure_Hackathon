@@ -54,7 +54,7 @@ export function ReviewView({ items, onDone }: { items: ReviewItem[]; onDone: () 
             <Input aria-label={t("Note pour le patient (facultatif)")} placeholder={t("Note pour le patient (facultatif)")} value={notes[it.caseId] ?? ""} onChange={(e) => setNotes({ ...notes, [it.caseId]: e.target.value })} />
             <div className="flex flex-wrap gap-2">
               <Button disabled={busy !== null} variant="destructive" onClick={() => decide(it.caseId, "EMERGENCY")}>{t("Urgence vitale")}</Button>
-              <Button disabled={busy !== null} className="bg-orange-500 hover:bg-orange-500/90" onClick={() => decide(it.caseId, "HIGH")}>{t("Urgent aujourd'hui")}</Button>
+              <Button disabled={busy !== null} className="bg-cream-500 hover:bg-cream-500/90" onClick={() => decide(it.caseId, "HIGH")}>{t("Urgent aujourd'hui")}</Button>
               <Button disabled={busy !== null} variant="outline" onClick={() => decide(it.caseId, "LOW")}>{t("Peu urgent")}</Button>
             </div>
           </CardContent>

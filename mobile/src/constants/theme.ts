@@ -20,8 +20,8 @@ export const Colors = {
   destructiveBg: '#FDF2F2',  // red-50
   destructiveBorder: '#F87171', // red-400 (alert left border)
   destructiveText: '#B91C1C',   // red-700
-  warningBorder: '#FB923C',  // orange-400
-  warningBg: '#FFF7ED',      // orange-50
+  warningBorder: '#D5BFA5',  // creamy brown border
+  warningBg: '#FAF5EE',      // cream surface
   border: '#D6E5EC',
   input: '#C7DAE3',          // hsl(214 20% 86%)
 
@@ -34,7 +34,7 @@ export const Colors = {
 /** Risk badges: uppercase pill, color + text (never color alone). */
 export const RiskColors: Record<RiskLevel, { bg: string; fg: string }> = {
   EMERGENCY: { bg: '#DC2626', fg: '#FFFFFF' },  // red-600
-  HIGH: { bg: '#F97316', fg: '#FFFFFF' },       // orange-500 ("URGENT CARE" in central-park)
+  HIGH: { bg: '#EFE3D3', fg: '#6B4F36' },       // cream surface0 ("URGENT CARE" in central-park)
   LOW: { bg: '#16A34A', fg: '#FFFFFF' },        // green-600
   UNCERTAIN: { bg: '#7C3AED', fg: '#FFFFFF' },  // violet-600
 };

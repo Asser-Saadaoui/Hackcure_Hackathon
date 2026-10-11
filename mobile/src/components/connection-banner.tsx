@@ -31,6 +31,6 @@ export function ConnectionBanner() {
 }
 
 const styles = StyleSheet.create({
-  banner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm, paddingVertical: 6, paddingHorizontal: Spacing.lg, backgroundColor: '#B45309' },
+  banner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm, paddingVertical: 6, paddingHorizontal: Spacing.lg, backgroundColor: '#8B6748' },
   text: { color: '#FFFFFF' },
 });

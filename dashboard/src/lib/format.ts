@@ -3,7 +3,7 @@ import type { Level } from "@/types";
 
 export const LEVEL: Record<Level, { label: string; className: string; dot: string }> = {
   EMERGENCY: { label: "Urgence vitale", className: "bg-red-600 text-white border-transparent", dot: "bg-red-600" },
-  HIGH: { label: "Urgent", className: "bg-orange-500 text-white border-transparent", dot: "bg-orange-500" },
+  HIGH: { label: "Urgent", className: "bg-cream-100 text-cream-900 border-cream-300", dot: "bg-cream-500" },
   UNCERTAIN: { label: "À vérifier", className: "bg-slate-500 text-white border-transparent", dot: "bg-slate-500" },
   LOW: { label: "Peu urgent", className: "bg-emerald-600 text-white border-transparent", dot: "bg-emerald-600" },
 };

@@ -50,7 +50,7 @@ function Stepper({ icon: Icon, label, value, total, simulated, step = 1, unit, o
         </button>
         <span className="text-sm text-muted-foreground">{total != null ? `/ ${total}` : unit}</span>
       </div>
-      <p className={cn("mt-2 h-4 text-xs", changed ? "text-amber-700" : "text-muted-foreground")}>
+      <p className={cn("mt-2 h-4 text-xs", changed ? "text-cream-700" : "text-muted-foreground")}>
         {simulated != null ? `${t("simulé")} : ${simulated}${unit ? ` ${unit}` : ""}` : ""}
       </p>
     </div>
@@ -144,7 +144,7 @@ export function AvailabilityView({ hospital, onChanged }: { hospital: Hospital; 
                 : t("Simulateur indisponible : saisissez vos valeurs.")}
             </p>
           </div>
-          <span className={cn("rounded-full px-2.5 py-1 text-xs font-medium", fromStaff ? "bg-primary text-primary-foreground" : "bg-amber-100 text-amber-800")}>
+          <span className={cn("rounded-full px-2.5 py-1 text-xs font-medium", fromStaff ? "bg-primary text-primary-foreground" : "bg-cream-100 text-cream-800")}>
             {fromStaff ? t("Saisie équipe") : t("Données simulées")}
           </span>
           {fromStaff && (
@@ -197,7 +197,7 @@ export function AvailabilityView({ hospital, onChanged }: { hospital: Hospital; 
           <ReadOnly icon={Stethoscope} label={t("Médecins présents")} value={a.doctorsAvailable} total={a.doctorsTotal} />
           <ReadOnly icon={Users} label={t("Patients en attente")} value={a.waitingPatients} />
         </div>
-        {a.staffShortage && <p className="text-xs text-orange-700">{t("Sous-effectif signalé par le simulateur.")}</p>}
+        {a.staffShortage && <p className="text-xs text-cream-700">{t("Sous-effectif signalé par le simulateur.")}</p>}
       </div>
 
       {error && <p className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive" role="alert">{t(error)}</p>}

@@ -149,7 +149,7 @@ export function IncomingView({ rows, scope, onScope, onOpen, error, loading }: P
                     <LevelBadge level={r.level} />
                     {isNew && <span className="rounded-full bg-sky-600 px-2 py-0.5 text-[11px] font-semibold uppercase text-white">{t("Nouveau")}</span>}
                     <span className="font-mono text-xs text-muted-foreground">{r.referenceCode}</span>
-                    <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", pending ? "bg-amber-100 text-amber-800" : "bg-secondary text-secondary-foreground")}>
+                    <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", pending ? "bg-cream-100 text-cream-800" : "bg-secondary text-secondary-foreground")}>
                       {t(STATUS[r.status] ?? r.status)}
                     </span>
                     {r.arrivalMode === "AMBULANCE" && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground"><Ambulance className="h-3.5 w-3.5" /> {' '}{t("ambulance (simulée)")}</span>}

@@ -65,7 +65,7 @@ export function ReroutePanel({ referralId, accepted, onDone, onCancel }: { refer
                   <p className="font-medium">{o.name}</p>
                   <p className="truncate text-xs text-muted-foreground">{o.reason}</p>
                 </div>
-                {!o.capable && <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800">{t("plateau incomplet")}</span>}
+                {!o.capable && <span className="shrink-0 rounded-full bg-cream-100 px-2 py-0.5 text-xs text-cream-800">{t("plateau incomplet")}</span>}
                 <span className="shrink-0 text-xs text-muted-foreground">~{o.eta} min</span>
                 {target === o.key && <Check className="h-4 w-4 shrink-0 text-primary" />}
               </button>

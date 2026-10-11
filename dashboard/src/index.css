@@ -71,3 +71,5 @@
 [dir="rtl"] .interactive-action:is(:hover, :focus-visible, :active):not(:disabled) .action-overlay { transform: translateX(0); }
 [dir="rtl"] .interactive-action .lucide-arrow-right { transform: scaleX(-1); }
 @media (forced-colors: active) { .interactive-action .action-fill, .interactive-action .action-overlay { display: none; } .interactive-action:is(:hover, :focus-visible, :active):not(:disabled) .action-label { opacity: 1; transform: none; } }
+
+.interactive-action[class*="bg-cream-"] { --action-fill:#6B4F36; }

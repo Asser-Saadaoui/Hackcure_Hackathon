@@ -49,7 +49,7 @@ export function MagicSurfaceEffects() {
     :is(.magic-surface,[id^="magic-card-"]):is([data-magic-active],:focus-within)::before { opacity:1; }
     :is(.magic-surface,[id^="magic-card-"]):is([data-magic-active],:focus-within)::after { opacity:var(--magic-opacity,.15); }
     :is(.magic-surface,[id^="magic-card-"])[role="alert"],.magic-surface[class*="destructive"],.magic-surface[class*="red-"],[id^="magic-card-danger-"] { --magic-from:#C52020; --magic-to:#F87171; }
-    .magic-surface[class*="amber-"],[id^="magic-card-warning-"][id] { --magic-from:#B45309; --magic-to:#FB923C; }
+    .magic-surface[class*="cream-"],[id^="magic-card-warning-"][id] { --magic-from:#8B6748; --magic-to:#D5BFA5; }
     @media(prefers-reduced-motion:reduce),(forced-colors:active) { :is(.magic-surface,[id^="magic-card-"])::before,:is(.magic-surface,[id^="magic-card-"])::after { display:none; } }
   `}</style>;
 }

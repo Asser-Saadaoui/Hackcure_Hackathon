@@ -36,7 +36,7 @@ export function EdMessage({ message: m, answer, onAnswer }: Props) {
         <View style={[styles.bubble, styles.mine]}>
           {m.kind === 'WORSE' && (
             <View style={styles.worseTag}>
-              <AlertTriangle size={12} color="#9A3412" strokeWidth={2.5} />
+              <AlertTriangle size={12} color="#6B4F36" strokeWidth={2.5} />
               <AppText style={styles.worseText}>{t('iFeelWorse')}</AppText>
             </View>
           )}
@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
   answered: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: Spacing.xs },
   answeredText: { color: Colors.primary, fontFamily: Fonts.medium },
   worseTag: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', backgroundColor: Colors.warningBg, borderRadius: Radius.pill, paddingHorizontal: Spacing.sm, paddingVertical: 2 },
-  worseText: { fontSize: 11, color: '#9A3412', fontFamily: Fonts.semibold },
+  worseText: { fontSize: 11, color: '#6B4F36', fontFamily: Fonts.semibold },
   time: { fontSize: 11, lineHeight: 14, alignSelf: 'flex-end' },
   mineTime: { color: '#CFE7EC' },
   system: { alignSelf: 'center', paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: Radius.pill, backgroundColor: Colors.secondary },

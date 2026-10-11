@@ -74,7 +74,7 @@ export function ChatPanel({ referralId, messages, disabled, onSent, patientLangu
               <div className={cn("max-w-[80%] rounded-2xl px-3.5 py-2 text-sm shadow-sm",
                 m.sender === "STAFF" ? "bg-primary text-primary-foreground" : "border bg-card",
                 m.kind === "WORSE" && "border-red-300 bg-red-50 text-red-900",
-                m.kind === "INSTRUCTION" && "bg-amber-600 text-white")}>
+                m.kind === "INSTRUCTION" && "bg-cream-600 text-white")}>
                 {m.kind === "ANSWER" && m.replyTo && <p className="mb-1 text-xs opacity-70">↳ {questions[m.replyTo] ?? t("Réponse")}</p>}
                 {m.kind === "WORSE" && <p className="mb-1 flex items-center gap-1 text-xs font-semibold"><TriangleAlert className="h-3.5 w-3.5" /> {' '}{t("Le patient signale une aggravation")}</p>}
                 {m.kind === "IMAGE" && <VerifiedPhoto path={`/referrals/${referralId}/chat/${m.id}/image`} sha256={m.sha256} />}

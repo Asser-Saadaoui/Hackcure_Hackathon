@@ -12,7 +12,7 @@ function status(h: Hospital): { color: string; label: string } {
   const a = h.availability;
   if (!a.accepting || a.bedsAvailable === 0) return { color: "#DC2626", label: a.accepting ? t("Complet") : t("Ne reçoit plus") };
   if (a.bedsAvailable == null) return { color: "#94A3B8", label: t("Inconnu") };
-  if (a.bedsAvailable < 5 || a.equipmentDown.length > 0) return { color: "#F59E0B", label: t("Places limitées") };
+  if (a.bedsAvailable < 5 || a.equipmentDown.length > 0) return { color: "#8B6748", label: t("Places limitées") };
   return { color: "#16A34A", label: t("Disponible") };
 }
 
@@ -59,7 +59,7 @@ export function NetworkView({ hospitals, simulatorOk }: { hospitals: Hospital[];
           })}
         </MapContainer>
         <div className="flex flex-wrap gap-4 border-t px-3 py-2 text-xs text-muted-foreground">
-          {[["#16A34A", t("Disponible")], ["#F59E0B", t("Places limitées")], ["#DC2626", t("Complet / ne reçoit plus")], ["#94A3B8", t("Inconnu")]].map(([c, l]) => (
+          {[["#16A34A", t("Disponible")], ["#8B6748", t("Places limitées")], ["#DC2626", t("Complet / ne reçoit plus")], ["#94A3B8", t("Inconnu")]].map(([c, l]) => (
             <span key={l} className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: c }} />{l}</span>
           ))}
         </div>
@@ -83,7 +83,7 @@ export function NetworkView({ hospitals, simulatorOk }: { hospitals: Hospital[];
                   <td className={cn(a.icuAvailable === 0 && "text-red-700")}>{a.icuAvailable ?? "?"}{a.icuTotal != null && ` / ${a.icuTotal}`}</td>
                   <td>{a.waitMinutes != null ? `${a.waitMinutes} min` : "?"}</td>
                   <td className="text-xs">{!a.accepting ? t("Ne reçoit plus") : a.equipmentDown.map((e) => t(EQUIPMENT[e] ?? e)).join(", ") || "—"}</td>
-                  <td className="pe-3"><span className={cn("rounded-full px-2 py-0.5 text-xs", a.source === "staff" ? "bg-primary text-primary-foreground" : "bg-amber-100 text-amber-800")}>
+                  <td className="pe-3"><span className={cn("rounded-full px-2 py-0.5 text-xs", a.source === "staff" ? "bg-primary text-primary-foreground" : "bg-cream-100 text-cream-800")}>
                     {a.source === "staff" ? t("équipe") : a.source === "simulator" ? t("simulé") : "?"}</span></td>
                 </tr>
               );
