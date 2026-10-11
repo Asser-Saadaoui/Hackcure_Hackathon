@@ -1,6 +1,6 @@
 import { Camera, Mic, Square, SendHorizontal } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Platform, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
 
 import { AppText } from '@/components/app-text';
 import { InputGroup, InputGroupAddon, InputGroupButton } from '@/components/input-group';
@@ -29,6 +29,8 @@ const HINT = {
 /** shadcn Input Group composer. Existing photo, dictation and send callbacks stay screen-owned. */
 export function ChatInput({ onSend, disabled, busy = false, onActivity, onAttach }: Props) {
   const { t, rtl, language } = useI18n();
+  const { width, height } = useWindowDimensions();
+  const compact = width < 900 || height < 700;
   const [text, setText] = useState('');
   const [focused, setFocused] = useState(false);
   const [listening, setListening] = useState(false);
@@ -56,10 +58,10 @@ export function ChatInput({ onSend, disabled, busy = false, onActivity, onAttach
   };
 
   return (
-    <View style={styles.bar}>
+    <View style={[styles.bar, compact && styles.compactBar]}>
     <InputGroup focused={focused || listening}>
       <TextInput
-        style={[styles.input, { textAlign: rtl ? 'right' : 'left' }, rtl && styles.arabic]}
+        style={[styles.input, compact && styles.compactInput, { textAlign: rtl ? 'right' : 'left' }, rtl && styles.arabic]}
         value={text}
         onChangeText={(value) => { setText(value); onActivity?.(value.length > 0); }}
         onFocus={() => { setFocused(true); onActivity?.(true); }}
@@ -109,7 +111,7 @@ export function ChatInput({ onSend, disabled, busy = false, onActivity, onAttach
       </View>
       </InputGroupAddon>
     </InputGroup>
-    {Platform.OS === 'web' && <AppText variant="small" style={styles.hint}>{HINT[language]}</AppText>}
+    {Platform.OS === 'web' && !compact && <AppText variant="small" style={styles.hint}>{HINT[language]}</AppText>}
     </View>
   );
 }
@@ -135,6 +137,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.regular,
     color: Colors.foreground,
   },
+  compactBar: {paddingVertical:8},
+  compactInput: {height:48, minHeight:48, maxHeight:96, paddingTop:12},
   arabic: {fontFamily:Platform.OS === 'web' ? 'Arial' : undefined},
   tools: {flexDirection:'row', alignItems:'center', gap:4},
   sendTools: {flexDirection:'row', alignItems:'center', justifyContent:'flex-end', gap:8, flex:1, minWidth:0},
