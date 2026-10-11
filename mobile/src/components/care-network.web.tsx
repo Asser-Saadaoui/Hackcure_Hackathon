@@ -20,7 +20,7 @@ export function CareNetwork() {
     <style>{`
       .care-network { border:1px solid #D6E5EC; border-radius:24px; background:linear-gradient(115deg,#fff,#F3F8FA); padding:22px 26px; color:#185079; font-family:Inter_400Regular,Arial,sans-serif; }
       .care-network h2 { margin:0; font-size:17px; line-height:26px; font-weight:600; letter-spacing:-.2px; }
-      .care-network p { margin:14px 0 0; font-size:12px; line-height:19px; color:#56667C; }
+      .care-network p { margin:14px 0 0; font-size:12px; line-height:19px; color:#506D81; }
       .care-network-map { position:relative; display:grid; grid-template-columns:1fr 1fr 1.4fr; align-items:center; gap:26px; min-height:244px; margin-top:12px; }
       .care-network-person,.care-network-hub { display:flex; flex-direction:column; align-items:center; gap:10px; z-index:1; text-align:center; font-size:13px; font-weight:600; }
       .care-network-circle { width:58px; height:58px; border:1px solid #D6E5EC; border-radius:50%; background:#fff; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 16px #142D5008; }

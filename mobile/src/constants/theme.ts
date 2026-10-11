@@ -9,8 +9,8 @@ export const Colors = {
   primaryFg: '#FFFFFF',
   secondary: '#EAF3F6',
   secondaryFg: '#185079',
-  muted: '#F3F5F7',
-  mutedFg: '#56667C', // Readable secondary text on the light surfaces.
+  muted: '#EDF4F7',
+  mutedFg: '#506D81', // Readable blue-grey secondary text on the light surfaces.
   accent: '#E5F0F5',
   accentFg: '#185079',
   brandAccent: '#3885AB',
@@ -27,7 +27,7 @@ export const Colors = {
 
   // aliases used by the screens
   text: '#185079',
-  textSecondary: '#65758B',
+  textSecondary: '#506D81',
   surface: '#FFFFFF',
 } as const;
 
