@@ -1,10 +1,10 @@
 import { t, type Language } from "@/i18n";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { BookmarkPlus, HelpCircle, Send, Settings2, TriangleAlert } from "lucide-react";
+import { BookmarkPlus, HelpCircle, ImageOff, Send, Settings2, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { api } from "@/api";
+import { api, chatImageUrl } from "@/api";
 import { time } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { ChatMessage } from "@/types";
@@ -76,7 +76,8 @@ export function ChatPanel({ referralId, messages, disabled, onSent, patientLangu
                 m.kind === "INSTRUCTION" && "bg-amber-600 text-white")}>
                 {m.kind === "ANSWER" && m.replyTo && <p className="mb-1 text-xs opacity-70">↳ {questions[m.replyTo] ?? t("Réponse")}</p>}
                 {m.kind === "WORSE" && <p className="mb-1 flex items-center gap-1 text-xs font-semibold"><TriangleAlert className="h-3.5 w-3.5" /> {' '}{t("Le patient signale une aggravation")}</p>}
-                <p dir="auto" className="whitespace-pre-wrap">{m.text}</p>
+                {m.kind === "IMAGE" && <ChatImage referralId={referralId} messageId={m.id} />}
+                {m.text && <p dir="auto" className="whitespace-pre-wrap">{m.text}</p>}
                 {m.options && m.options.length > 0 && <p className="mt-1 text-xs opacity-80">{t("Choix :")}{' '}{m.options.join(" / ")}</p>}
                 <p className="mt-1 text-[10px] opacity-60">{m.senderName ? `${m.senderName} · ` : ""}{time(m.createdAt)}</p>
               </div>
@@ -130,5 +131,23 @@ export function ChatPanel({ referralId, messages, disabled, onSent, patientLangu
         </div>
       )}
     </div>
+  );
+}
+
+/** Patient photo: thumbnail in the bubble, full size in a new tab. */
+function ChatImage({ referralId, messageId }: { referralId: string; messageId: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let current: string | null = null;
+    chatImageUrl(referralId, messageId).then((u) => { current = u; setUrl(u); }).catch(() => setFailed(true));
+    return () => { if (current) URL.revokeObjectURL(current); };
+  }, [referralId, messageId]);
+  if (failed) return <p role="alert" className="flex items-center gap-1 text-xs opacity-70"><ImageOff className="h-3.5 w-3.5" /> {t("Photo indisponible")}</p>;
+  if (!url) return <div role="status" aria-label={t("Chargement de la photo…")} className="h-40 w-56 motion-safe:animate-pulse rounded-lg bg-secondary" />;
+  return (
+    <a href={url} target="_blank" rel="noreferrer" title={t("Ouvrir en taille réelle")}>
+      <img src={url} alt={t("Photo envoyée par le patient")} className="max-h-64 w-56 rounded-lg object-cover" />
+    </a>
   );
 }

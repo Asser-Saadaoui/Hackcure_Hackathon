@@ -6,7 +6,7 @@ export interface StaffUser { id: string; email: string; name: string; role: Role
 
 export interface ChatMessage {
   id: string; referralId: string; sender: "PATIENT" | "STAFF" | "SYSTEM"; senderName?: string;
-  kind: "TEXT" | "QUESTION" | "ANSWER" | "INSTRUCTION" | "WORSE" | "SYSTEM" | "RED_FLAG";
+  kind: "TEXT" | "QUESTION" | "ANSWER" | "INSTRUCTION" | "WORSE" | "SYSTEM" | "RED_FLAG" | "IMAGE";  // IMAGE: text = optional caption
   text: string; options?: string[]; replyTo?: string; createdAt: string;
 }
 
@@ -82,6 +82,14 @@ export interface SimHospital {
 export interface Scenario {
   speed: number; paused: boolean; autoOutages: boolean; tickSeconds: number; presets: { id: string; label: string }[];
   log: { at: string; text: string }[]; hospitals: SimHospital[];
+}
+
+export interface LatLng { lat: number; lng: number }
+export interface Tracking {
+  caseId: string; referralId: string; status: ReferralStatus; arrivalMode: "SELF" | "AMBULANCE" | null;
+  hospital: LatLng & { name: string }; patient: (LatLng & { address?: string }) | null;
+  ambulance: { unitName: string; status: string; position: LatLng; etaMinutes: number; simulated: true } | null;
+  route: LatLng[]; distanceKm: number | null; etaMinutes: number | null;
 }
 
 export interface Hospital { key: string; name: string; nameAr?: string; type: string; lat: number; lng: number; specialties: string[]; equipment: string[]; availability: Availability }

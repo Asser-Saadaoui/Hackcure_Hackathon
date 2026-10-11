@@ -4,6 +4,10 @@ export type Language = 'fr' | 'en' | 'ar' | 'darija';
 export const LANGUAGES = [['fr', 'Français'], ['ar', 'العربية'], ['darija', 'تونسي'], ['en', 'English']] as const;
 // French source strings are stable keys. Clinical reports and patient messages are never translated here.
 const rows: [string, string, string, string][] = [
+  ["Photo indisponible", "Photo unavailable", "الصورة غير متاحة", "التصويرة موش متاحة"],
+  ["Chargement de la photo…", "Loading photo…", "جارٍ تحميل الصورة…", "نحمّلوا التصويرة…"],
+  ["Ouvrir en taille réelle", "Open full-size photo", "فتح الصورة بالحجم الكامل", "حلّ التصويرة بحجمها الكامل"],
+  ["Photo envoyée par le patient", "Photo sent by the patient", "صورة أرسلها المريض", "تصويرة بعثها المريض"],
   ["Diminuer {label}", "Decrease {label}", "تقليل {label}", "نقّص {label}"],
   ["Augmenter {label}", "Increase {label}", "زيادة {label}", "زيد {label}"],
   ["Enregistrement…", "Saving…", "جارٍ الحفظ…", "نسجّلوا…"],

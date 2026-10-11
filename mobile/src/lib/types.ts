@@ -34,6 +34,14 @@ export interface TriggeredRule {
   severity: 'critical' | 'high' | 'moderate';
 }
 
+/** Explainability shown to the patient in the chat: the system's reasons and the elements behind the NLP score. */
+export interface PatientExplain {
+  level: RiskLevel;
+  reasons: string[];
+  factors: { label: string; direction: 'up' | 'down'; weight: number }[];
+  saturated: boolean;
+}
+
 export interface Decision {
   level: RiskLevel;
   uncertainty: Uncertainty;
@@ -47,9 +55,10 @@ export interface Decision {
 /** What the backend answers after each patient message in the triage chat. */
 export type TurnResult =
   | { kind: 'question'; caseId: string; turn: Turn }
-  | { kind: 'emergency'; caseId: string; decision: Decision }
-  | { kind: 'under_review'; caseId: string; decision: Decision }
-  | { kind: 'result'; caseId: string; decision: Decision }
+  /** turn = the assistant's message explaining the decision in the chat (the app then shows a button). */
+  | { kind: 'emergency'; caseId: string; decision: Decision; turn?: Turn; explain?: PatientExplain | null }
+  | { kind: 'under_review'; caseId: string; decision: Decision; turn?: Turn; explain?: PatientExplain | null }
+  | { kind: 'result'; caseId: string; decision: Decision; turn?: Turn; explain?: PatientExplain | null }
   | { kind: 'degraded'; caseId: string; message: string };
 
 export interface CaseLocation {
@@ -66,6 +75,7 @@ export interface CaseDetail {
   status: CaseStatus;
   level: RiskLevel | null;
   decision: Decision | null;
+  explain?: PatientExplain | null;
   turns: Turn[];
   location: CaseLocation | null;
   referral: Referral | null;
@@ -100,7 +110,7 @@ export interface Referral {
   createdAt: string;
 }
 
-export type ChatKind = 'TEXT' | 'QUESTION' | 'ANSWER' | 'INSTRUCTION' | 'WORSE' | 'SYSTEM' | 'RED_FLAG';
+export type ChatKind = 'TEXT' | 'QUESTION' | 'ANSWER' | 'INSTRUCTION' | 'WORSE' | 'SYSTEM' | 'RED_FLAG' | 'IMAGE';
 
 export interface ChatMessage {
   id: string;
@@ -111,6 +121,7 @@ export interface ChatMessage {
   text: string;
   options?: string[];         // QUESTION: answer choices (empty = free text)
   replyTo?: string;           // ANSWER: id of the QUESTION it answers
+                              // IMAGE: text is the optional caption; the photo is at chatImageSource()
   createdAt: string;
 }
 

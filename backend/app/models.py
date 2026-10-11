@@ -2,7 +2,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, LargeBinary, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -86,6 +86,16 @@ class ChatMessage(Base):
     options: Mapped[list | None] = mapped_column(JSON, nullable=True)
     reply_to: Mapped[str | None] = mapped_column(String(32), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+
+
+class ChatImage(Base):
+    """Photo attached to an IMAGE chat message (kept in the database so backups and Docker need nothing else)."""
+    __tablename__ = 'chat_images'
+    message_id: Mapped[str] = mapped_column(ForeignKey('chat_messages.id'), primary_key=True)
+    case_id: Mapped[str] = mapped_column(ForeignKey('cases.id'), index=True)
+    content_type: Mapped[str] = mapped_column(String(32))
+    data: Mapped[bytes] = mapped_column(LargeBinary)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
 class Ambulance(Base):

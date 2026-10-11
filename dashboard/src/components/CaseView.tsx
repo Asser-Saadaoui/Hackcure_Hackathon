@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { ChatPanel } from "@/components/ChatPanel";
 import { LevelBadge } from "@/components/LevelBadge";
+import { LiveTrackingMap } from "@/components/LiveTrackingMap";
 import { FeedbackPanel } from "@/components/FeedbackPanel";
 import { ReroutePanel } from "@/components/ReroutePanel";
 import { api, downloadFhir, openReportPdf } from "@/api";
@@ -192,6 +193,7 @@ export function CaseView({ detail, onBack, onChanged }: { detail: CaseDetail; on
           </TabsList>
 
           <TabsContent value="summary" className="space-y-4 pt-4">
+            {c.location && <LiveTrackingMap referralId={r.id} />}
             {/* Why this level, in plain words; numbers only on demand */}
             <Card>
               <CardHeader className="pb-2"><CardTitle className="text-base">{t("Pourquoi ce niveau")}</CardTitle></CardHeader>

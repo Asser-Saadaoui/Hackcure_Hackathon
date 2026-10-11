@@ -53,6 +53,14 @@
       ],
       "expo-asset",
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "Sahhanito lets you send a photo to the emergency team that is expecting you.",
+          "cameraPermission": "Sahhanito lets you take a photo to send to the emergency team that is expecting you.",
+          "microphonePermission": false
+        }
+      ],
+      [
         "expo-build-properties",
         {
           "android": {

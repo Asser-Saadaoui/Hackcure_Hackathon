@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -137,6 +137,16 @@ def reject(referral_id: str, body: Reject, user: StaffUser = Depends(hospital_st
     return dict(ok=True)
 
 
+@router.get('/referrals/{referral_id}/tracking')
+def tracking(referral_id: str, user: StaffUser = Depends(hospital_staff), db: Session = Depends(get_db)):
+    """Live map for the receiving ED: patient position, route, hospital and the simulated ambulance."""
+    r = my_referral(db, user, referral_id)
+    case = db.get(Case, r.case_id)
+    if not case.location:
+        raise HTTPException(404, 'Position du patient inconnue.')
+    return dict(services.tracking_view(db, case, r), status=r.status)
+
+
 @router.get('/referrals/{referral_id}/report.pdf')
 def report_pdf(referral_id: str, user: StaffUser = Depends(hospital_staff), db: Session = Depends(get_db)):
     r = my_referral(db, user, referral_id)
@@ -189,6 +199,15 @@ def escalate(referral_id: str, body: Escalate, user: StaffUser = Depends(hospita
 def chat(referral_id: str, body: ChatIn, user: StaffUser = Depends(hospital_staff), db: Session = Depends(get_db)):
     r = my_referral(db, user, referral_id)
     return services.chat_view(services.staff_chat(db, r, user, body.text.strip(), body.kind, body.options))
+
+
+@router.get('/referrals/{referral_id}/chat/{message_id}/image')
+def chat_image(referral_id: str, message_id: str, user: StaffUser = Depends(hospital_staff), db: Session = Depends(get_db)):
+    my_referral(db, user, referral_id)
+    img = services.chat_image(db, referral_id, message_id)
+    services.audit(db, user.email, 'chat.image_viewed', img.case_id)
+    db.commit()
+    return Response(img.data, media_type=img.content_type, headers={'Cache-Control': 'private, max-age=86400'})
 
 
 # ---- availability (simulator + staff override) -----------------------------------
@@ -299,7 +318,6 @@ def all_feedback(kind: str | None = None, user: StaffUser = Depends(clinician), 
 def feedback_csv(user: StaffUser = Depends(clinician), db: Session = Depends(get_db)):
     import csv
     import io
-    from fastapi.responses import Response
     buf = io.StringIO()
     w = csv.writer(buf)
     w.writerow(['date', 'type', 'hospital', 'ai_level', 'actual_level', 'missed_signs', 'note', 'p_nlp', 's_rule', 'p_final',

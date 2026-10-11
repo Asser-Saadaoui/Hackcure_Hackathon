@@ -1,4 +1,4 @@
-import type { Alternative, CaseDetail, ChatMessage, Hospital, ReferralRow, ReviewItem, Scenario, SimSettings, StaffUser, TriageFeedback } from "@/types";
+import type { Alternative, CaseDetail, ChatMessage, Hospital, ReferralRow, ReviewItem, Scenario, SimSettings, StaffUser, Tracking, TriageFeedback } from "@/types";
 
 const BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "";
 const TOKEN_KEY = "sahhanito.staff.token";
@@ -47,6 +47,7 @@ export const api = {
   referral: (id: string) => call<CaseDetail>("GET", `/staff/referrals/${id}`),
   accept: (id: string, arrivalMode: "SELF" | "AMBULANCE", note?: string) => call<CaseDetail>("POST", `/staff/referrals/${id}/accept`, { arrivalMode, note }),
   reject: (id: string, reason: string, explanation: string) => call<{ ok: boolean }>("POST", `/staff/referrals/${id}/reject`, { reason, explanation }),
+  tracking: (id: string) => call<Tracking>("GET", `/staff/referrals/${id}/tracking`),
   alternatives: (id: string) => call<Alternative[]>("GET", `/staff/referrals/${id}/alternatives`),
   reroute: (id: string, facilityKey: string | null, reason: string, explanation: string) =>
     call<{ ok: boolean; facilityName: string | null }>("POST", `/staff/referrals/${id}/reroute`, { facilityKey, reason, explanation }),
@@ -85,6 +86,13 @@ export async function openReportPdf(referralId: string): Promise<void> {
   const url = URL.createObjectURL(await resp.blob());
   if (tab) tab.location.href = url; else window.location.href = url;
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+/** Photo sent by the patient in the chat, fetched with the session header (no token in the URL). Caller revokes the URL. */
+export async function chatImageUrl(referralId: string, messageId: string): Promise<string> {
+  const resp = await fetch(`${BASE}/api/v1/staff/referrals/${referralId}/chat/${messageId}/image`, { headers: { Authorization: `Bearer ${session.get() ?? ""}` } });
+  if (!resp.ok) throw new ApiError(`Erreur ${resp.status}`, resp.status);
+  return URL.createObjectURL(await resp.blob());
 }
 
 /** HL7 FHIR R4 document Bundle of the case, downloaded as JSON for import into the hospital's own system. */

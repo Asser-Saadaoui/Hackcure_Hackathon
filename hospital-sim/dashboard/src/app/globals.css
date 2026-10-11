@@ -1,0 +1,100 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --scrollbar-thumb: #64748B;
+  --scrollbar-track: #F8FAFC;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #F8FAFC;
+  color: #0F172A;
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #64748B;
+}
+
+.panel {
+  @apply bg-surface-1 border border-surface-border rounded-xl shadow-sm;
+}
+
+/* Data label micro-text */
+.data-label {
+  @apply text-xs font-medium tracking-widest uppercase text-text-secondary;
+}
+
+/* Metric value large */
+.metric-value {
+  @apply text-3xl font-bold text-text-primary tabular-nums;
+}
+
+/* Mono text for IDs and values */
+.mono {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* Status subtle shadows instead of glow */
+.glow-ok    { box-shadow: 0 4px 12px 0 rgba(16, 185, 129, 0.15); }
+.glow-warn  { box-shadow: 0 4px 12px 0 rgba(245, 158, 11, 0.15); }
+.glow-crit  { box-shadow: 0 4px 12px 0 rgba(239, 68, 68, 0.15); }
+.glow-cyan  { box-shadow: 0 4px 12px 0 rgba(6, 182, 212, 0.15); }
+
+/* Recharts overrides */
+.recharts-tooltip-wrapper {
+  outline: none !important;
+}
+.recharts-default-tooltip {
+  background-color: #FFFFFF !important;
+  border: 1px solid #CBD5E1 !important;
+  border-radius: 8px !important;
+  color: #0F172A !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Animated underline for nav items */
+.nav-active {
+  @apply text-brand-cyan;
+  position: relative;
+}
+.nav-active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: #2563EB;
+  border-radius: 1px;
+}
+
+/* Grid background */
+.bg-grid {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' width='32' height='32' fill='none' stroke='rgb(203 213 225 / 0.5)'%3e%3cpath d='M0 .5H31.5V32'/%3e%3c/svg%3e");
+}

@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 
 from app import config, hospitals
 from app.events import broker
-from app.models import Ambulance, AuditLog, AvailabilityOverride, Case, ChatMessage, Referral, Turn, utcnow
+from app.models import Ambulance, AuditLog, AvailabilityOverride, Case, ChatImage, ChatMessage, Referral, Turn, utcnow
 
 CODE_ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ'
 ACTIVE_REFERRAL = ('SENT', 'INFO_REQUESTED', 'ACCEPTED')
@@ -95,7 +95,8 @@ def turn_view(tr):
 def case_view(case):
     r = current_referral(case)
     return dict(id=case.id, referenceCode=case.reference_code, status=case.status, level=case.level,
-                decision=decision_view(case), turns=[turn_view(x) for x in case.turns], location=case.location,
+                decision=decision_view(case), explain=(case.assessment or {}).get('patient_explain'),
+                turns=[turn_view(x) for x in case.turns], location=case.location,
                 referral=referral_view(r) if r else None, createdAt=iso(case.created_at), closedAt=iso(case.closed_at))
 
 
@@ -190,6 +191,11 @@ def triage(db, case, message):
     audit(db, 'ai', 'triage.turn', case.id, status=ai['status'], level=decision['level'], p_final=decision['pFinal'])
 
     status = ai['status']
+    explanation_turn = None
+    if status in ('emergency', 'under_review', 'result') and (ai.get('reply') or {}).get('text'):
+        explanation_turn = _add_turn(db, case, 'ASSISTANT', ai['reply']['text'])
+        if ai['reply'].get('explain'):
+            case.assessment = dict(case.assessment or {}, patient_explain=ai['reply']['explain'])
     if status == 'question':
         tr = _add_turn(db, case, 'ASSISTANT', ai['reply']['text'], ai['reply'].get('quick_replies') or None)
         db.commit()
@@ -203,6 +209,10 @@ def triage(db, case, message):
     else:
         case.status = 'RESULT_READY'
         result = dict(kind='result', caseId=case.id, decision=decision)
+    if explanation_turn is not None:
+        db.flush()
+        result['turn'] = turn_view(explanation_turn)   # the assistant explains the decision in the chat
+        result['explain'] = (case.assessment or {}).get('patient_explain')
     db.commit()
     if case.status == 'UNDER_REVIEW':
         broker.publish('reviews', dict(type='review.new', caseId=case.id))
@@ -228,6 +238,16 @@ def assign_if_needed(db, case):
     if any(r.status in ACTIVE_REFERRAL or r.status in ('ARRIVED', 'COMPLETED') for r in case.referrals):
         return None
     return route_case(db, case)
+
+
+def assign_waiting(db):
+    """Cases that need a hospital but have none (every ED was full or closed when they were decided): try again."""
+    since = utcnow() - timedelta(hours=6)
+    waiting = db.scalars(select(Case).where(Case.status.in_(('EMERGENCY', 'RESULT_READY')), Case.location.is_not(None),
+                                            Case.created_at >= since)).all()
+    for case in waiting:
+        if needs_hospital(case) and not case.referrals:
+            assign_if_needed(db, case)
 
 
 def alternatives(db, case):
@@ -429,7 +449,53 @@ def patient_chat(db, case, r, text, kind, question_id):
     if r.status == 'INFO_REQUESTED' and kind == 'ANSWER':
         r.status = 'SENT'
     db.commit()
-    # Every patient message after referral is screened by the AI (monitor mode: rules + NLP, no question).
+    screen_patient_text(db, case, r, text)
+    if kind == 'WORSE':
+        publish_hospital(r.facility_key, dict(type='patient.worse', referralId=r.id, caseId=case.id))
+    return m
+
+
+# Sniffed from the bytes, never trusted from the client.
+IMAGE_MAGIC = ((b'\xff\xd8\xff', 'image/jpeg'), (b'\x89PNG\r\n\x1a\n', 'image/png'))
+MAX_IMAGE_BYTES = 8 * 1024 * 1024
+
+
+def image_type(data):
+    if data[:4] == b'RIFF' and data[8:12] == b'WEBP':
+        return 'image/webp'
+    return next((t for magic, t in IMAGE_MAGIC if data.startswith(magic)), None)
+
+
+def patient_image(db, case, r, data, caption):
+    """A photo for the ED team (wound, rash, medication box...). Shown to humans only: the AI never reads it."""
+    if len(data) > MAX_IMAGE_BYTES:
+        raise HTTPException(413, 'Image too large (max 8 MB).')
+    content_type = image_type(data)
+    if not content_type:
+        raise HTTPException(415, 'Only JPEG, PNG or WebP photos are accepted.')
+    m = ChatMessage(referral_id=r.id, case_id=case.id, sender='PATIENT', kind='IMAGE', text=caption)
+    db.add(m)
+    db.flush()
+    db.add(ChatImage(message_id=m.id, case_id=case.id, content_type=content_type, data=data))
+    db.commit()
+    view = chat_view(m)
+    publish_case(case, dict(type='chat.message', message=view))
+    publish_hospital(r.facility_key, dict(type='chat.message', referralId=r.id, message=view))
+    if caption:
+        screen_patient_text(db, case, r, caption)
+    return m
+
+
+def chat_image(db, referral_id, message_id):
+    m = db.get(ChatMessage, message_id)
+    img = db.get(ChatImage, message_id) if m and m.referral_id == referral_id else None
+    if not img:
+        raise HTTPException(404, 'Image not found.')
+    return img
+
+
+def screen_patient_text(db, case, r, text):
+    """Every patient message after referral is screened by the AI (monitor mode: rules + NLP, no question)."""
     try:
         ai = call_ai(case, text, mode='monitor')
         case.ai_state = ai['state']
@@ -440,9 +506,6 @@ def patient_chat(db, case, r, text, kind, question_id):
             escalate(db, case, 'EMERGENCY', None, 'ai')
     except (httpx.HTTPError, ValueError, KeyError):
         pass
-    if kind == 'WORSE':
-        publish_hospital(r.facility_key, dict(type='patient.worse', referralId=r.id, caseId=case.id))
-    return m
 
 
 def staff_chat(db, r, user, text, kind, options):
@@ -527,8 +590,8 @@ def tick_ambulances(db):
             mark_arrived(db, r, 'ambulance')
 
 
-def tracking_view(db, case):
-    r = current_referral(case)
+def tracking_view(db, case, referral=None):
+    r = referral or current_referral(case)
     if not r:
         raise HTTPException(404, 'No hospital assigned yet.')
     f = hospitals.FACILITIES[r.facility_key]
