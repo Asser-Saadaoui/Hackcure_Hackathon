@@ -28,7 +28,7 @@ export function ReviewView({ items, onDone }: { items: ReviewItem[]; onDone: () 
       </div>
       {error && <p role="alert" className="text-sm text-destructive">{t(error)}</p>}
       {items.length === 0 && (
-        <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed bg-card py-16 text-center text-sm text-muted-foreground">
+        <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed bg-card py-16 text-center text-sm text-muted-foreground magic-surface">
           <CheckCircle2 className="h-8 w-8" />{t("Aucun dossier en attente.")}{' '}</div>
       )}
       {items.map((it) => (

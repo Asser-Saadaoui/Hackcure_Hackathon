@@ -195,7 +195,7 @@ export default function App() {
             if (openId) loadDetail(); else if (view === 'incoming') loadRows(); else if (view === 'network') loadNetwork(); else if (view === 'availability') loadHospital(); else if (view === 'reviews') loadReviews(); else loadFeedback();
           }}><RefreshCw className="h-4 w-4" aria-hidden="true" />{t("Actualiser")}</Button>
         </div>
-        {(failures[openId ? 'detail' : view] || error) && <div role="alert" className="mb-4 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm">
+        {(failures[openId ? 'detail' : view] || error) && <div role="alert" className="magic-surface mb-4 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm">
           <p className="font-semibold">{t("Données non actualisées")}</p><p>{t(failures[openId ? 'detail' : view] || error || '')}</p>
         </div>}
         <ErrorBoundary key={`${view}:${openId ?? ""}`} onReset={() => setOpenId(null)}>

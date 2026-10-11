@@ -125,7 +125,7 @@ export function IncomingView({ rows, scope, onScope, onOpen, error, loading }: P
       {loading && rows.length === 0 && <p role="status">{t("Chargement…")}</p>}
 
       {visible.length === 0 && !error && !loading && (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-card py-16 text-center">
+        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-card py-16 text-center magic-surface">
           <Inbox className="h-8 w-8 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">
             {rows.length > 0 ? t("Aucun dossier pour ce filtre.") : scope === "active" ? t("Aucun patient en route pour le moment.") : t("Aucun dossier.")}
@@ -140,7 +140,7 @@ export function IncomingView({ rows, scope, onScope, onOpen, error, loading }: P
           return (
             <li key={r.id}>
               <button onClick={() => open(r.id)}
-                className={cn("flex w-full items-center gap-4 rounded-xl border bg-card p-4 text-start shadow-sm transition hover:border-primary/40",
+                className={cn("magic-surface flex w-full items-center gap-4 rounded-xl border bg-card p-4 text-start shadow-sm transition hover:border-primary/40",
                   pending && r.level === "EMERGENCY" && "border-red-300 ring-1 ring-red-200",
                   isNew && "bg-sky-50/60")}>
                 <span className={cn("h-10 w-1.5 shrink-0 rounded-full", LEVEL[r.level ?? "UNCERTAIN"].dot)} />

@@ -34,7 +34,7 @@ export function NetworkView({ hospitals, simulatorOk }: { hospitals: Hospital[];
         <p className="text-sm text-muted-foreground">{simulatorOk ? t("Disponibilités simulées en direct, corrigées par les équipes quand elles les saisissent.") : t("Simulateur indisponible : dernières valeurs connues.")}</p>
       </div>
 
-      <div className="overflow-hidden rounded-xl border bg-card">
+      <div className="overflow-hidden rounded-xl border bg-card magic-surface">
         <MapContainer center={GRAND_TUNIS} zoom={11} scrollWheelZoom={false} className="h-[380px] w-full" attributionControl>
           <FixSize />
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap" />
@@ -65,7 +65,7 @@ export function NetworkView({ hospitals, simulatorOk }: { hospitals: Hospital[];
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border bg-card">
+      <div className="overflow-x-auto rounded-xl border bg-card magic-surface">
         <table className="w-full text-sm">
           <thead className="bg-secondary/60 text-start text-xs text-muted-foreground">
             <tr><th className="px-3 py-2">{t("Hôpital")}</th><th>{t("Lits libres")}</th><th>{t("Réa")}</th><th>{t("Attente")}</th><th>{t("Indisponible")}</th><th className="pe-3">{t("Source")}</th></tr>

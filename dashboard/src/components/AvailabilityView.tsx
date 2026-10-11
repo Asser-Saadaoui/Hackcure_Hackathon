@@ -34,7 +34,7 @@ function Stepper({ icon: Icon, label, value, total, simulated, step = 1, unit, o
   const v = value ?? 0;
   const changed = simulated != null && value != null && simulated !== value;
   return (
-    <div className="rounded-xl border bg-card p-4">
+    <div className="rounded-xl border bg-card p-4 magic-surface">
       <div className="flex items-center gap-2 text-xs text-muted-foreground"><Icon className="h-4 w-4" />{label}</div>
       <div className="mt-2 flex items-center gap-2">
         <button type="button" aria-label={t("Diminuer {label}", {label})} onClick={() => onChange(Math.max(0, v - step))}
@@ -59,7 +59,7 @@ function Stepper({ icon: Icon, label, value, total, simulated, step = 1, unit, o
 
 function ReadOnly({ icon: Icon, label, value, total }: { icon: typeof BedDouble; label: string; value: number | null; total?: number | null }) {
   return (
-    <div className="flex items-center gap-3 rounded-lg bg-secondary/60 px-3 py-2">
+    <div className="magic-surface flex items-center gap-3 rounded-lg bg-secondary/60 px-3 py-2">
       <Icon className="h-4 w-4 text-muted-foreground" />
       <span className="text-sm text-muted-foreground">{label}</span>
       <span className="ms-auto font-semibold">{value ?? "?"}{total != null && <span className="font-normal text-muted-foreground"> / {total}</span>}</span>
