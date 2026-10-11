@@ -68,6 +68,7 @@ class Referral(Base):
     eta_minutes: Mapped[int] = mapped_column(Integer)
     distance_km: Mapped[float | None] = mapped_column(Float, nullable=True)
     match_reason: Mapped[str] = mapped_column(Text)
+    options: Mapped[dict | None] = mapped_column(JSON, nullable=True)   # chosen hospital vs the next two, and why
     reason: Mapped[str | None] = mapped_column(Text, nullable=True)        # rejection / timeout reason
     decided_by: Mapped[str | None] = mapped_column(String(120), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

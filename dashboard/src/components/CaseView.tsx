@@ -13,6 +13,7 @@ import { LevelBadge } from "@/components/LevelBadge";
 import { LiveTrackingMap } from "@/components/LiveTrackingMap";
 import { FeedbackPanel } from "@/components/FeedbackPanel";
 import { ReroutePanel } from "@/components/ReroutePanel";
+import { ReferralOptions } from "@/components/ReferralOptions";
 import { VerifiedPhoto } from "@/components/VerifiedPhoto";
 import { AmbulanceMonitor } from "@/components/AmbulanceMonitor";
 import { api, downloadFhir, openReportPdf } from "@/api";
@@ -267,7 +268,7 @@ export function CaseView({ detail, onBack, onChanged }: { detail: CaseDetail; on
                   <p>{t("Spécialité :")}{' '}<span className="font-medium">{c.decision.suggestedSpecialty ?? t("Urgences")}</span>
                     {c.decision.requiredEquipment.length > 0 && <> {' '}{t("· plateau :")}{' '}{c.decision.requiredEquipment.map((e) => EQUIPMENT[e] ?? e).join(", ")}</>}</p>
                 )}
-                <p className="text-muted-foreground">{t("Pourquoi votre hôpital :")}{' '}{r.matchReason}</p>
+                {r.options ? <ReferralOptions options={r.options} /> : <p className="text-muted-foreground">{t("Pourquoi votre hôpital :")}{' '}{r.matchReason}</p>}
                 {c.location && (
                   <a className="inline-flex items-center gap-1 text-primary hover:underline" target="_blank" rel="noreferrer"
                     href={`https://www.openstreetmap.org/?mlat=${c.location.lat}&mlon=${c.location.lng}#map=16/${c.location.lat}/${c.location.lng}`}>

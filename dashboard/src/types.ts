@@ -32,7 +32,7 @@ export interface Ambulance { unitName: string; status: string; etaMinutes: numbe
 
 export interface CaseDetail {
   referral: { id: string; facilityName: string; status: ReferralStatus; arrivalMode: "SELF" | "AMBULANCE" | null; acceptNote: string | null;
-    etaMinutes: number; distanceKm: number | null; matchReason: string; createdAt: string; reason: string | null; decidedBy: string | null };
+    etaMinutes: number; distanceKm: number | null; matchReason: string; options?: ReferralOptions | null; createdAt: string; reason: string | null; decidedBy: string | null };
   case: {
     id: string; referenceCode: string; status: string; level: Level | null; language: string; createdAt: string;
     location: { lat: number; lng: number; address?: string } | null;
@@ -109,3 +109,8 @@ export interface VitalReading {
   vitals: { heartRate?: number; spo2?: number; respRate?: number; systolic?: number; diastolic?: number; temperature?: number };
   position: { lat: number; lng: number } | null;
 }
+
+/** Assigned hospital vs the next two compared by the system, with structured reasons. */
+export interface ReferralOption { key: string; name: string; etaMinutes: number; distanceKm: number; bedsAvailable: number | null; waitMinutes: number | null; hasSpecialty: boolean; capable: boolean; simulated: boolean }
+export interface ReferralReason { code: string; minutes?: number; beds?: number; specialty?: string }
+export interface ReferralOptions { level: Level | null; chosen: ReferralOption; alternatives: ReferralOption[]; why: ReferralReason[] }

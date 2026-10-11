@@ -138,5 +138,6 @@ def rank(location, level, specialty, equipment, overrides, exclude=(), relax=Fal
         if a['simulated'] and a['source'] == 'simulator':
             reason += ' · disponibilité simulée'
         out.append(dict(key=f['key'], name=f['name'], km=round(km, 1), eta=eta, score=score, reason=reason,
-                        capable=capable(f, a, True, True), bedsAvailable=beds, waitMinutes=a['waitMinutes'], source=a['source']))
+                        capable=capable(f, a, True, True), hasSpecialty=has_specialty, specialty=specialty,
+                        bedsAvailable=beds, waitMinutes=a['waitMinutes'], source=a['source']))
     return sorted(out, key=lambda r: r['score'])

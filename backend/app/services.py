@@ -77,7 +77,7 @@ def referral_view(r):
     return dict(id=r.id, caseId=r.case_id, facilityId=r.facility_key, facilityName=f.get('name', r.facility_key),
                 edPhone=f.get('edPhone'), lat=f.get('lat'), lng=f.get('lng'), status=r.status,
                 arrivalMode=r.arrival_mode, acceptNote=r.accept_note, etaMinutes=r.eta_minutes,
-                matchReason=r.match_reason, createdAt=iso(r.created_at))
+                matchReason=r.match_reason, options=r.options, createdAt=iso(r.created_at))
 
 
 def current_referral(case):
@@ -260,6 +260,44 @@ def alternatives(db, case):
     return hospitals.rank(case.location, case.level, d.get('suggestedSpecialty'), d.get('requiredEquipment'), overrides(db), exclude=tried)
 
 
+def _option(x):
+    return dict(key=x['key'], name=x['name'], etaMinutes=x['eta'], distanceKm=x['km'], bedsAvailable=x.get('bedsAvailable'),
+                waitMinutes=x.get('waitMinutes'), hasSpecialty=bool(x.get('hasSpecialty')), capable=bool(x.get('capable')),
+                simulated=x.get('source') != 'staff')
+
+
+def referral_options(best, ranked, level, chosen_by_staff=False):
+    """The chosen hospital, the next two, and why the chosen one is the most adequate (structured reasons: the apps
+    word them in the patient's or the staff's language)."""
+    others = [x for x in ranked if x['key'] != best['key']][:2]
+    why = []
+    if chosen_by_staff:
+        why.append(dict(code='staff_choice'))
+    if others:
+        gain = min(o['eta'] for o in others) - best['eta']
+        if gain > 0:
+            why.append(dict(code='faster', minutes=gain))
+        elif gain == 0:
+            why.append(dict(code='as_fast'))
+        if best.get('capable') and not all(o.get('capable') for o in others):
+            why.append(dict(code='equipment'))
+        if best.get('hasSpecialty') and not all(o.get('hasSpecialty') for o in others):
+            why.append(dict(code='specialty', specialty=best.get('specialty')))
+        beds = [o.get('bedsAvailable') for o in others if o.get('bedsAvailable') is not None]
+        if best.get('bedsAvailable') and beds and best['bedsAvailable'] > max(beds):
+            why.append(dict(code='more_beds', beds=best['bedsAvailable']))
+        waits = [o.get('waitMinutes') for o in others if o.get('waitMinutes') is not None]
+        if level != 'EMERGENCY' and best.get('waitMinutes') is not None and waits and best['waitMinutes'] < min(waits):
+            why.append(dict(code='shorter_wait', minutes=min(waits) - best['waitMinutes']))
+    if level == 'EMERGENCY':
+        why.append(dict(code='emergency_time'))   # for a life-threatening case, the time to care comes first
+    if best.get('bedsAvailable') == 0:
+        why.append(dict(code='saturated'))        # every ED full: the nearest still receives emergencies
+    if not why:
+        why.append(dict(code='best_overall'))
+    return dict(level=level, chosen=_option(best), alternatives=[_option(o) for o in others], why=why)
+
+
 def route_case(db, case, target=None, actor='system'):
     """Send the case to `target` (chosen by ED staff) or to the best remaining hospital."""
     if target:
@@ -278,7 +316,11 @@ def route_case(db, case, target=None, actor='system'):
         db.commit()
         return None
     best = ranked[0]
-    r = Referral(case_id=case.id, facility_key=best['key'], eta_minutes=best['eta'], distance_km=best['km'], match_reason=best['reason'])
+    # Compare with the next hospitals the system would have chosen (for a staff choice: the system's own ranking).
+    pool = alternatives(db, case) if target else ranked
+    options = referral_options(best, [best] + [x for x in pool if x['key'] != best['key']], case.level, chosen_by_staff=bool(target))
+    r = Referral(case_id=case.id, facility_key=best['key'], eta_minutes=best['eta'], distance_km=best['km'], match_reason=best['reason'],
+                 options=options)
     db.add(r)
     case.referrals.append(r)
     case.status = 'REFERRED'

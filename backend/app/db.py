@@ -27,7 +27,8 @@ def init_db():
 
 
 # create_all never alters an existing table: add the columns introduced after a table was first created.
-NEW_COLUMNS = {'chat_images': {'sha256': 'VARCHAR(64)', 'encryption': 'VARCHAR(16)'}}
+NEW_COLUMNS = {'chat_images': {'sha256': 'VARCHAR(64)', 'encryption': 'VARCHAR(16)'},
+               'referrals': {'options': 'JSON'}}
 
 
 def _add_missing_columns():
