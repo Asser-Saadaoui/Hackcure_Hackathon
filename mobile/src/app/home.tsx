@@ -1,7 +1,7 @@
 import { router, Stack, useFocusEffect } from 'expo-router';
 import { ArrowRight, Clock3, FileText, MessageCircle, Phone, ShieldCheck } from 'lucide-react-native';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Linking, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { AppText } from '@/components/app-text';
 import { Button } from '@/components/button';
@@ -19,6 +19,7 @@ import type { CaseSummary } from '@/lib/types';
 export default function HomeScreen() {
   const { language, t } = useI18n();
   const { width, fontScale } = useWindowDimensions();
+  const docked = Platform.OS === 'web' && width >= 1400 && fontScale <= 1.4;
   const columns = width >= 1000 && fontScale <= 1.4;
   const ar = language === 'ar' || language === 'darija';
   const fr = language === 'fr';
@@ -71,7 +72,7 @@ export default function HomeScreen() {
         <Button label={copy('Describe my symptoms', 'Décrire mes symptômes', 'نحكي على الأعراض')} size="lg" iconRight={ArrowRight} onPress={start} />
         <AppText variant="small">{copy('No account needed · Choose your language', 'Sans compte · Choisissez votre langue', 'بلا حساب · اختار لغتك')}</AppText>
       </View>
-      <View style={columns ? styles.heroMascot : undefined}><Hassanito state="idle" presentation="hero" message={copy('I’m Hassanito. We’ll take it one step at a time.', 'Je suis Hassanito. Une étape à la fois.', 'أنا حسنّيتو. نمشيو خطوة بخطوة.')} /></View>
+      <View style={docked ? { width: 0 } : columns ? styles.heroMascot : undefined}><Hassanito state="idle" presentation="hero" message={copy('I’m Hassanito. We’ll take it one step at a time.', 'Je suis Hassanito. Une étape à la fois.', 'أنا حسنّيتو. نمشيو خطوة بخطوة.')} /></View>
     </View>
     <View style={styles.metrics}>{metrics.map(({ Icon, label, value }) => <View key={label} style={[styles.card, styles.metric]}><Icon size={20} color={Colors.primary} /><AppText variant="title">{failed ? '—' : value ?? '—'}</AppText><AppText variant="small">{label}</AppText></View>)}</View>
     <View style={[styles.row, columns && styles.horizontal]}>
