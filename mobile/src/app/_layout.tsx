@@ -17,7 +17,8 @@ import { MagicSurfaceEffects } from '@/components/magic-surface-effects';
 
 import { BrandTitle } from '@/components/brand-title';
 import { ConnectionBanner } from '@/components/connection-banner';
-import { CompactNavigation, PlatformShell } from '@/components/platform-shell';
+import { PlatformShell } from '@/components/platform-shell';
+import { CompactNavigation, SidebarProvider } from '@/components/sidebar';
 import { Colors } from '@/constants/theme';
 import { LanguageProvider, useI18n } from '@/i18n';
 
@@ -78,7 +79,7 @@ export default function RootLayout() {
   return (
     <LanguageProvider>
       <MagicSurfaceEffects />
-      <Navigator />
+      <SidebarProvider><Navigator /></SidebarProvider>
     </LanguageProvider>
   );
 }
