@@ -89,6 +89,91 @@ flowchart LR
 
 Live updates use **Server-Sent Events**: the patient app and the dashboard receive new referrals, decisions, chat messages, ambulance positions and vital signs as they happen.
 
+### 2.1 Design principles
+
+- **Separation of concerns:** the AI service only judges urgency from text; the backend owns cases, hospitals and people; the simulation only models capacity. Each runs as its own service and can be replaced independently (e.g. the simulation by real hospital feeds).
+- **Deterministic decision, conversational interface:** the level comes from the NLP model, the rule engine and the fusion, never from the language model.
+- **Event-driven UI:** every state change is pushed to the screens that need it, so nobody refreshes.
+- **Degrade safely:** if the LLM is slow or down, reviewed templates take over; if the AI service is down, the patient is told to call 190; if every hospital is full, an emergency still goes to the nearest emergency department.
+
+### 2.2 One triage, end to end
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant P as Patient app
+  participant B as Backend
+  participant A as AI service
+  participant L as LLM (Gemini)
+  participant S as Hospital simulation
+  participant H as Hospital dashboard
+
+  P->>B: POST /cases (first message)
+  B->>A: POST /turn (conversation)
+  A->>A: extraction → NLP model + rule engine → fusion
+  A->>L: next question (conversation only)
+  L-->>A: question + quick replies
+  A-->>B: question, assessment, explanation
+  B-->>P: assistant question
+  Note over P,A: 3 to 6 questions (or a critical sign → immediate decision)
+  A-->>B: decision (level, reasons, factors)
+  B-->>P: explanation in the chat + result button
+  B->>S: availability of the 18 hospitals
+  B->>B: rank hospitals, create referral
+  B->>S: hold a bed
+  B-->>H: SSE referral.new (sound + notification)
+  H->>B: accept (ambulance)
+  B-->>P: SSE referral.status, tracking.position
+  Note over B,H: if no answer in time or refused → next hospital
+```
+
+### 2.3 Live events
+
+| Event | Sent to | When |
+|---|---|---|
+| `referral.new`, `referral.status` | hospital, patient | case sent to a hospital, accepted, refused, rerouted, timed out |
+| `case.escalated`, `case.reviewed` | patient, hospital | level raised by staff or by the AI after a new message; clinician review |
+| `chat.message`, `patient.worse` | patient, hospital | chat between the patient and the emergency team |
+| `case.photo` | hospital | photo added by the patient |
+| `tracking.position`, `ambulance.status` | patient, hospital | simulated ambulance moves or changes status |
+| `iot.vitals`, `iot.alert` | hospital | ambulance monitor reading, threshold crossed |
+| `review.*` | clinicians | review queue changes |
+
+Patient streams are per case (`/api/v1/cases/{id}/events`), hospital streams per facility (`/api/v1/staff/events`); both authenticate with the session token.
+
+### 2.4 Data model
+
+| Table | Holds |
+|---|---|
+| `patient_sessions` | anonymous device sessions (token hash only) |
+| `cases` | one triage: language, location, AI state, assessment, decision, level, status, review |
+| `turns` | the conversation (patient and assistant messages, quick replies) |
+| `referrals` | each hospital the case was sent to: status, ETA, distance, reason, who decided and when |
+| `chat_messages`, `chat_images` | patient ↔ emergency team messages and their photos (encrypted) |
+| `case_images` | photos added during triage (encrypted) |
+| `ambulances` | simulated ambulance per referral: unit, route, trip time, status |
+| `vital_readings` | ambulance monitor telemetry: vitals, position, alerts, device, sequence |
+| `staff_users`, `staff_sessions` | hospital accounts, roles, sessions |
+| `availability_overrides`, `hospital_settings` | staff-entered capacity, saved replies |
+| `triage_feedback` | "this level was wrong" reports from hospitals |
+| `audit_log` | every staff action |
+
+Full schema: `docs/database-schema.md`.
+
+### 2.5 Deployment topology
+
+```
+Internet ──HTTPS──► Caddy (80/443, automatic certificates, HSTS)
+                     ├── APP_DOMAIN    → patient web app (static) + /api → backend
+                     └── STAFF_DOMAIN  → hospital dashboard (static) + /api → backend
+private network:     backend ── PostgreSQL
+                        ├── ai (triage + LLM interviewer)
+                        ├── hospital-sim
+                        └── ◄── iot-sim (simulated monitors, or the real gateways later)
+```
+
+All services are containers in `docker-compose.yml`; only Caddy is exposed.
+
 ---
 
 ## 3. Modules
@@ -151,7 +236,53 @@ One simulated vital-signs monitor per ambulance carrying a patient. Every 5 s it
 
 The receiving hospital sees the **Moniteur ambulance** card in the case file: circular gauges, 5-minute trends and alerts (SpO₂ < 90 %, heart rate > 130 or < 45, systolic < 90, respiratory rate > 28, temperature ≥ 39.5 °C). These readings are **displayed only**: they never influence the triage level.
 
-`docs/iot-architecture.md` describes the real deployment (certified monitors, 4G/5G gateway, MQTT with per-device certificates, time-series storage, standards, Tunisian regulation) and an ESP32-S3 hardware demo kit with its wiring.
+#### Telemetry message
+
+```json
+{
+  "deviceId": "MON-AMB-92", "referralId": "…", "seq": 1791682745123, "ts": 1791682745123,
+  "vitals": { "heartRate": 117, "spo2": 88, "respRate": 26, "systolic": 124, "diastolic": 79, "temperature": 36.8 },
+  "position": { "lat": 36.8065, "lng": 10.1815 },
+  "sig": "HMAC-SHA256(device key, canonical JSON without sig)"
+}
+```
+
+Flow: the monitor asks `GET /api/v1/iot/assignments` which ambulances carry a patient, then sends one `POST /api/v1/iot/telemetry` per reading. The backend checks the signature, freshness (60 s), sequence, device ↔ ambulance binding and physiological ranges, stores the reading, computes alerts and pushes `iot.vitals` / `iot.alert` to the receiving hospital.
+
+#### Prototype with real hardware
+
+The same pipeline works with a physical monitor built on an **ESP32-S3**: the board reads real sensors and sends exactly the message above, so the dashboard shows real measurements without any change on the server. It is a **demonstration kit, not a medical device**: never use it on patients.
+
+![Wiring of the ESP32-S3 demo kit](docs/iot-wiring-illustration.png)
+
+| Function | Part | Interface |
+|---|---|---|
+| Microcontroller | ESP32-S3 DevKitC-1 (Wi-Fi, Bluetooth LE, TLS) | — |
+| Mobile network | SIMCom SIM7600E 4G LTE (bands used in Tunisia) | UART |
+| Position | u-blox NEO-M8N GPS (or the 4G module's GNSS) | UART |
+| Device identity | Microchip ATECC608B secure element (private key never leaves the chip) | I²C |
+| Heart rate + SpO₂ | MAX30102 finger sensor | I²C |
+| Temperature | MAX30205 skin sensor (±0.1 °C) | I²C |
+| Breathing rate + motion | MPU6050 accelerometer on the chest | I²C |
+| ECG (one lead) | AD8232 front end, 3 electrodes | analog |
+| Blood pressure | Bluetooth LE cuff (Blood Pressure Service) | BLE |
+| Display (optional) | SSD1306 0.96″ OLED | I²C |
+| Power | LiPo 3.7 V → TP4056 charger → MT3608 boost 5 V | — |
+
+Pin assignment (ESP32-S3): I²C SDA GPIO8 / SCL GPIO9 (all I²C parts, addresses 0x57, 0x48, 0x68, 0x60, 0x3C); 4G UART TX GPIO17 / RX GPIO18, power key GPIO16, status GPIO15; GPS TX GPIO5 / RX GPIO4; ECG output **GPIO1 (ADC1)**, lead-off GPIO2 / GPIO3, shutdown GPIO21; interrupts GPIO6 (MAX30102) and GPIO7 (MPU6050). Exact schematic: `docs/iot-wiring.svg`; full pin table and wiring notes: `docs/iot-architecture.md` §10.
+
+**Firmware design** (the ESP32 firmware is the next step to implement; the server side is ready)
+
+1. At start-up it connects over 4G (Wi-Fi as fallback), syncs the time, and loads its device identity from the secure element.
+2. Every 5 s it samples the sensors: heart rate and SpO₂ from the MAX30102, temperature from the MAX30205, breathing rate and a motion flag from the MPU6050 (readings taken during movement are marked unreliable), ECG-derived heart rate from the AD8232, and the last blood pressure from the Bluetooth cuff; it adds the GPS position.
+3. It builds the telemetry message, increments the sequence number, signs it, and sends it; without network it buffers readings and resends them in order.
+4. The OLED shows the values and the connection state.
+
+**Wiring notes:** the 4G module takes up to 2 A in bursts, so it is powered from the 5 V boost rail, never from the ESP32's 3.3 V regulator; I²C needs 4.7 kΩ pull-ups if the boards do not include them; ECG electrodes are only attached while the kit runs on battery.
+
+#### Towards a real ambulance
+
+In production the sensors are replaced by the **certified monitor already in the ambulance** (connected through IEEE 11073 SDC, HL7 or the manufacturer's interface), the ESP32 by a **rugged 4G/5G gateway**, and HTTPS by **MQTT with per-device certificates**. Readings go to a time-series database and are exported as HL7 FHIR `Observation`s. `docs/iot-architecture.md` details the architecture, message format with LOINC codes, security, reliability, Tunisian regulation (personal data law, medical-device standards) and a migration plan.
 
 ### 3.5 Patient app (`mobile/`)
 
