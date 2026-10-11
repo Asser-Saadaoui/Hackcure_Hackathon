@@ -1,8 +1,9 @@
-import type { LucideIcon } from 'lucide-react-native';
+import { Phone, type LucideIcon } from 'lucide-react-native';
 import { Pressable, StyleSheet, View, type PressableProps } from 'react-native';
 
 import { Colors, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
 import { AppText } from './app-text';
+import { AnimatedShinyText } from './animated-shiny-text';
 import { InteractiveButton } from './interactive-button';
 
 type Variant = 'default' | 'outline' | 'ghost' | 'secondary' | 'destructive';
@@ -28,8 +29,9 @@ const FG: Record<Variant, string> = {
 
 /** shadcn-style button (central-park): rounded-md, h-10/h-11, optional Lucide icons. */
 export function Button({ label, variant = 'default', size = 'default', icon: Icon, iconRight: IconRight, disabled, style, ...rest }: Props) {
+  const emergencyCall = Icon === Phone && /190/.test(label);
   // Main calls to action (large primary): Magic UI interactive hover button.
-  if (variant === 'default' && size === 'lg') {
+  if (variant === 'default' && size === 'lg' && !emergencyCall) {
     return <InteractiveButton label={label} icon={Icon} disabled={disabled ?? undefined} accessibilityLabel={rest.accessibilityLabel}
       onPress={rest.onPress ? () => rest.onPress?.(undefined as never) : undefined} style={typeof style === 'function' ? undefined : style} />;
   }
@@ -52,7 +54,9 @@ export function Button({ label, variant = 'default', size = 'default', icon: Ico
       {...rest}>
       <View style={styles.row}>
         {Icon && <Icon size={16} color={fg} strokeWidth={2.25} />}
-        <AppText style={[styles.label, size === 'lg' && styles.labelLg, { color: fg }]}>{label}</AppText>
+        {emergencyCall
+          ? <AnimatedShinyText color={fg} enabled={!disabled} style={[styles.label,size === 'lg' && styles.labelLg,{color:fg}]}>{label}</AnimatedShinyText>
+          : <AppText style={[styles.label, size === 'lg' && styles.labelLg, { color: fg }]}>{label}</AppText>}
         {IconRight && <IconRight size={16} color={fg} strokeWidth={2.25} />}
       </View>
     </Pressable>
