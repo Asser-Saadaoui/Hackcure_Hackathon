@@ -5,6 +5,7 @@ import { ActivityIndicator, Linking, Platform, Pressable, StyleSheet, useWindowD
 
 import { AppText } from '@/components/app-text';
 import { Button } from '@/components/button';
+import { CareNetwork } from '@/components/care-network';
 import { Hassanito } from '@/components/hassanito';
 import { RiskBadge } from '@/components/risk-badge';
 import { Screen } from '@/components/screen';
@@ -73,6 +74,7 @@ export default function HomeScreen() {
       </View>
       <View style={docked ? { width: 0 } : columns ? styles.heroMascot : undefined}><Hassanito state="idle" presentation="hero" message={copy('I’m Hassanito. We’ll take it one step at a time.', 'Je suis Hassanito. Une étape à la fois.', 'أنا حسنّيتو. نمشيو خطوة بخطوة.')} /></View>
     </View>
+    <CareNetwork />
     <View style={styles.metrics}>{metrics.map(({ Icon, label, value }) => <View key={label} style={[styles.card, styles.metric]}><Icon size={20} color={Colors.primary} /><AppText variant="title">{failed ? '—' : value ?? '—'}</AppText><AppText variant="small">{label}</AppText></View>)}</View>
     <View style={[styles.row, columns && styles.horizontal]}>
     <View style={[styles.card, styles.grow]}>

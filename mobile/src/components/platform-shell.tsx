@@ -10,6 +10,7 @@ import { Button } from './button';
 import { Hassanito } from './hassanito';
 import { Colors, Fonts } from '@/constants/theme';
 import { useI18n } from '@/i18n';
+import { EXPERIENCE } from '@/i18n/experience';
 import { getJSON, Keys } from '@/lib/storage';
 
 /** Responsive React shell; clinical screens retain ownership of their mascot state. */
@@ -69,7 +70,7 @@ export function PlatformShell({ children }: { children: ReactNode }) {
     <View style={styles.workspace}>
       <View style={styles.topbar}>
         <AppText variant="subtitle">{title}</AppText>
-        <View style={styles.context}><AppText variant="small">{arabic ? 'تونس · فضاء خاص بالجهاز' : language === 'fr' ? 'Tunisie · Espace de cet appareil' : 'Tunisia · This device’s workspace'}</AppText>
+        <View style={styles.context}><AppText variant="small">{EXPERIENCE[language].workspaceTagline}</AppText>
           <Button label={t('call190')} variant="outline" size="sm" icon={Phone} onPress={() => Linking.openURL('tel:190')} />
         </View>
       </View>
