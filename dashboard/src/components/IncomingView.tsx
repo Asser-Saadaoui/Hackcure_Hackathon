@@ -2,6 +2,8 @@ import { t } from "@/i18n";
 import { useMemo, useState } from "react";
 import { Ambulance, ChevronRight, Inbox, MessageSquare, ShieldAlert, User } from "lucide-react";
 import { LevelBadge } from "@/components/LevelBadge";
+import { MagicCard } from "@/components/ui/magic-card";
+import { Button } from "@/components/ui/button";
 import { ago, LEVEL, STATUS } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { Level, ReferralRow } from "@/types";
@@ -28,6 +30,15 @@ function loadViewed(): Set<string> {
   try { return new Set(JSON.parse(localStorage.getItem(VIEWED_KEY) ?? "[]")); } catch { return new Set(); }
 }
 
+/** Presentation filters only; server urgency and case ordering are preserved. */
+export function filterReferrals(rows: ReferralRow[], query: string, level: Level | 'ALL', status: 'ALL' | 'DECIDE' | 'ACCEPTED', unreadOnly: boolean) {
+  const search = query.trim().toLocaleLowerCase();
+  return rows.filter(r => (level === 'ALL' || r.level === level) &&
+    (!unreadOnly || r.unread > 0) &&
+    (!search || `${r.referenceCode} ${r.chiefComplaint}`.toLocaleLowerCase().includes(search)) &&
+    (status === 'ALL' || (status === 'DECIDE' ? r.status === 'SENT' || r.status === 'INFO_REQUESTED' : r.status === 'ACCEPTED')));
+}
+
 function Pill({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button aria-pressed={active} onClick={onClick} className={cn("rounded-full border px-3 py-2 text-xs font-medium transition",
@@ -40,12 +51,18 @@ export function IncomingView({ rows, scope, onScope, onOpen, error, loading }: P
   const [level, setLevel] = useState<Level | "ALL">("ALL");
   const [status, setStatus] = useState<(typeof STATUS_FILTERS)[number]["value"]>("ALL");
   const [viewed, setViewed] = useState<Set<string>>(loadViewed);
+  const [unreadOnly, setUnreadOnly] = useState(false);
 
   const waiting = rows.filter((r) => r.status === "SENT" || r.status === "INFO_REQUESTED").length;
-  const visible = useMemo(() => rows.filter((r) =>
-    (level === "ALL" || r.level === level) &&
-    (!query.trim() || `${r.referenceCode} ${r.chiefComplaint}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())) &&
-    (status === "ALL" || (status === "DECIDE" ? r.status === "SENT" || r.status === "INFO_REQUESTED" : r.status === "ACCEPTED"))), [rows, level, status, query]);
+  const visible = useMemo(() => filterReferrals(rows, query, level, status, unreadOnly), [rows, level, status, query, unreadOnly]);
+  const reset = () => { setQuery(""); setLevel("ALL"); setStatus("ALL"); setUnreadOnly(false); };
+  const unavailable = rows.length === 0 && (!!error || loading);
+  const cards = [
+    {label:"Dossiers dans cette vue", count:rows.length, Icon:Inbox, active:level === "ALL" && status === "ALL" && !unreadOnly && !query, action:reset},
+    ...(scope === "active" ? [{label:"À décider", count:waiting, Icon:User, active:status === "DECIDE", action:() => { reset(); setStatus("DECIDE"); }}] : []),
+    {label:"Urgence vitale", count:rows.filter(r => r.level === "EMERGENCY").length, Icon:ShieldAlert, active:level === "EMERGENCY", action:() => { reset(); setLevel("EMERGENCY"); }},
+    {label:"Messages à lire", count:rows.filter(r => r.unread > 0).length, Icon:MessageSquare, active:unreadOnly, action:() => { reset(); setUnreadOnly(true); }},
+  ];
 
   function open(id: string) {
     const next = new Set(viewed).add(id);
@@ -65,13 +82,26 @@ export function IncomingView({ rows, scope, onScope, onOpen, error, loading }: P
         </div>
         <div className="flex gap-1 rounded-lg bg-secondary p-1">
           {(["active", "history"] as const).map((s) => (
-            <button key={s} aria-pressed={scope === s} onClick={() => { setStatus("ALL"); onScope(s); }}
+            <button key={s} aria-pressed={scope === s} onClick={() => { reset(); onScope(s); }}
               className={cn("rounded-md px-3 py-1.5 text-sm font-medium", scope === s ? "bg-card shadow-sm" : "text-muted-foreground")}>
               {s === "active" ? t("En cours") : t("Historique")}
             </button>
           ))}
         </div>
       </div>
+
+      <section aria-label={t("Vue d’ensemble de la file")} className="space-y-2">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {cards.map(({label,count,Icon,active,action}) => <MagicCard key={label} className={cn(active && "ring-2 ring-primary/40")} gradientOpacity={0.3}>
+            <button type="button" className="flex min-h-32 w-full flex-col items-start gap-3 rounded-xl p-4 text-start focus-visible:ring-inset" aria-pressed={active} disabled={unavailable} onClick={action}>
+              <span className="flex w-full items-center justify-between"><Icon aria-hidden="true" className={cn("h-5 w-5", label === "Urgence vitale" ? "text-destructive" : "text-primary")} /><ChevronRight aria-hidden="true" className="h-4 w-4 text-muted-foreground" /></span>
+              <span className="text-2xl font-semibold tabular-nums">{unavailable ? '—' : count}</span>
+              <span className="text-xs font-medium text-muted-foreground">{t(label)}</span>
+            </button>
+          </MagicCard>)}
+        </div>
+        <p className="text-xs text-muted-foreground">{error ? t("Les compteurs peuvent être périmés.") : t("Compteurs avant filtres. Sélectionnez une carte pour filtrer la liste.")}</p>
+      </section>
 
       <div className="flex flex-wrap items-center gap-2">
         {LEVEL_FILTERS.map((f) => (
@@ -87,8 +117,11 @@ export function IncomingView({ rows, scope, onScope, onOpen, error, loading }: P
         )}
       </div>
 
-      <label className="block space-y-1 text-sm"><span>{t("Rechercher un dossier")}</span><input className="min-h-11 w-full rounded-lg border bg-card px-3" dir="auto" value={query} onChange={e => setQuery(e.target.value)} /></label>
-      {(query || level !== "ALL" || status !== "ALL") && <button className="rounded-lg border px-3 py-2 text-sm" onClick={() => { setQuery(""); setLevel("ALL"); setStatus("ALL"); }}>{t("Réinitialiser les filtres")}</button>}
+      <label className="block space-y-1 text-sm"><span>{t("Rechercher un dossier")}</span><input type="search" placeholder={t("Code du dossier ou symptômes décrits")} className="min-h-11 w-full rounded-lg border bg-card px-3" dir="auto" value={query} onChange={e => setQuery(e.target.value)} /></label>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p role="status" className="text-xs text-muted-foreground">{unavailable ? t("En attente de données") : t("{n} dossier(s) affiché(s) sur {total}", {n:visible.length,total:rows.length})}</p>
+        {(query || level !== "ALL" || status !== "ALL" || unreadOnly) && <Button size="sm" variant="outline" onClick={reset}>{t("Réinitialiser les filtres")}</Button>}
+      </div>
       {loading && rows.length === 0 && <p role="status">{t("Chargement…")}</p>}
 
       {visible.length === 0 && !error && !loading && (
@@ -100,7 +133,7 @@ export function IncomingView({ rows, scope, onScope, onOpen, error, loading }: P
         </div>
       )}
 
-      <ul className="space-y-2">
+      <ul aria-label={t("Patients orientés vers vous")} aria-busy={loading} className="space-y-2">
         {visible.map((r) => {
           const pending = r.status === "SENT" || r.status === "INFO_REQUESTED";
           const isNew = scope === "active" && !viewed.has(r.id);

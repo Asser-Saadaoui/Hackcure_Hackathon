@@ -4,6 +4,14 @@ export type Language = 'fr' | 'en' | 'ar' | 'darija';
 export const LANGUAGES = [['fr', 'Français'], ['ar', 'العربية'], ['darija', 'تونسي'], ['en', 'English']] as const;
 // French source strings are stable keys. Clinical reports and patient messages are never translated here.
 const rows: [string, string, string, string][] = [
+  ['Vue d’ensemble de la file', 'Queue overview', 'نظرة عامة على قائمة الحالات', 'نظرة على قائمة الحالات'],
+  ['Dossiers dans cette vue', 'Cases in this view', 'الحالات في هذا العرض', 'الحالات في العرض هذا'],
+  ['Messages à lire', 'Cases with unread messages', 'حالات بها رسائل غير مقروءة', 'حالات فيها مساجات ما تقراتش'],
+  ['Compteurs avant filtres. Sélectionnez une carte pour filtrer la liste.', 'Counts before filters. Select a card to filter the list.', 'الأعداد قبل التصفية. اختر بطاقة لتصفية القائمة.', 'الأعداد قبل الفلترة. اختار بطاقة باش تفلتر القائمة.'],
+  ['{n} dossier(s) affiché(s) sur {total}', 'Showing {n} of {total} cases', 'عرض {n} من أصل {total} حالة', 'نوريوا {n} من {total} حالات'],
+  ['Code du dossier ou symptômes décrits', 'Case code or described symptoms', 'رمز الحالة أو الأعراض الموصوفة', 'رمز الحالة ولا الأعراض المكتوبة'],
+  ['En attente de données', 'Waiting for data', 'في انتظار البيانات', 'نستناو المعطيات'],
+  ['Les compteurs peuvent être périmés.', 'Counts may be out of date.', 'قد تكون الأعداد قديمة.', 'الأعداد تنجم تكون قديمة.'],
   ["Photo indisponible", "Photo unavailable", "الصورة غير متاحة", "التصويرة موش متاحة"],
   ["Chargement de la photo…", "Loading photo…", "جارٍ تحميل الصورة…", "نحمّلوا التصويرة…"],
   ["Le patient, relié au bon soin", "The patient, connected to the right care", "المريض متصل بالرعاية المناسبة", "المريض مربوط بالعلاج المناسب"],

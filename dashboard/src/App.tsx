@@ -1,6 +1,7 @@
 import { t, useLanguage, LanguageSelect } from "@/i18n";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bell, ClipboardCheck, Flag, Gauge, Inbox, LogOut, Network } from "lucide-react";
+import { Bell, ClipboardCheck, Flag, Gauge, Inbox, LogOut, Network, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Brand } from "@/components/Brand";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { FeedbackView } from "@/components/FeedbackView";
@@ -190,9 +191,9 @@ export default function App() {
       <main id="main-content" tabIndex={-1} className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
           <span role="status">{loading[openId ? 'detail' : view] ? t("Chargement…") : updated[openId ? "detail" : view] ? `${t("Dernière mise à jour")} · ${new Date(updated[openId ? "detail" : view]).toLocaleTimeString(language === 'fr' ? 'fr-TN' : language === 'en' ? 'en-GB' : 'ar-TN', { hour: '2-digit', minute: '2-digit', hour12: false })}` : ''}</span>
-          <button className="rounded-lg border bg-card px-3 py-2" disabled={loading[openId ? 'detail' : view]} onClick={() => {
+          <Button variant="outline" size="sm" disabled={loading[openId ? 'detail' : view]} onClick={() => {
             if (openId) loadDetail(); else if (view === 'incoming') loadRows(); else if (view === 'network') loadNetwork(); else if (view === 'availability') loadHospital(); else if (view === 'reviews') loadReviews(); else loadFeedback();
-          }}>{t("Actualiser")}</button>
+          }}><RefreshCw className="h-4 w-4" aria-hidden="true" />{t("Actualiser")}</Button>
         </div>
         {(failures[openId ? 'detail' : view] || error) && <div role="alert" className="mb-4 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm">
           <p className="font-semibold">{t("Données non actualisées")}</p><p>{t(failures[openId ? 'detail' : view] || error || '')}</p>
