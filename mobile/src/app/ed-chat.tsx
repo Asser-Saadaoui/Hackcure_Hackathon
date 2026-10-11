@@ -1,4 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
+import { useHeaderHeight } from 'expo-router/react-navigation';
 import { AlertTriangle, Phone, ShieldAlert } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -27,6 +28,7 @@ import type { ChatKind, ChatMessage } from '@/lib/types';
 const TYPING_TIMEOUT_MS = 10_000;
 
 export default function EdChatScreen() {
+  const headerHeight = useHeaderHeight();
   const { t } = useI18n();
   const params = useLocalSearchParams<{ caseId?: string; referralId?: string }>();
   const [caseId, setCaseId] = useState<string | null>(params.caseId ?? null);
@@ -117,7 +119,7 @@ export default function EdChatScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['bottom', 'left', 'right']}>
       <GridPattern />
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={headerHeight}>
         <View style={styles.column}>
           <View style={styles.top}>
             <AppText variant="subtitle">{hospital ?? t('chatWithEd')}</AppText>

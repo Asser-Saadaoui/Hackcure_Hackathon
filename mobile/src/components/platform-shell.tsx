@@ -13,6 +13,25 @@ import { Colors, Fonts } from '@/constants/theme';
 import { useI18n } from '@/i18n';
 import { EXPERIENCE } from '@/i18n/experience';
 import { getJSON, Keys } from '@/lib/storage';
+import type { Language } from '@/lib/types';
+
+const NAV_LINKS = [
+    { path: '/home' as const, Icon: LayoutDashboard },
+    { path: '/chat' as const, Icon: MessageCircle },
+    { path: '/history' as const, Icon: History },
+    { path: '/settings' as const, Icon: Settings },
+  ];
+
+function navigationLabels(language: Language) {
+  return language === 'ar' || language === 'darija'
+    ? ['لوحة المتابعة', 'وصف الأعراض', 'المحادثات السابقة', 'الإعدادات']
+    : language === 'fr' ? ['Tableau de bord', 'Mes symptômes', 'Historique', 'Paramètres']
+    : ['Overview', 'Symptom intake', 'My history', 'Settings'];
+}
+const navigate = async (target: '/home' | '/chat' | '/history' | '/settings') => {
+  if (target === '/chat' && !await getJSON(Keys.onboarding)) return router.push('/welcome');
+  router.push(target);
+};
 
 /** Responsive React shell; clinical screens retain ownership of their mascot state. */
 export function PlatformShell({ children }: { children: ReactNode }) {
@@ -22,30 +41,13 @@ export function PlatformShell({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const wide = Platform.OS === 'web' && width >= 900 && fontScale <= 1.4;
   const arabic = language === 'ar' || language === 'darija';
-  const labels = arabic ? ['لوحة المتابعة', 'وصف الأعراض', 'المحادثات السابقة', 'الإعدادات']
-    : language === 'fr' ? ['Tableau de bord', 'Mes symptômes', 'Historique', 'Paramètres']
-    : ['Overview', 'Symptom intake', 'My history', 'Settings'];
-  const links = [
-    { path: '/home' as const, Icon: LayoutDashboard },
-    { path: '/chat' as const, Icon: MessageCircle },
-    { path: '/history' as const, Icon: History },
-    { path: '/settings' as const, Icon: Settings },
-  ];
-  const navigate = async (target: '/home' | '/chat' | '/history' | '/settings') => {
-    if (target === '/chat' && !await getJSON(Keys.onboarding)) return router.push('/welcome');
-    router.push(target);
-  };
+  const labels = navigationLabels(language);
+  const links = NAV_LINKS;
   // Emergency pages stay focused on instructions and contacting help.
   if (path === '/emergency' || path === '/welcome' || path === '/') return <>{children}</>;
   if (!wide) return <View style={styles.workspace}>
     <View style={styles.content}>{children}</View>
     {(path === '/history' || path === '/settings') && <View style={styles.companion}><Hassanito compact /></View>}
-    <SafeAreaView edges={['bottom']} style={styles.mobileNav}>{links.map(({ path: target, Icon }, index) => <Pressable key={target}
-      accessibilityRole="button" accessibilityLabel={labels[index]} accessibilityState={{ selected: path === target }}
-      onPress={() => navigate(target)} style={styles.mobileLink}>
-      <Icon size={20} color={path === target ? Colors.primary : Colors.mutedFg} />
-      <AppText style={[styles.mobileLabel, path === target && { color: Colors.primary }]}>{labels[index]}</AppText>
-    </Pressable>)}</SafeAreaView>
   </View>;
   const selected = links.findIndex(link => link.path === path);
   const title = selected >= 0 ? labels[selected] : t('patientSection');
@@ -81,6 +83,23 @@ export function PlatformShell({ children }: { children: ReactNode }) {
   </View>;
 }
 
+/** Compact navigation belongs below the route header, outside the scrolling page content. */
+export function CompactNavigation() {
+  const path = usePathname();
+  const {language} = useI18n();
+  if (path === '/emergency' || path === '/welcome' || path === '/') return null;
+  const labels = navigationLabels(language);
+  const links = NAV_LINKS;
+  return <SafeAreaView edges={['left','right']} style={styles.mobileNav}>
+    {links.map(({path:target,Icon},index) => <Pressable key={target}
+      accessibilityRole="button" accessibilityLabel={labels[index]} accessibilityState={{selected:path === target}}
+      onPress={() => navigate(target)} style={({pressed}) => [styles.mobileLink, path === target && styles.mobileActive, pressed && {opacity:.75}]}>
+      <Icon size={20} color={path === target ? Colors.primary : Colors.mutedFg} />
+      <AppText style={[styles.mobileLabel,path === target && {color:Colors.primary}]}>{labels[index]}</AppText>
+    </Pressable>)}
+  </SafeAreaView>;
+}
+
 const styles = StyleSheet.create({
   shell: { flex: 1, flexDirection: 'row', backgroundColor: Colors.background },
   sidebar: { width: 200, paddingHorizontal: 14, paddingVertical: 18, gap: 16, backgroundColor: Colors.navy },
@@ -96,7 +115,8 @@ const styles = StyleSheet.create({
   context: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   content: { flex: 1 },
   companion: { paddingHorizontal: 28, paddingBottom: 16 },
-  mobileNav: { flexDirection: 'row', padding: 8, backgroundColor: Colors.card, borderTopWidth: 1, borderColor: Colors.border },
+  mobileNav: { flexDirection: 'row', padding: 6, backgroundColor: Colors.card, borderBottomWidth: 1, borderColor: Colors.border },
+  mobileActive: {backgroundColor:Colors.accent,borderRadius:12},
   mobileLink: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 4, minHeight: 48, padding: 4 },
   mobileLabel: { fontSize: 10, textAlign: 'center', color: Colors.mutedFg },
 });

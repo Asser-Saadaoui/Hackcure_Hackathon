@@ -4,6 +4,7 @@ import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
 import { Inter_700Bold } from '@expo-google-fonts/inter/700Bold';
 import { useFonts } from 'expo-font';
 import { Stack, usePathname } from 'expo-router';
+import { getHeaderTitle, Header } from 'expo-router/react-navigation';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
@@ -16,7 +17,7 @@ import { MagicSurfaceEffects } from '@/components/magic-surface-effects';
 
 import { BrandTitle } from '@/components/brand-title';
 import { ConnectionBanner } from '@/components/connection-banner';
-import { PlatformShell } from '@/components/platform-shell';
+import { CompactNavigation, PlatformShell } from '@/components/platform-shell';
 import { Colors } from '@/constants/theme';
 import { LanguageProvider, useI18n } from '@/i18n';
 
@@ -38,6 +39,10 @@ function Navigator() {
           headerTitle: () => <BrandTitle section={t('patientSection')} />,
           headerTitleAlign: 'left',
           headerShown: !desktop,
+          header: desktop ? undefined : ({options,route,back}) => <View>
+            <Header {...options} title={getHeaderTitle(options,route.name)} back={back} />
+            <CompactNavigation />
+          </View>,
           contentStyle: { backgroundColor: Colors.background },
         }}>
         <Stack.Screen name="index" options={{ headerShown: false }} />

@@ -1,5 +1,6 @@
 import { Image } from 'expo-image';
 import { router, Stack } from 'expo-router';
+import { useHeaderHeight } from 'expo-router/react-navigation';
 import { ArrowRight, ClipboardList, History, Phone, RotateCcw, Settings, ShieldAlert, Stethoscope } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -53,6 +54,7 @@ const timeOf = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: '2-
 const localId = () => 'local-' + Math.random().toString(36).slice(2);
 
 export default function ChatScreen() {
+  const headerHeight = useHeaderHeight();
   const { t, language } = useI18n();
   const [caseId, setCaseId] = useState<string | null>(null);
   const [items, setItems] = useState<Item[]>([]);
@@ -212,7 +214,7 @@ export default function ChatScreen() {
       />
       <SafeAreaView style={styles.safe} edges={['bottom', 'left', 'right']}>
         <GridPattern />
-        <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
+        <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={headerHeight}>
           <View style={styles.column}>
             {/* Always reachable: emergencies never wait for the conversation. */}
             <View style={styles.emergencyWrap}>
