@@ -77,6 +77,7 @@ export interface CaseDetail {
   decision: Decision | null;
   explain?: PatientExplain | null;
   turns: Turn[];
+  photos?: CasePhoto[];      // added in the triage chat, for the hospital team (never used by the AI)
   location: CaseLocation | null;
   referral: Referral | null;
   createdAt: string;
@@ -121,7 +122,8 @@ export interface ChatMessage {
   text: string;
   options?: string[];         // QUESTION: answer choices (empty = free text)
   replyTo?: string;           // ANSWER: id of the QUESTION it answers
-                              // IMAGE: text is the optional caption; the photo is at chatImageSource()
+  sha256?: string;            // IMAGE: SHA-256 of the stored photo (integrity check)
+                              // IMAGE: text is the optional caption; the photo is at chatPhotoPath()
   createdAt: string;
 }
 
@@ -192,3 +194,10 @@ export type PatientEvent =
   | { type: 'tracking.position'; caseId: string; ambulance: AmbulanceView }
   /** A clinician reviewed an UNCERTAIN case (approved / overrode the level). */
   | { type: 'case.reviewed'; caseId: string; level: RiskLevel; decision: Decision };
+
+/** Photo the patient added in the triage chat: for the hospital team only, never used by the AI. */
+export interface CasePhoto {
+  id: string;
+  sha256: string;
+  createdAt: string;
+}

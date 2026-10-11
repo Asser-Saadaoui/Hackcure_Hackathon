@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app import config, hospitals, services
+from app import config, hospitals, iot, photo_security, services
 from app.db import get_db
 from app.deps import clinician, hospital_staff, staff
 from app.events import sse
@@ -201,13 +201,30 @@ def chat(referral_id: str, body: ChatIn, user: StaffUser = Depends(hospital_staf
     return services.chat_view(services.staff_chat(db, r, user, body.text.strip(), body.kind, body.options))
 
 
+@router.get('/referrals/{referral_id}/vitals')
+def vitals(referral_id: str, user: StaffUser = Depends(hospital_staff), db: Session = Depends(get_db)):
+    """Live readings of the SIMULATED ambulance monitor (iot-sim/). Display only: never used by the AI."""
+    my_referral(db, user, referral_id)
+    return dict(readings=iot.recent(db, referral_id), simulated=True)
+
+
+@router.get('/referrals/{referral_id}/photos/{image_id}')
+def case_photo(referral_id: str, image_id: str, user: StaffUser = Depends(hospital_staff), db: Session = Depends(get_db)):
+    """Photo the patient added during triage (case-level), for the hospital the case is referred to."""
+    r = my_referral(db, user, referral_id)
+    img, data = services.read_case_photo(db, r.case_id, image_id)
+    services.audit(db, user.email, 'case.image_viewed', r.case_id, sha256=img.sha256)
+    db.commit()
+    return Response(data, media_type=img.content_type, headers={**photo_security.HEADERS, 'X-Content-SHA256': img.sha256})
+
+
 @router.get('/referrals/{referral_id}/chat/{message_id}/image')
 def chat_image(referral_id: str, message_id: str, user: StaffUser = Depends(hospital_staff), db: Session = Depends(get_db)):
     my_referral(db, user, referral_id)
-    img = services.chat_image(db, referral_id, message_id)
-    services.audit(db, user.email, 'chat.image_viewed', img.case_id)
+    img, data = services.chat_image(db, referral_id, message_id)
+    services.audit(db, user.email, 'chat.image_viewed', img.case_id, sha256=img.sha256)
     db.commit()
-    return Response(img.data, media_type=img.content_type, headers={'Cache-Control': 'private, max-age=86400'})
+    return Response(data, media_type=img.content_type, headers={**photo_security.HEADERS, 'X-Content-SHA256': img.sha256 or ''})
 
 
 # ---- availability (simulator + staff override) -----------------------------------

@@ -1,5 +1,5 @@
 import { router, usePathname } from 'expo-router';
-import { ChevronLeft, ChevronRight, History, LayoutDashboard, MessageCircle, Phone, Settings, ShieldCheck } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, History, LayoutDashboard, MessageCircle, Phone, Settings } from 'lucide-react-native';
 import { useState, type ReactNode } from 'react';
 import { Image, Linking, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -55,15 +55,12 @@ export function PlatformShell({ children }: { children: ReactNode }) {
         {links.map(({ path: target, Icon }, index) => <Pressable key={target} accessibilityRole="button" accessibilityLabel={labels[index]}
           accessibilityState={{ selected: path === target }} onPress={() => navigate(target)}
           style={({ pressed }) => [styles.link, path === target && styles.active, pressed && { opacity: .75 }]}>
-          <Icon size={19} color={path === target ? '#FFFFFF' : '#B8CCE5'} />
+          <Icon size={17} color={path === target ? '#FFFFFF' : '#B8CCE5'} />
           {!collapsed && <AppText style={[styles.linkText, path === target && { color: '#FFFFFF' }]}>{labels[index]}</AppText>}
         </Pressable>)}
       </View>
-      {!collapsed && <View style={styles.sidebarNote}><ShieldCheck size={20} color="#A8CBFB" />
-        <AppText variant="small" style={{ color: '#CBDCF0' }}>{arabic ? 'نموذج تجريبي. لا يعوّض الطبيب.' : language === 'fr' ? 'Prototype. Ne remplace pas un médecin.' : 'Integration prototype. Does not replace a clinician.'}</AppText>
-      </View>}
       <Pressable accessibilityRole="button" accessibilityLabel={collapsed ? 'Expand navigation' : 'Collapse navigation'}
-        accessibilityState={{ expanded: !collapsed }} onPress={() => setCollapsed(value => !value)} style={[styles.link, collapsed && { marginTop: 'auto' }]}>
+        accessibilityState={{ expanded: !collapsed }} onPress={() => setCollapsed(value => !value)} style={[styles.link, { marginTop: 'auto' }]}>
         {collapsed ? <ChevronRight size={20} color="#B8CCE5" /> : <ChevronLeft size={20} color="#B8CCE5" />}
         {!collapsed && <AppText variant="small" style={{ color: '#B8CCE5' }}>{arabic ? 'تصغير القائمة' : language === 'fr' ? 'Réduire' : 'Collapse'}</AppText>}
       </Pressable>
@@ -84,17 +81,16 @@ export function PlatformShell({ children }: { children: ReactNode }) {
 
 const styles = StyleSheet.create({
   shell: { flex: 1, flexDirection: 'row', backgroundColor: Colors.background },
-  sidebar: { width: 254, padding: 24, gap: 28, backgroundColor: Colors.navy },
-  collapsed: { width: 78, paddingHorizontal: 12, alignItems: 'center' },
-  eyebrow: { fontSize: 10, fontFamily: Fonts.semibold, letterSpacing: 1.8, color: '#9DB5D3', marginTop: 12 },
-  navigation: { gap: 8 },
-  link: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 13, borderRadius: 12 },
+  sidebar: { width: 200, paddingHorizontal: 14, paddingVertical: 18, gap: 16, backgroundColor: Colors.navy },
+  collapsed: { width: 64, paddingHorizontal: 10, alignItems: 'center' },
+  eyebrow: { fontSize: 9, fontFamily: Fonts.semibold, letterSpacing: 1.6, color: '#9DB5D3', marginTop: 4 },
+  navigation: { gap: 4 },
+  link: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9, paddingHorizontal: 10, borderRadius: 10 },
   active: { backgroundColor: '#2B4C79', borderStartWidth: 3, borderColor: '#FF7C8C' },
-  linkText: { fontSize: 13, fontFamily: Fonts.medium, color: '#B8CCE5' },
-  sidebarNote: { marginTop: 'auto', padding: 16, borderRadius: 16, backgroundColor: '#203C61', gap: 10 },
+  linkText: { fontSize: 12.5, fontFamily: Fonts.medium, color: '#B8CCE5' },
   footer: { color: '#9DB5D3', fontSize: 11 },
   workspace: { flex: 1, minWidth: 0 },
-  topbar: { backgroundColor: '#FFFFFF', paddingHorizontal: 28, paddingVertical: 22, borderBottomWidth: 1, borderColor: Colors.border, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' },
+  topbar: { backgroundColor: '#FFFFFF', paddingHorizontal: 24, paddingVertical: 12, borderBottomWidth: 1, borderColor: Colors.border, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' },
   context: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   content: { flex: 1 },
   companion: { paddingHorizontal: 28, paddingBottom: 16 },

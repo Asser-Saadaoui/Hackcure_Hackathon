@@ -1,4 +1,5 @@
 import type {
+  CasePhoto,
   CaseDetail, Language, CaseLocation, CaseSummary, ChatKind, ChatMessage,
   PatientEvent, PatientReport, Session, TrackingView, TurnResult,
 } from '@/lib/types';
@@ -32,6 +33,8 @@ export interface PatientApi {
   getChat(referralId: string): Promise<ChatMessage[]>;
   /** kind: TEXT, WORSE ("I feel worse") or ANSWER (reply to a hospital QUESTION; pass questionId). */
   sendChat(referralId: string, text: string, kind?: ChatKind, questionId?: string): Promise<ChatMessage>;
+  /** Photo added in the triage chat, kept for the hospital team. Never sent to the AI (no effect on the triage). */
+  addCasePhoto(caseId: string, base64: string): Promise<CasePhoto>;
   /** Photo for the ED team, base64 JPEG/PNG/WebP (max 8 MB). Never read by the AI. */
   sendChatImage(referralId: string, base64: string, caption?: string): Promise<ChatMessage>;
 

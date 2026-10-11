@@ -19,8 +19,8 @@ from rule_engine import evaluate as evaluate_rules
 from triage_pipeline import process_turn
 
 VERSION = 'sahhanito-turn-0.1'
-MAX_QUESTIONS = 5
-MIN_QUESTIONS = 3   # before a non-emergency final decision, at least this many questions in total
+MAX_QUESTIONS = 6   # questions in the interview (the LLM may say "done" earlier)
+MIN_QUESTIONS = 3   # before a final decision, at least this many questions in total
 
 EMERGENCY_MESSAGE = {
     'fr': "Ceci peut être une urgence. Appelez le 190 (SAMU) maintenant. Nous prévenons l'hôpital le plus adapté.",
@@ -67,15 +67,27 @@ def triage_turn(state, message, previous_question_id=None, *, language='fr', mod
         intake_field, previous_question_id = previous_question_id[len('intake:'):], None
     if previous_question_id and previous_question_id.startswith('confirm:'):
         previous_question_id = None   # answer to a confirmation question (handled below), not an NLP field
+    prev_meta = (state or {}).get('sahhanito') or {}
+    restate = prev_meta.get('pending_restate') if mode == 'interview' else None
+    text = message
+    if restate and len((message or '').split()) <= 2:
+        if interviewer_module.POLAR_YES.match(message or '') and restate.get('yes'):
+            text = restate['yes']
+        elif interviewer_module.POLAR_NO.match(message or '') and restate.get('no'):
+            text = restate['no']
     try:
-        r = process_turn(state, message, previous_question_id, language=plang, ml_bundle=ml_bundle)
+        r = process_turn(state, text, previous_question_id, language=plang, ml_bundle=ml_bundle)
     except ValueError:
         if previous_question_id is None:
             raise
         # Stale or foreign question id (e.g. the app resent an old one): keep the message, drop the link.
-        r = process_turn(state, message, None, language=plang, ml_bundle=ml_bundle)
+        r = process_turn(state, text, None, language=plang, ml_bundle=ml_bundle)
     st = r['patient_state']
     meta = st.setdefault('sahhanito', {'asked': {}, 'llm_notes': {}})
+    meta.pop('pending_restate', None)
+    if text != message:
+        # Not the patient's own words: a critical sign found only here is confirmed before an emergency.
+        meta.setdefault('restated_turns', []).append(len(st['turns']) - 1)
     meta.setdefault('intake', {})
     meta.setdefault('intake_turns', {})
     # Answer to "did this start suddenly / recently?": an old, long-standing sign is ruled out for this case.
@@ -94,50 +106,45 @@ def triage_turn(state, message, previous_question_id=None, *, language='fr', mod
     meta['nlp_explanation'] = assessment['nlp_explanation']
     decided = decision_policy.decide(assessment, rules, language)
 
-    asked = len(st.get('asked_questions', []))
-    question = r['next_question']
-    if question and question['field'] is None and rules['triggered_rules']:
-        question = None   # generic "describe your problem": pointless once a rule identified it
-        st.pop('pending_question', None)
-    # The pipeline re-asks a question whose answer was unclear. Allow one repeat of a specific question, and ask
-    # the open "describe your problem" only once: after that the adaptive intake (LLM) rephrases instead.
-    repeats = meta.setdefault('pipeline_asked', {})
-    if question and repeats.get(str(question['field']), 0) >= (1 if question['field'] is None else 2):
-        question = None
-        st.pop('pending_question', None)
+    # The interview is led by the LLM (questions chosen from the conversation, never dictated by the rules or the
+    # NLP question bank). The decision is made once the LLM has enough (or after MAX_QUESTIONS), from the whole
+    # conversation. Only exception: a critical sign in the patient's own words decides at once.
+    st.pop('pending_question', None)      # the NLP question bank does not drive the interview
+    asked = len(st.get('asked_questions', [])) + len(meta['intake'])
     reply = None
-    confirm_ids = _needs_confirmation(st, rules, meta, message) if mode == 'interview' and decided['level'] == 'EMERGENCY' else None
+    urgent_now = decided['level'] == 'EMERGENCY' and _critical_in_own_words(st, rules, meta)
+    next_q = None
+    if mode == 'interview' and not urgent_now and asked < MAX_QUESTIONS and not meta.get('interview_done'):
+        next_q = interviewer_module.ask_adaptive_intake(interviewer or default_interviewer(), meta['intake'], _history(st),
+                                                        language, message, purpose='interview',
+                                                        allow_done=asked >= MIN_QUESTIONS)
+        if next_q and next_q.get('done'):
+            meta['interview_done'] = True
+            meta['llm_notes'].update(next_q.get('collected') or {})
+            next_q = None
+    confirm_ids = _needs_confirmation(st, rules, meta) if mode == 'interview' and not next_q and decided['level'] == 'EMERGENCY' else None
     if mode == 'monitor':
         status = 'monitor'
-    elif confirm_ids:
-        # A critical sign that rests only on a "Yes" to our own question: one quick confirmation first.
+    elif next_q:
         status = 'question'
-        text, options = interviewer_module.confirm_question(confirm_ids[0], language, message)
+        field = next_q['field']
+        meta['pending_intake'] = field
+        if next_q.get('restate'):
+            meta['pending_restate'] = next_q['restate']
+        meta['intake_turns'][str(len(st['turns']))] = next_q['text']
+        meta['llm_notes'].update(next_q.get('collected') or {})
+        reply = dict(text=next_q['text'], quick_replies=next_q['quick_replies'],
+                     question_id=f'intake:{field}', field=field, source=next_q['source'])
+    elif confirm_ids:
+        # A critical sign that rests only on a "Yes" (or our restatement of it): one quick confirmation first.
+        status = 'question'
+        text_q, options = interviewer_module.confirm_question(confirm_ids[0], language, message)
         meta['pending_confirm'] = confirm_ids
-        meta['intake_turns'][str(len(st['turns']))] = text
-        reply = dict(text=text, quick_replies=options, question_id='confirm:' + ','.join(confirm_ids), field='confirm', source='template')
+        meta['intake_turns'][str(len(st['turns']))] = text_q
+        reply = dict(text=text_q, quick_replies=options, question_id='confirm:' + ','.join(confirm_ids), field='confirm', source='template')
     elif decided['level'] == 'EMERGENCY':
         status = 'emergency'
         reply = _decision_reply(st, rules, decided, language, interviewer)
-    elif question and asked < MAX_QUESTIONS:
-        status = 'question'
-        repeats[str(question['field'])] = repeats.get(str(question['field']), 0) + 1
-        history = _history(st)
-        asked_reply = (interviewer or default_interviewer()).ask(question, history, language, message)
-        meta['asked'][question['id']] = asked_reply['text']
-        meta['llm_notes'].update(asked_reply.get('collected') or {})
-        reply = dict(text=asked_reply['text'], quick_replies=asked_reply['quick_replies'],
-                     question_id=question['id'], field=question['field'], source=asked_reply['source'])
-    elif mode == 'interview' and (asked_reply := _intake_question(st, meta, decided, asked, language, message, interviewer)):
-        # Before deciding: UNCERTAIN collects what a clinician needs (up to 5); HIGH / LOW ask follow-ups until
-        # at least MIN_QUESTIONS in total. Every answer goes back through the NLP and the rules.
-        status = 'question'
-        field = asked_reply['field']
-        meta['pending_intake'] = field
-        meta['intake_turns'][str(len(st['turns']))] = asked_reply['text']
-        meta['llm_notes'].update(asked_reply.get('collected') or {})
-        reply = dict(text=asked_reply['text'], quick_replies=asked_reply['quick_replies'],
-                     question_id=f'intake:{field}', field=field, source=asked_reply['source'])
     elif decided['level'] == 'UNCERTAIN':
         status = 'under_review'
         reply = _decision_reply(st, rules, decided, language, interviewer)
@@ -170,21 +177,31 @@ def triage_turn(state, message, previous_question_id=None, *, language='fr', mod
     )
 
 
-def _needs_confirmation(state, rules, meta, message):
+def _own_words(state, meta, e):
+    """True when this evidence comes from something the patient wrote (not a bare "Yes", not our restatement of it)."""
+    restated = set(meta.get('restated_turns', []))
+    turn = e.get('turn_id')
+    if isinstance(turn, int) and turn in restated:
+        return False
+    text = (e.get('text') or '').strip()
+    if e.get('source') == 'text':
+        return True
+    said = [(t.get('answer') or '').lower() for i, t in enumerate(state.get('turns', [])) if i not in restated]
+    return bool(text) and not interviewer_module.POLAR_YES.match(text) and any(text.lower() in x for x in said)
+
+
+def _critical_in_own_words(state, rules, meta):
+    critical = [x for x in rules['triggered_rules'] if x['severity'] == 'critical']
+    return any(x['id'] in meta.get('confirmed_rules', []) or any(_own_words(state, meta, e) for e in x['evidence'])
+               for x in critical)
+
+
+def _needs_confirmation(state, rules, meta):
     """Critical rules whose only support is a "Yes" to one of our questions (nothing in the patient's own words)."""
     critical = [x for x in rules['triggered_rules'] if x['severity'] == 'critical']
-    if not critical or not interviewer_module.POLAR_YES.match(message or ''):
+    if not critical or _critical_in_own_words(state, rules, meta):
         return None
-    if any(x['id'] in meta.get('confirmed_rules', []) for x in critical):
-        return None
-    said = [(t.get('answer') or '').lower() for t in state.get('turns', [])]
-    def own_words(e):
-        text = (e.get('text') or '').strip()
-        return e.get('source') == 'text' or (text and not interviewer_module.POLAR_YES.match(text)
-                                               and any(text.lower() in s for s in said))
-    if any(own_words(e) for x in critical for e in x['evidence']):
-        return None
-    return [x['id'] for x in critical]
+    return [x['id'] for x in critical if x['id'] not in meta.get('confirmed_rules', [])] or None
 
 
 def _reported(state, lang):
@@ -234,20 +251,6 @@ def _explain(state, ml, ml_bundle):
         return explain_nlp(state, ml_bundle or _cached_state_model('experimental_v3'))
     except Exception:
         return None
-
-
-def _intake_question(st, meta, decided, asked, language, message, interviewer):
-    itv = interviewer or default_interviewer()
-    total = asked + len(meta['intake'])
-    if decided['level'] == 'UNCERTAIN':
-        purpose, limit = 'uncertain', interviewer_module.MAX_INTAKE
-    elif decided['level'] in ('HIGH', 'LOW') and total < MIN_QUESTIONS:
-        purpose, limit = 'followup', len(meta['intake']) + (MIN_QUESTIONS - total)
-    else:
-        return None
-    if not interviewer_module.intake_open(meta['intake'], itv, limit):
-        return None
-    return interviewer_module.ask_adaptive_intake(itv, meta['intake'], _history(st), language, message, purpose)
 
 
 def _history(state):

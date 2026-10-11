@@ -1,4 +1,4 @@
-import type { Alternative, CaseDetail, ChatMessage, Hospital, ReferralRow, ReviewItem, Scenario, SimSettings, StaffUser, Tracking, TriageFeedback } from "@/types";
+import type { Alternative, CaseDetail, ChatMessage, Hospital, ReferralRow, ReviewItem, Scenario, SimSettings, StaffUser, Tracking, TriageFeedback, VitalReading } from "@/types";
 
 const BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "";
 const TOKEN_KEY = "sahhanito.staff.token";
@@ -48,6 +48,7 @@ export const api = {
   accept: (id: string, arrivalMode: "SELF" | "AMBULANCE", note?: string) => call<CaseDetail>("POST", `/staff/referrals/${id}/accept`, { arrivalMode, note }),
   reject: (id: string, reason: string, explanation: string) => call<{ ok: boolean }>("POST", `/staff/referrals/${id}/reject`, { reason, explanation }),
   tracking: (id: string) => call<Tracking>("GET", `/staff/referrals/${id}/tracking`),
+  vitals: (id: string) => call<{ readings: VitalReading[]; simulated: true }>("GET", `/staff/referrals/${id}/vitals`),
   alternatives: (id: string) => call<Alternative[]>("GET", `/staff/referrals/${id}/alternatives`),
   reroute: (id: string, facilityKey: string | null, reason: string, explanation: string) =>
     call<{ ok: boolean; facilityName: string | null }>("POST", `/staff/referrals/${id}/reroute`, { facilityKey, reason, explanation }),
@@ -88,11 +89,25 @@ export async function openReportPdf(referralId: string): Promise<void> {
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
-/** Photo sent by the patient in the chat, fetched with the session header (no token in the URL). Caller revokes the URL. */
-export async function chatImageUrl(referralId: string, messageId: string): Promise<string> {
-  const resp = await fetch(`${BASE}/api/v1/staff/referrals/${referralId}/chat/${messageId}/image`, { headers: { Authorization: `Bearer ${session.get() ?? ""}` } });
+/** "verified": SHA-256 of the bytes = the hash announced in the chat message (and by the server);
+ *  "unchecked": no hash to compare, or no WebCrypto (plain-HTTP origin). A mismatch throws: the photo is not shown. */
+export type Integrity = "verified" | "unchecked";
+
+/** Patient photo (path under /api/v1/staff), fetched with the session header (no token in the URL), integrity-checked.
+ *  Caller revokes the URL. */
+export async function verifiedImageUrl(path: string, expectedSha256?: string): Promise<{ url: string; integrity: Integrity; sha256: string | null }> {
+  const resp = await fetch(`${BASE}/api/v1/staff${path}`,
+    { headers: { Authorization: `Bearer ${session.get() ?? ""}` }, cache: "no-store" });
   if (!resp.ok) throw new ApiError(`Erreur ${resp.status}`, resp.status);
-  return URL.createObjectURL(await resp.blob());
+  const blob = await resp.blob();
+  const announced = [expectedSha256, resp.headers.get("X-Content-SHA256")].filter((x): x is string => !!x).map((x) => x.toLowerCase());
+  let actual: string | null = null;
+  if (globalThis.crypto?.subtle) {
+    const digest = await crypto.subtle.digest("SHA-256", await blob.arrayBuffer());
+    actual = Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
+    if (announced.some((x) => x !== actual)) throw new ApiError("Intégrité de la photo non vérifiée : affichage bloqué.", 0);
+  }
+  return { url: URL.createObjectURL(blob), integrity: actual && announced.length ? "verified" : "unchecked", sha256: actual };
 }
 
 /** HL7 FHIR R4 document Bundle of the case, downloaded as JSON for import into the hospital's own system. */

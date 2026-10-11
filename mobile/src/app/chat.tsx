@@ -1,7 +1,8 @@
+import { Image } from 'expo-image';
 import { router, Stack } from 'expo-router';
 import { ArrowRight, ClipboardList, History, Phone, RotateCcw, Settings, ShieldAlert, Stethoscope } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Alert } from '@/components/alert';
@@ -12,12 +13,14 @@ import { ChatBubble } from '@/components/chat/chat-bubble';
 import { ChatInput } from '@/components/chat/chat-input';
 import { ExplainCard } from '@/components/chat/explain-card';
 import { TypingIndicator } from '@/components/chat/typing-indicator';
+import { ChatPhoto } from '@/components/ed-chat/chat-photo';
 import { Hassanito } from '@/components/hassanito';
-import { PrototypeNotice } from '@/components/prototype-notice';
+import { usePhotoCapture } from '@/components/photo/use-photo-capture';
+import { GridPattern } from '@/components/grid-pattern';
 import { Colors, Fonts, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useI18n } from '@/i18n';
 import { api } from '@/lib/api';
-import { HttpError } from '@/lib/http-api';
+import { casePhotoPath, HttpError } from '@/lib/http-api';
 import { getJSON, Keys, remove, setJSON } from '@/lib/storage';
 import type { PatientExplain, Turn, TurnResult } from '@/lib/types';
 
@@ -38,7 +41,13 @@ type Item = {
   text: string;
   time: string;
   failed?: boolean;
+  /** A photo for the hospital team (never sent to the AI: no effect on the triage). */
+  photoId?: string;
+  /** Taken before the first message: kept on the device, uploaded once the case exists. */
+  photoLocal?: string;
 };
+
+const dataUri = (data: string) => (data.startsWith('data:') ? data : `data:image/jpeg;base64,${data}`);
 
 const timeOf = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 const localId = () => 'local-' + Math.random().toString(36).slice(2);
@@ -57,6 +66,28 @@ export default function ChatScreen() {
   const [outcome, setOutcome] = useState<{ kind: 'emergency' | 'result' | 'under_review'; caseId: string } | null>(null);
   const [explain, setExplain] = useState<PatientExplain | null>(null);
   const scrollRef = useRef<ScrollView>(null);
+  // Photos go to the hospital team with the case; they are never sent to the AI (no effect on the triage).
+  const photo = usePhotoCapture(async (data) => {
+    if (!caseId) {
+      // No case yet: keep it here, it goes with the first message.
+      setItems((list) => [...list, { id: localId(), role: 'PATIENT', text: '', time: timeOf(new Date().toISOString()), photoLocal: data }]);
+      return;
+    }
+    const p = await api.addCasePhoto(caseId, data);
+    setItems((list) => [...list, { id: p.id, role: 'PATIENT', text: '', time: timeOf(p.createdAt), photoId: p.id }]);
+  }, t('photoHintTriage'));
+
+  /** Upload the photos taken before the case existed. */
+  const uploadPending = async (newCaseId: string, pending: Item[]) => {
+    for (const item of pending) {
+      try {
+        const p = await api.addCasePhoto(newCaseId, item.photoLocal!);
+        setItems((list) => list.map((i) => (i.id === item.id ? { ...i, photoId: p.id, photoLocal: undefined } : i)));
+      } catch {
+        setItems((list) => list.map((i) => (i.id === item.id ? { ...i, failed: true } : i)));
+      }
+    }
+  };
 
   // Resume the case in progress (if the backend still has it).
   const resume = useCallback(() => {
@@ -66,7 +97,11 @@ export default function ChatScreen() {
         const c = await api.getCase(id);
         setResumeError(false);
         setCaseId(c.id);
-        setItems(c.turns.map((tr) => ({ id: tr.id, role: tr.role, text: tr.text, time: timeOf(tr.createdAt) })));
+        const entries = [
+          ...c.turns.map((tr) => ({ at: tr.createdAt, item: { id: tr.id, role: tr.role, text: tr.text, time: timeOf(tr.createdAt) } as Item })),
+          ...(c.photos ?? []).map((p) => ({ at: p.createdAt, item: { id: p.id, role: 'PATIENT', text: '', time: timeOf(p.createdAt), photoId: p.id } as Item })),
+        ].sort((a, b) => a.at.localeCompare(b.at));
+        setItems(entries.map((e) => e.item));
         setQuickReplies(c.turns.at(-1)?.quickReplies ?? []);
         if (c.status !== 'TRIAGING' && c.status !== 'CLOSED') {
           setExplain(c.explain ?? null);
@@ -129,6 +164,7 @@ export default function ChatScreen() {
       if (!caseId) {
         setCaseId(result.caseId);
         await setJSON(Keys.currentCase, result.caseId);
+        uploadPending(result.caseId, items.filter((i) => i.photoLocal));
       }
       setDegraded(result.kind === 'degraded' ? text : null);
       handleResult(result);
@@ -175,6 +211,7 @@ export default function ChatScreen() {
         }}
       />
       <SafeAreaView style={styles.safe} edges={['bottom', 'left', 'right']}>
+        <GridPattern />
         <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
           <View style={styles.column}>
             {/* Always reachable: emergencies never wait for the conversation. */}
@@ -194,15 +231,28 @@ export default function ChatScreen() {
             <View style={styles.companion}><Hassanito compact state={mascotState === 'alert' ? 'alert' : sending ? 'thinking' : listening ? 'listening' : mascotState} /></View>
 
             <ScrollView ref={scrollRef} style={styles.flex} contentContainerStyle={styles.messages} onContentSizeChange={scrollToEnd}>
-              <PrototypeNotice />
               {resumeError && <Alert variant="warning" title={t('errorRetry')}>
                 <Button label={t('retry')} variant="outline" onPress={resume} disabled={sending} />
               </Alert>}
               <ChatBubble role="ASSISTANT" text={t('chatGreeting')} />
               {items.map((item) => (
                 <View key={item.id} style={styles.itemWrap}>
-                  <ChatBubble role={item.role} text={item.text} time={item.time} failed={item.failed} />
-                  {item.failed && (
+                  {item.photoId && caseId ? (
+                    <View style={styles.photoItem}>
+                      <ChatPhoto path={casePhotoPath(caseId, item.photoId)} />
+                      <AppText variant="small" style={styles.photoNote}>{t('photoNotUsed')} · {item.time}</AppText>
+                    </View>
+                  ) : item.photoLocal ? (
+                    <View style={styles.photoItem}>
+                      <Image source={{ uri: dataUri(item.photoLocal) }} style={styles.photoLocal} contentFit="cover" />
+                      <AppText variant="small" style={[styles.photoNote, item.failed && styles.photoError]}>
+                        {item.failed ? t('photoFailed') : t('photoPending')} · {item.time}
+                      </AppText>
+                    </View>
+                  ) : (
+                    <ChatBubble role={item.role} text={item.text} time={item.time} failed={item.failed} />
+                  )}
+                  {item.failed && !item.photoLocal && (
                     <Pressable accessibilityRole="button" onPress={() => send(item.text, item.id)} style={styles.retry}>
                       <AppText variant="small" style={styles.retryText}>{t('sendFailed')} {t('retry')} ↻</AppText>
                     </Pressable>
@@ -211,6 +261,8 @@ export default function ChatScreen() {
               ))}
               {outcome && explain && !sending && <ExplainCard explain={explain} />}
               {sending && <TypingIndicator label={t('typing')} slowLabel={t('typingLong')} />}
+              {photo.sending && <ActivityIndicator color={Colors.primary} style={styles.photoSending} />}
+              {photo.error && <AppText variant="small" style={styles.photoError}>{photo.error}</AppText>}
               {degraded && !sending && (
                 <Alert variant="destructive" icon={ShieldAlert} title={t('aiUnavailableTitle')}>
                   <AppText variant="small" style={styles.alertText}>{t('aiUnavailableBody')}</AppText>
@@ -242,8 +294,10 @@ export default function ChatScreen() {
 
             {/* After a decision only a case under review can still receive information. */}
             {(!outcome || outcome.kind === 'under_review') && (
-              <ChatInput onSend={(text) => send(text)} disabled={sending} onActivity={setListening} />
+              <ChatInput onSend={(text) => send(text)} disabled={sending} onActivity={setListening}
+                onAttach={photo.sending ? undefined : photo.open} />
             )}
+            {photo.element}
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -253,6 +307,11 @@ export default function ChatScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
+  photoItem: { alignSelf: 'flex-end', alignItems: 'flex-end', gap: 4, maxWidth: '82%' },
+  photoNote: { color: Colors.mutedFg, textAlign: 'right' },
+  photoSending: { alignSelf: 'flex-end' },
+  photoLocal: { width: 200, height: 200, borderRadius: 10 },
+  photoError: { color: Colors.destructive, alignSelf: 'flex-end' },
   flex: { flex: 1 },
   column: { flex: 1, width: '100%', maxWidth: MaxContentWidth + 200, alignSelf: 'center' },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, paddingHorizontal: Spacing.sm },

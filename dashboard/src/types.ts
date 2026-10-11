@@ -8,6 +8,7 @@ export interface ChatMessage {
   id: string; referralId: string; sender: "PATIENT" | "STAFF" | "SYSTEM"; senderName?: string;
   kind: "TEXT" | "QUESTION" | "ANSWER" | "INSTRUCTION" | "WORSE" | "SYSTEM" | "RED_FLAG" | "IMAGE";  // IMAGE: text = optional caption
   text: string; options?: string[]; replyTo?: string; createdAt: string;
+  sha256?: string;  // IMAGE: SHA-256 of the stored photo
 }
 
 export interface ReferralRow {
@@ -42,6 +43,7 @@ export interface CaseDetail {
     actions: string[];
   };
   transcript: Turn[];
+  photos?: { id: string; sha256: string; createdAt: string }[];   // triage-chat photos (not used by the AI)
   explanation: { headline: string; points: string[]; confidence: string; confidenceNote: string;
     modelFactors?: { label: string; contribution: number; direction: "up" | "down" }[]; modelSaturated?: boolean };
   patientAge: string | number | null;
@@ -99,4 +101,11 @@ export interface ReviewItem {
   decision: CaseDetail["case"]["decision"]; assessment: { p_nlp: number | null; s_rule: number; p_final: number; uncertainty: string; uncertainty_reasons: string[];
     triggered_rules: TriggeredRule[] } | null;
   transcript: Turn[]; report: Report;
+}
+
+/** One message of the SIMULATED ambulance monitor (iot-sim/). Display only: never used by the AI. */
+export interface VitalReading {
+  seq: number; deviceId: string; measuredAt: string | null; simulated: true; signed: true; alerts: string[];
+  vitals: { heartRate?: number; spo2?: number; respRate?: number; systolic?: number; diastolic?: number; temperature?: number };
+  position: { lat: number; lng: number } | null;
 }

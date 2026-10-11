@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app import config, hospitals, workers
 from app.db import init_db
 from app.events import broker
+from app.routes_iot import router as iot_router
 from app.routes_patient import router as patient_router
 from app.routes_public import router as public_router
 from app.routes_staff import router as staff_router
@@ -32,10 +33,11 @@ async def lifespan(_app):
 
 app = FastAPI(title='Sahhanito backend', version=VERSION, lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=config.CORS_ORIGINS, allow_methods=['GET', 'POST', 'PUT', 'DELETE'],
-                   allow_headers=['Authorization', 'Content-Type'])
+                   allow_headers=['Authorization', 'Content-Type'], expose_headers=['X-Content-SHA256'])
 app.include_router(patient_router)
 app.include_router(staff_router)
 app.include_router(public_router)
+app.include_router(iot_router)
 
 
 @app.get('/api/v1/health')

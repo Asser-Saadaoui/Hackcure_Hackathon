@@ -374,6 +374,17 @@ PURPOSE = {
                   "question that will help most, then note what the patient said.\n"
                   "- If the main complaint is still vague, ask what exactly is wrong and where (topic \"clarify\"). "
                   "Otherwise pick the most useful remaining topic.\n"),
+    'interview': ("You lead the triage interview. The urgency is decided afterwards by another system from the whole "
+                  "conversation, so your ONLY job is to collect, one question at a time, what that decision needs, then "
+                  "note what the patient said.\n"
+                  "- First make sure you know WHAT is wrong and WHERE (topic \"clarify\"). Then cover, in the order that "
+                  "makes sense for THIS complaint: the warning signs that fit it (topic \"intake.red_flags\": e.g. injury: "
+                  "wound, bleeding, numbness or cold skin in the injured limb, can they move it; chest: pain spreading to the arm "
+                  "or jaw, breathing difficulty, sweating; head: sudden worst headache, weakness of one side, speech), when it "
+                  "started, how strong, age, illnesses and medicines (e.g. blood thinners).\n"
+                  "- Ask only what fits what the patient described: never screen for an unrelated disease (numbness in a "
+                  "broken leg is about the leg, not a stroke).\n"
+                  "- When you have enough for a decision, answer with topic \"done\" instead of a question.\n"),
     'followup': ("The triage system has a preliminary, NOT final, picture of the complaint. Your ONLY job: ask the ONE "
                  "follow-up question that best completes it before the final decision, then note what the patient said.\n"
                  "- Prefer questions whose answer could change the urgency for THIS complaint (topic \"intake.red_flags\": "
@@ -383,9 +394,12 @@ PURPOSE = {
 }
 
 
-def ask_adaptive_intake(interviewer, answered, history, language, message, purpose='uncertain'):
+def ask_adaptive_intake(interviewer, answered, history, language, message, purpose='uncertain', allow_done=False):
     """Next intake question. With the LLM: chosen from the conversation (clarify the complaint, or the
-    most useful missing topic) with matching quick replies. Otherwise: the next fixed question."""
+    most useful missing topic) with matching quick replies. Otherwise: the next fixed question.
+    purpose='interview' (the whole triage interview): may return dict(done=True) when allow_done, and each question
+    comes with `restate` = what a "yes" / "no" answer means, as the patient's own sentence, so a bare "Yes" still
+    reaches the NLP and the rules with its meaning (written before the patient answers)."""
     fallback_field = next_intake(answered)
 
     def fixed():
@@ -407,8 +421,13 @@ def ask_adaptive_intake(interviewer, answered, history, language, message, purpo
         "- Ask neutrally: never suggest the answer and never presuppose a symptom or timeline the patient did not mention.\n"
         "- Up to 4 short quick replies (max 4 words each) the patient can tap, in the same language.\n"
         f"- Write in {LANG_NAMES.get(language, 'French')}.\n"
-        "- JSON only: {\"topic\": one of " + json.dumps((['clarify'] if purpose == 'uncertain' else []) + list(remaining)) + ", \"question\": string, "
-        "\"quick_replies\": [string], \"collected\": {\"age\": number|null, \"onset\": string|null, \"severity\": string|null, "
+        + ("- if_yes / if_no: what a plain \"yes\" / \"no\" to your question means, written as the patient speaking in the "
+           "first person, in English, naming the body part (e.g. \"I have numbness in my injured leg\" / \"I have no numbness "
+           "in my injured leg\"); null if the question is not a yes/no question.\n" if purpose == 'interview' else "") +
+        "- JSON only: {\"topic\": one of " + json.dumps((['clarify'] if purpose in ('uncertain', 'interview') else []) + list(remaining)
+                                                       + (['done'] if allow_done else [])) + ", \"question\": string, "
+        "\"quick_replies\": [string], " + ("\"if_yes\": string|null, \"if_no\": string|null, " if purpose == 'interview' else "") +
+        "\"collected\": {\"age\": number|null, \"onset\": string|null, \"severity\": string|null, "
         "\"symptoms\": [string], \"conditions\": [string], \"medications\": [string], \"other\": string|null}}"
     )
     transcript = '\n'.join(f"{'Patient' if h['role'] == 'patient' else 'Assistant'}: {h['text']}" for h in history[-14:])
@@ -419,19 +438,24 @@ def ask_adaptive_intake(interviewer, answered, history, language, message, purpo
         out = json.loads(re.search(r'\{.*\}', content, re.S).group())
     except Exception:
         return fixed()
-    question = (out.get('question') or '').strip()
     topic = out.get('topic')
+    if topic == 'done' and allow_done:
+        collected = out.get('collected') if isinstance(out.get('collected'), dict) else {}
+        return dict(done=True, collected={k: v for k, v in collected.items() if v not in (None, '', [])})
+    question = (out.get('question') or '').strip()
     quick = [q.strip() for q in (out.get('quick_replies') or []) if isinstance(q, str) and 0 < len(q.strip()) <= 40][:4]
     if not question or len(question) > 420 or not re.search(r'[?؟]', question) or UNSAFE.search(question):
         return fixed()
-    if topic == 'clarify' and purpose == 'uncertain':
+    if topic == 'clarify' and purpose in ('uncertain', 'interview'):
         field = f"intake.clarify.{sum(k.startswith('intake.clarify') for k in answered) + 1}"
     elif topic in remaining:
         field = topic
     else:
         return fixed()
     collected = out.get('collected') if isinstance(out.get('collected'), dict) else {}
-    return dict(text=question, quick_replies=quick, field=field, source='llm',
+    restate = {k: out[f'if_{k}'].strip() for k in ('yes', 'no')
+               if isinstance(out.get(f'if_{k}'), str) and 3 <= len(out[f'if_{k}'].strip()) <= 200}
+    return dict(text=question, quick_replies=quick, field=field, source='llm', restate=restate or None,
                 collected={k: v for k, v in collected.items() if v not in (None, '', [])})
 
 
@@ -546,6 +570,7 @@ CONFIRM_OPTIONS = {
     'darija_latin': ['Ey, jdida', 'Le, 9dima', 'Ma na3rafch'],
 }
 POLAR_YES = re.compile(r"^\s*(yes|yeah|yep|y|oui|ouais|ey+|eyh|ah|aye|إي|اي|ايه|نعم|أيوه|wah)\b", re.I)
+POLAR_NO = re.compile(r"^\s*(no|nope|non|nan|la|le|lé|لا|لأ)\s*[.!]?\s*$", re.I)
 SAYS_OLD = re.compile(r"^\s*(non|no|nope|le|lé|la|لا)\b|ancien|depuis longtemps|depuis des|long time|for years|قديم|من زمان|9dim|zman", re.I)
 
 

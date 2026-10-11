@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
+import { GridPattern } from '@/components/grid-pattern';
 import { Colors, MaxContentWidth, Spacing } from '@/constants/theme';
 
 type Props = { children: ReactNode; scroll?: boolean; edges?: Edge[]; maxWidth?: number };
@@ -11,6 +12,7 @@ export function Screen({ children, scroll = true, edges = ['bottom', 'left', 'ri
   const content = <View style={[styles.inner, { maxWidth }]}>{children}</View>;
   return (
     <SafeAreaView style={styles.safe} edges={edges}>
+      <GridPattern />
       {scroll ? <ScrollView contentContainerStyle={styles.scroll}>{content}</ScrollView> : content}
     </SafeAreaView>
   );

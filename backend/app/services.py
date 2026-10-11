@@ -16,9 +16,9 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app import config, hospitals
+from app import config, hospitals, photo_security
 from app.events import broker
-from app.models import Ambulance, AuditLog, AvailabilityOverride, Case, ChatImage, ChatMessage, Referral, Turn, utcnow
+from app.models import Ambulance, AuditLog, AvailabilityOverride, Case, CaseImage, ChatImage, ChatMessage, Referral, Turn, utcnow
 
 CODE_ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ'
 ACTIVE_REFERRAL = ('SENT', 'INFO_REQUESTED', 'ACCEPTED')
@@ -92,11 +92,12 @@ def turn_view(tr):
     return dict(id=tr.id, role=tr.role, text=tr.text, createdAt=iso(tr.created_at), quickReplies=tr.quick_replies or None)
 
 
-def case_view(case):
+def case_view(case, db=None):
     r = current_referral(case)
     return dict(id=case.id, referenceCode=case.reference_code, status=case.status, level=case.level,
                 decision=decision_view(case), explain=(case.assessment or {}).get('patient_explain'),
                 turns=[turn_view(x) for x in case.turns], location=case.location,
+                photos=case_photos(db, case) if db is not None else [],
                 referral=referral_view(r) if r else None, createdAt=iso(case.created_at), closedAt=iso(case.closed_at))
 
 
@@ -114,6 +115,8 @@ def chat_view(m):
         out['options'] = m.options
     if m.reply_to:
         out['replyTo'] = m.reply_to
+    if m.kind == 'IMAGE' and m.image is not None and m.image.sha256:
+        out['sha256'] = m.image.sha256     # lets the receiver verify the photo it downloads
     return out
 
 
@@ -455,28 +458,17 @@ def patient_chat(db, case, r, text, kind, question_id):
     return m
 
 
-# Sniffed from the bytes, never trusted from the client.
-IMAGE_MAGIC = ((b'\xff\xd8\xff', 'image/jpeg'), (b'\x89PNG\r\n\x1a\n', 'image/png'))
-MAX_IMAGE_BYTES = 8 * 1024 * 1024
-
-
-def image_type(data):
-    if data[:4] == b'RIFF' and data[8:12] == b'WEBP':
-        return 'image/webp'
-    return next((t for magic, t in IMAGE_MAGIC if data.startswith(magic)), None)
-
-
 def patient_image(db, case, r, data, caption):
-    """A photo for the ED team (wound, rash, medication box...). Shown to humans only: the AI never reads it."""
-    if len(data) > MAX_IMAGE_BYTES:
-        raise HTTPException(413, 'Image too large (max 8 MB).')
-    content_type = image_type(data)
-    if not content_type:
-        raise HTTPException(415, 'Only JPEG, PNG or WebP photos are accepted.')
+    """A photo for the ED team (wound, rash, medication box...), already verified (photo_security.verify_upload).
+    Shown to humans only: the AI never reads it. Stored sanitized and encrypted, with its SHA-256."""
+    clean = photo_security.sanitize(data)
     m = ChatMessage(referral_id=r.id, case_id=case.id, sender='PATIENT', kind='IMAGE', text=caption)
     db.add(m)
     db.flush()
-    db.add(ChatImage(message_id=m.id, case_id=case.id, content_type=content_type, data=data))
+    digest = photo_security.sha256_hex(clean)
+    m.image = ChatImage(message_id=m.id, case_id=case.id, content_type='image/jpeg', sha256=digest,
+                        encryption=photo_security.ENC, data=photo_security.encrypt(clean, m.id))
+    audit(db, 'patient', 'chat.image_received', case.id, sha256=digest, bytes=len(clean))
     db.commit()
     view = chat_view(m)
     publish_case(case, dict(type='chat.message', message=view))
@@ -486,12 +478,59 @@ def patient_image(db, case, r, data, caption):
     return m
 
 
+def case_photo(db, case, data):
+    """Photo added in the triage chat (already verified). Stored for the hospital team; deliberately NOT passed to
+    the AI service: photos play no part in detection or classification."""
+    clean = photo_security.sanitize(data)
+    img = CaseImage(case_id=case.id, content_type='image/jpeg', sha256=photo_security.sha256_hex(clean), encryption=photo_security.ENC,
+                    data=b'')
+    db.add(img)
+    db.flush()
+    img.data = photo_security.encrypt(clean, img.id)
+    audit(db, 'patient', 'case.image_received', case.id, sha256=img.sha256, bytes=len(clean))
+    db.commit()
+    view = case_photo_view(img)
+    publish_case(case, dict(type='case.photo', photo=view))
+    r = current_referral(case)
+    if r:
+        publish_hospital(r.facility_key, dict(type='case.photo', referralId=r.id, caseId=case.id, photo=view))
+    return img
+
+
+def case_photo_view(img):
+    return dict(id=img.id, sha256=img.sha256, createdAt=iso(img.created_at))
+
+
+def case_photos(db, case):
+    return [case_photo_view(x) for x in db.scalars(select(CaseImage).where(CaseImage.case_id == case.id).order_by(CaseImage.created_at))]
+
+
+def read_case_photo(db, case_id, image_id):
+    img = db.get(CaseImage, image_id)
+    if not img or img.case_id != case_id:
+        raise HTTPException(404, 'Image not found.')
+    try:
+        data = photo_security.decrypt(img.data, img.id)
+    except Exception:
+        raise HTTPException(500, 'Stored photo failed its integrity check.')
+    if photo_security.sha256_hex(data) != img.sha256:
+        raise HTTPException(500, 'Stored photo failed its integrity check.')
+    return img, data
+
+
 def chat_image(db, referral_id, message_id):
+    """Decrypted image bytes + SHA-256, after checking the stored image was not altered."""
     m = db.get(ChatMessage, message_id)
     img = db.get(ChatImage, message_id) if m and m.referral_id == referral_id else None
     if not img:
         raise HTTPException(404, 'Image not found.')
-    return img
+    try:
+        data = photo_security.decrypt(img.data, img.message_id) if img.encryption == photo_security.ENC else img.data
+    except Exception:
+        raise HTTPException(500, 'Stored photo failed its integrity check.')
+    if img.sha256 and photo_security.sha256_hex(data) != img.sha256:
+        raise HTTPException(500, 'Stored photo failed its integrity check.')
+    return img, data
 
 
 def screen_patient_text(db, case, r, text):
@@ -860,6 +899,7 @@ def staff_case_view(db, r):
                                   contributions=a.get('contributions'), triggeredRules=a.get('triggered_rules', [])),
                   actions=(case.ai_decision or {}).get('actions', [])),
         transcript=[turn_view(x) for x in case.turns],
+        photos=case_photos(db, case),     # added by the patient in the triage chat (not used by the AI)
         explanation=explanation(case),
         patientAge=patient_age(case),
         journey=journey(case),

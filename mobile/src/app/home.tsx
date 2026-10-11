@@ -6,7 +6,6 @@ import { ActivityIndicator, Linking, Platform, Pressable, StyleSheet, useWindowD
 import { AppText } from '@/components/app-text';
 import { Button } from '@/components/button';
 import { Hassanito } from '@/components/hassanito';
-import { PrototypeNotice } from '@/components/prototype-notice';
 import { RiskBadge } from '@/components/risk-badge';
 import { Screen } from '@/components/screen';
 import { Colors, Fonts } from '@/constants/theme';
@@ -95,7 +94,6 @@ export default function HomeScreen() {
       copy('Answer a few questions', 'Répondez à quelques questions', 'جاوب على الأسئلة'),
       copy('Follow your next steps', 'Consultez les prochaines étapes', 'شوف الخطوات الجاية'),
     ].map((label, index) => <View key={label} style={styles.step}><View style={styles.number}><AppText style={{ color: Colors.primary }}>{index + 1}</AppText></View><AppText style={styles.grow}>{label}</AppText></View>)}</View>
-    <PrototypeNotice />
   </Screen>;
 }
 

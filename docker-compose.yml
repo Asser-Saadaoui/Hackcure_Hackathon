@@ -46,6 +46,17 @@ services:
       REFERRAL_TIMEOUT_EMERGENCY_S: ${REFERRAL_TIMEOUT_EMERGENCY_S:-180}
       REFERRAL_TIMEOUT_HIGH_S: ${REFERRAL_TIMEOUT_HIGH_S:-600}
       AMBULANCE_TIME_SCALE: ${AMBULANCE_TIME_SCALE:-1}
+      IOT_KEY: ${IOT_KEY:?set IOT_KEY (shared with iot-sim)}
+      IMAGE_KEY: ${IMAGE_KEY:?set IMAGE_KEY (python3 -c "import base64,os;print(base64.b64encode(os.urandom(32)).decode())")}
+
+  # Simulated ambulance monitors (IoT): signed vital-sign telemetry to the backend. Remove for a real fleet.
+  iot-sim:
+    build: ./iot-sim
+    restart: unless-stopped
+    depends_on: [backend]
+    environment:
+      BACKEND_URL: http://backend:8100
+      IOT_KEY: ${IOT_KEY:?set IOT_KEY (shared with the backend)}
 
   web:
     build: { context: ., dockerfile: deploy/web.Dockerfile }

@@ -24,3 +24,6 @@ REFERRAL_TIMEOUT_S = {'EMERGENCY': float(os.environ.get('REFERRAL_TIMEOUT_EMERGE
 OVERRIDE_TTL_H = float(os.environ.get('OVERRIDE_TTL_H', '12'))     # staff availability override lifetime
 AMBULANCE_TIME_SCALE = float(os.environ.get('AMBULANCE_TIME_SCALE', '1'))  # >1 speeds the simulated ambulance up
 STAFF_SESSION_H = float(os.environ.get('STAFF_SESSION_H', '12'))
+# Simulated IoT (ambulance monitors, iot-sim/): master key shared with the device simulator. Each device key is
+# HMAC(IOT_KEY, device id). Development default only: set IOT_KEY in production.
+IOT_KEY = os.environ.get('IOT_KEY', 'dev-iot-key-change-me')

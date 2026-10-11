@@ -86,15 +86,31 @@ class ChatMessage(Base):
     options: Mapped[list | None] = mapped_column(JSON, nullable=True)
     reply_to: Mapped[str | None] = mapped_column(String(32), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    image: Mapped['ChatImage | None'] = relationship(uselist=False, lazy='select')
 
 
 class ChatImage(Base):
-    """Photo attached to an IMAGE chat message (kept in the database so backups and Docker need nothing else)."""
+    """Photo attached to an IMAGE chat message: sanitized, encrypted (AES-256-GCM), with its SHA-256."""
     __tablename__ = 'chat_images'
     message_id: Mapped[str] = mapped_column(ForeignKey('chat_messages.id'), primary_key=True)
     case_id: Mapped[str] = mapped_column(ForeignKey('cases.id'), index=True)
     content_type: Mapped[str] = mapped_column(String(32))
+    data: Mapped[bytes] = mapped_column(LargeBinary)        # AES-256-GCM ciphertext (see photo_security.py)
+    sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)      # of the stored (sanitized) image
+    encryption: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class CaseImage(Base):
+    """Photo the patient adds in the triage chat. For the hospital team only: never sent to the AI service, so it
+    plays no part in detection or classification. Sanitized, encrypted (AES-256-GCM), with its SHA-256."""
+    __tablename__ = 'case_images'
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    case_id: Mapped[str] = mapped_column(ForeignKey('cases.id'), index=True)
+    content_type: Mapped[str] = mapped_column(String(32))
     data: Mapped[bytes] = mapped_column(LargeBinary)
+    sha256: Mapped[str] = mapped_column(String(64))
+    encryption: Mapped[str] = mapped_column(String(16))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
@@ -108,6 +124,21 @@ class Ambulance(Base):
     trip_minutes: Mapped[float] = mapped_column(Float)
     status: Mapped[str] = mapped_column(String(24), default='DISPATCHED')
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class VitalReading(Base):
+    """One telemetry message of a SIMULATED ambulance monitor (iot-sim/). Shown to the hospital; never used by the AI."""
+    __tablename__ = 'vital_readings'
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    referral_id: Mapped[str] = mapped_column(ForeignKey('referrals.id'), index=True)
+    case_id: Mapped[str] = mapped_column(ForeignKey('cases.id'), index=True)
+    device_id: Mapped[str] = mapped_column(String(40))
+    seq: Mapped[int] = mapped_column(Integer)
+    measured_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    vitals: Mapped[dict] = mapped_column(JSON)          # heartRate, spo2, respRate, systolic, diastolic, temperature
+    position: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    alerts: Mapped[list] = mapped_column(JSON, default=list)
 
 
 class StaffUser(Base):

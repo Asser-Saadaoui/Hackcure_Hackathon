@@ -1,8 +1,7 @@
-import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
-import { AlertTriangle, Camera, Image as ImageIcon, Phone, ShieldAlert } from 'lucide-react-native';
+import { AlertTriangle, Phone, ShieldAlert } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Alert } from '@/components/alert';
@@ -11,6 +10,8 @@ import { Button } from '@/components/button';
 import { ChatInput } from '@/components/chat/chat-input';
 import { EdMessage } from '@/components/ed-chat/ed-message';
 import { EdTyping } from '@/components/ed-chat/ed-typing';
+import { usePhotoCapture } from '@/components/photo/use-photo-capture';
+import { GridPattern } from '@/components/grid-pattern';
 import { Colors, Fonts, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useI18n } from '@/i18n';
 import { api } from '@/lib/api';
@@ -35,9 +36,6 @@ export default function EdChatScreen() {
   const [waitingStaff, setWaitingStaff] = useState(false);
   const [escalation, setEscalation] = useState<string | null>(null);
   const [sendError, setSendError] = useState(false);
-  const [photoMenu, setPhotoMenu] = useState(false);
-  const [photoSending, setPhotoSending] = useState(false);
-  const [photoError, setPhotoError] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -107,34 +105,18 @@ export default function EdChatScreen() {
     }
   };
 
-  /** Photo for the ED team: camera or gallery, compressed, sent as base64. */
-  const sendPhoto = async (source: 'camera' | 'library') => {
-    setPhotoMenu(false);
-    if (!referralId) return;
-    setPhotoError(null);
-    const permission = source === 'camera'
-      ? await ImagePicker.requestCameraPermissionsAsync()
-      : await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) { setPhotoError(t('photoPermission')); return; }
-    const options: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], quality: 0.5, base64: true, exif: false };
-    const picked = source === 'camera' ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
-    const asset = picked.canceled ? null : picked.assets[0];
-    const data = asset?.base64 ?? (asset?.uri.startsWith('data:') ? asset.uri : null);   // web gives a data: URL
-    if (!data) return;
-    setPhotoSending(true);
-    try {
-      upsert(await api.sendChatImage(referralId, data));
-    } catch {
-      setPhotoError(t('photoFailed'));
-    } finally {
-      setPhotoSending(false);
-    }
-  };
+  /** Photo for the ED team (camera or gallery), signed and sent at once. Never read by the AI. */
+  const photo = usePhotoCapture(async (data) => {
+    if (referralId) upsert(await api.sendChatImage(referralId, data));
+  }, t('photoHint'));
+  const photoSending = photo.sending;
+  const photoError = photo.error;
 
   const answerOf = (q: ChatMessage) => messages.find((m) => m.sender === 'PATIENT' && m.replyTo === q.id);
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom', 'left', 'right']}>
+      <GridPattern />
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
         <View style={styles.column}>
           <View style={styles.top}>
@@ -175,19 +157,9 @@ export default function EdChatScreen() {
           </View>
 
           <ChatInput onSend={(text) => send(text)} disabled={!referralId}
-            onAttach={photoSending ? undefined : () => setPhotoMenu(true)} />
+            onAttach={photoSending ? undefined : photo.open} />
 
-          <Modal visible={photoMenu} transparent animationType="fade" onRequestClose={() => setPhotoMenu(false)}>
-            <Pressable style={styles.sheetBackdrop} onPress={() => setPhotoMenu(false)}>
-              <Pressable style={styles.sheet} onPress={() => {}}>
-                <AppText variant="subtitle">{t('attachPhoto')}</AppText>
-                <AppText variant="small">{t('photoHint')}</AppText>
-                <Button label={t('takePhoto')} icon={Camera} onPress={() => sendPhoto('camera')} />
-                <Button label={t('choosePhoto')} variant="outline" icon={ImageIcon} onPress={() => sendPhoto('library')} />
-                <Button label={t('cancel')} variant="ghost" onPress={() => setPhotoMenu(false)} />
-              </Pressable>
-            </Pressable>
-          </Modal>
+          {photo.element}
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -211,9 +183,4 @@ const styles = StyleSheet.create({
   worseText: { color: '#C2410C', fontFamily: Fonts.semibold },
   pressed: { opacity: 0.85 },
   sending: { alignSelf: 'flex-end' },
-  sheetBackdrop: { flex: 1, backgroundColor: 'rgba(15,23,42,0.45)', justifyContent: 'flex-end' },
-  sheet: {
-    width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center', gap: Spacing.md, padding: Spacing.xl,
-    backgroundColor: Colors.card, borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl,
-  },
 });
