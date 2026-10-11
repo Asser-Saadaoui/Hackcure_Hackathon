@@ -1,3 +1,4 @@
+import { t } from "@/i18n";
 import { useEffect, useState } from "react";
 import { Flag } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -46,24 +47,24 @@ export function FeedbackPanel({ referralId, aiLevel, onDone, onCancel }: { refer
     <Card className="border-amber-300">
       <CardContent className="space-y-4 pt-5">
         <div>
-          <p className="flex items-center gap-2 font-semibold"><Flag className="h-4 w-4" />Signaler une erreur de triage</p>
-          <p className="text-sm text-muted-foreground">Niveau donné par Sahhanito : <LevelBadge level={ai} className="ml-1 align-middle" />. Votre retour sert à corriger les règles et le modèle ; il ne modifie pas ce dossier.</p>
+          <p className="flex items-center gap-2 font-semibold"><Flag className="h-4 w-4" />{t("Signaler une erreur de triage")}</p>
+          <p className="text-sm text-muted-foreground">{t("Niveau donné par Sahhanito :")}{' '}<LevelBadge level={ai} className="ml-1 align-middle" />{t(". Votre retour sert à corriger les règles et le modèle ; il ne modifie pas ce dossier.")}</p>
         </div>
         <div className="flex gap-1 rounded-lg bg-secondary p-1">
-          {([["FALSE_NEGATIVE", "Sous-évalué (faux négatif)"], ["FALSE_POSITIVE", "Surévalué"]] as const).map(([k, label]) => (
-            <button key={k} onClick={() => setKind(k)} className={cn("flex-1 rounded-md px-3 py-1.5 text-sm", kind === k ? "bg-card font-medium shadow-sm" : "text-muted-foreground")}>{label}</button>
+          {([["FALSE_NEGATIVE", t("Sous-évalué (faux négatif)")], ["FALSE_POSITIVE", t("Surévalué")]] as const).map(([k, label]) => (
+            <button aria-pressed={kind === k} key={k} onClick={() => setKind(k)} className={cn("flex-1 rounded-md px-3 py-1.5 text-sm", kind === k ? "bg-card font-medium shadow-sm" : "text-muted-foreground")}>{label}</button>
           ))}
         </div>
 
         <div className="space-y-1.5">
-          <p className="text-sm font-medium">Niveau réel selon votre évaluation</p>
+          <p className="text-sm font-medium">{t("Niveau réel selon votre évaluation")}</p>
           {allowed.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{kind === "FALSE_NEGATIVE" ? "Le niveau était déjà le plus élevé." : "Le niveau était déjà le plus bas."}</p>
+            <p className="text-sm text-muted-foreground">{kind === "FALSE_NEGATIVE" ? t("Le niveau était déjà le plus élevé.") : t("Le niveau était déjà le plus bas.")}</p>
           ) : (
             <div className="flex flex-wrap gap-2">
               {allowed.map((l) => (
-                <button key={l} onClick={() => setActual(l)}
-                  className={cn("rounded-full border px-3 py-1 text-sm", actual === l ? `${LEVEL[l].className}` : "bg-card")}>{LEVEL[l].label}</button>
+                <button aria-pressed={actual === l} key={l} onClick={() => setActual(l)}
+                  className={cn("rounded-full border px-3 py-1 text-sm", actual === l ? `${LEVEL[l].className}` : "bg-card")}>{t(LEVEL[l].label)}</button>
               ))}
             </div>
           )}
@@ -71,24 +72,24 @@ export function FeedbackPanel({ referralId, aiLevel, onDone, onCancel }: { refer
 
         {kind === "FALSE_NEGATIVE" && (
           <div className="space-y-1.5">
-            <p className="text-sm font-medium">Signes manqués</p>
+            <p className="text-sm font-medium">{t("Signes manqués")}</p>
             <div className="flex flex-wrap gap-1.5">
               {options.map((o) => (
-                <button key={o} onClick={() => setSigns((s) => (s.includes(o) ? s.filter((x) => x !== o) : [...s, o]))}
+                <button aria-pressed={signs.includes(o)} key={o} onClick={() => setSigns((s) => (s.includes(o) ? s.filter((x) => x !== o) : [...s, o]))}
                   className={cn("rounded-full border px-2.5 py-1 text-xs", signs.includes(o) && "border-primary bg-accent text-accent-foreground")}>{o}</button>
               ))}
             </div>
-            <input value={other} onChange={(e) => setOther(e.target.value)} maxLength={120} placeholder="Autre signe manqué (facultatif)"
+            <input aria-label={t("Autre signe manqué (facultatif)")} value={other} onChange={(e) => setOther(e.target.value)} maxLength={120} placeholder={t("Autre signe manqué (facultatif)")}
               className="w-full rounded-md border bg-card px-3 py-1.5 text-sm" />
           </div>
         )}
 
         <Textarea rows={3} maxLength={1000} value={note} onChange={(e) => setNote(e.target.value)}
-          placeholder="Commentaire clinique (facultatif) : ce qui aurait dû alerter, diagnostic retenu…" />
-        {error && <p className="text-sm text-destructive">{error}</p>}
+          placeholder={t("Commentaire clinique (facultatif) : ce qui aurait dû alerter, diagnostic retenu…")} />
+        {error && <p className="text-sm text-destructive" role="alert">{t(error)}</p>}
         <div className="flex gap-2">
-          <Button disabled={busy || !actual} onClick={submit}><Flag className="mr-2 h-4 w-4" />{busy ? "Envoi…" : "Envoyer le signalement"}</Button>
-          <Button variant="ghost" onClick={onCancel}>Annuler</Button>
+          <Button disabled={busy || !actual} onClick={submit}><Flag className="me-2 h-4 w-4" />{busy ? t("Envoi…") : t("Envoyer le signalement")}</Button>
+          <Button variant="ghost" onClick={onCancel}>{t("Annuler")}</Button>
         </div>
       </CardContent>
     </Card>

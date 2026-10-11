@@ -1,3 +1,4 @@
+import { locale } from "@/i18n";
 import type { Level } from "@/types";
 
 export const LEVEL: Record<Level, { label: string; className: string; dot: string }> = {
@@ -26,12 +27,14 @@ export const LANG: Record<string, string> = { fr: "Français", ar: "Arabe", dari
 export function ago(iso: string | null | undefined): string {
   if (!iso) return "—";
   const secs = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 1000));
-  if (secs < 60) return `il y a ${secs} s`;
+  if (!Number.isFinite(secs)) return "—";
+  const relative = new Intl.RelativeTimeFormat(locale(), { style: "short" });
+  if (secs < 60) return relative.format(-secs, "second");
   const mins = Math.round(secs / 60);
-  if (mins < 60) return `il y a ${mins} min`;
+  if (mins < 60) return relative.format(-mins, "minute");
   const hrs = Math.round(mins / 60);
-  return hrs < 24 ? `il y a ${hrs} h` : `il y a ${Math.round(hrs / 24)} j`;
+  return hrs < 24 ? relative.format(-hrs, "hour") : relative.format(-Math.round(hrs / 24), "day");
 }
 
-export const time = (iso: string) => new Date(iso).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+export const time = (iso: string) => new Date(iso).toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit" });
 export const pct = (x: number | null | undefined) => (x == null ? "—" : `${Math.round(x * 100)} %`);

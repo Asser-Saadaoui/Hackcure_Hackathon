@@ -1,3 +1,4 @@
+import { t, LanguageSelect } from "@/i18n";
 import { useState, type FormEvent } from "react";
 import { LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -34,31 +35,32 @@ export function LoginScreen({ onLogin }: { onLogin: (u: StaffUser) => void }) {
       <div className="w-full max-w-sm space-y-6">
         <div className="flex flex-col items-center gap-3 text-center">
           <Brand />
+          <LanguageSelect />
           <div>
-            <h1 className="text-xl font-semibold tracking-tight">Bienvenue dans votre espace</h1>
-            <p className="mt-2 text-sm text-muted-foreground">Équipes hospitalières du Grand Tunis</p>
+            <h1 className="text-xl font-semibold tracking-tight">{t("Bienvenue dans votre espace")}</h1>
+            <p className="mt-2 text-sm text-muted-foreground">{t("Équipes hospitalières du Grand Tunis")}</p>
           </div>
         </div>
         <Card>
           <CardContent className="pt-6">
             <form onSubmit={submit} className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="email">E-mail professionnel</Label>
+                <Label htmlFor="email">{t("E-mail professionnel")}</Label>
                 <Input id="email" type="email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="password">Mot de passe</Label>
+                <Label htmlFor="password">{t("Mot de passe")}</Label>
                 <Input id="password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
               </div>
-              {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
+              {error && <p className="text-sm text-destructive" role="alert">{t(error)}</p>}
               <Button type="submit" className="w-full" disabled={busy}>
-                <LogIn className="mr-2 h-4 w-4" /> {busy ? "Connexion…" : "Se connecter"}
+                <LogIn className="me-2 h-4 w-4" /> {busy ? t("Connexion…") : t("Se connecter")}
               </Button>
             </form>
           </CardContent>
         </Card>
-        <p className="text-center text-xs text-muted-foreground">Prototype non validé cliniquement. Capacités et suivi ambulance simulés.</p>
-        <p className="text-center text-xs text-muted-foreground">Accès réservé au personnel autorisé. Toutes les actions sont journalisées.</p>
+        <p className="text-center text-xs text-muted-foreground">{t("Prototype non validé cliniquement. Capacités et suivi ambulance simulés.")}</p>
+        <p className="text-center text-xs text-muted-foreground">{t("Accès réservé au personnel autorisé. Toutes les actions sont journalisées.")}</p>
       </div>
     </div>
   );

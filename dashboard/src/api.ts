@@ -19,15 +19,17 @@ export const setUnauthorizedHandler = (fn: () => void) => { onUnauthorized = fn;
 async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
   const token = session.get();
   let resp: Response;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
   try {
     resp = await fetch(`${BASE}/api/v1${path}`, {
-      method,
+      method, signal: controller.signal,
       headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {
     throw new ApiError("Serveur injoignable. Vérifiez la connexion.", 0);
-  }
+  } finally { clearTimeout(timeout); }
   if (resp.status === 401 && path !== "/staff/login") { session.clear(); onUnauthorized(); }
   if (!resp.ok) {
     let message = `Erreur ${resp.status}`;

@@ -1,3 +1,4 @@
+import { t } from "@/i18n";
 import { useState } from "react";
 import {
   Ambulance, ArrowLeft, ArrowRightLeft, Check, ChevronDown, Clock, FileJson, FileText, Footprints, Hospital, MapPin, ShieldAlert,
@@ -20,7 +21,7 @@ const REJECT_REASONS = ["Plus de lit disponible", "Plateau technique indisponibl
 
 function List({ items, empty = "—" }: { items: string[]; empty?: string }) {
   if (!items.length) return <p className="text-sm text-muted-foreground">{empty}</p>;
-  return <ul className="list-disc space-y-0.5 pl-5 text-sm">{items.map((x, i) => <li key={i} dir="auto">{x}</li>)}</ul>;
+  return <ul className="list-disc space-y-0.5 ps-5 text-sm">{items.map((x, i) => <li key={i} dir="auto">{x}</li>)}</ul>;
 }
 
 function Bar({ label, value, hint }: { label: string; value: number | null; hint?: string }) {
@@ -38,7 +39,7 @@ function ModelFactors({ factors }: { factors: { label: string; contribution: num
   const max = Math.max(...factors.map((f) => Math.abs(f.contribution)), 0.05);
   return (
     <div className="space-y-1.5 rounded-lg border p-3">
-      <p className="text-xs font-semibold uppercase text-muted-foreground">Ce qui a pesé sur le modèle de langage</p>
+      <p className="text-xs font-semibold uppercase text-muted-foreground">{t("Ce qui a pesé sur le modèle de langage")}</p>
       {factors.map((f) => {
         const width = `${Math.round((Math.abs(f.contribution) / max) * 50)}%`;
         return (
@@ -54,7 +55,7 @@ function ModelFactors({ factors }: { factors: { label: string; contribution: num
           </div>
         );
       })}
-      <p className="text-[11px] text-muted-foreground">Variation du score du modèle quand l'élément est retiré du dossier. → vers l'urgence · ← vers « non urgent ». Indicatif, non calibré cliniquement.</p>
+      <p className="text-[11px] text-muted-foreground">{t("Variation du score du modèle quand l'élément est retiré du dossier. → vers l'urgence · ← vers « non urgent ». Indicatif, non calibré cliniquement.")}</p>
     </div>
   );
 }
@@ -98,28 +99,25 @@ export function CaseView({ detail, onBack, onChanged }: { detail: CaseDetail; on
       {/* Sticky header: who, how urgent, when, and the decision buttons — always visible */}
       <div className="sticky top-0 z-20 -mx-4 space-y-2 border-b bg-background/95 px-4 pb-3 pt-2 backdrop-blur sm:-mx-6 sm:px-6">
         <div className="flex items-center justify-between">
-          <button onClick={onBack} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /> Patients</button>
+          <button onClick={onBack} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /> {' '}{t("Patients")}</button>
           <div className="flex gap-2">
-            <Button variant="ghost" size="sm" onClick={() => { setReporting(true); setReported(false); }} title="Le niveau donné par Sahhanito était faux">
-              <Flag className="mr-1.5 h-4 w-4" />Signaler un faux négatif
-            </Button>
-            <Button variant="outline" size="sm" title="HL7 FHIR R4 (Bundle document) à importer dans le dossier patient de l'hôpital"
+            <Button variant="ghost" size="sm" onClick={() => { setReporting(true); setReported(false); }} title={t("Le niveau donné par Sahhanito était faux")}>
+              <Flag className="me-1.5 h-4 w-4" />{t("Signaler un faux négatif")}{' '}</Button>
+            <Button variant="outline" size="sm" title={t("HL7 FHIR R4 (Bundle document) à importer dans le dossier patient de l'hôpital")}
               onClick={() => downloadFhir(r.id, c.referenceCode).catch((err) => setError((err as Error).message))}>
-              <FileJson className="mr-1.5 h-4 w-4" />Export FHIR
-            </Button>
+              <FileJson className="me-1.5 h-4 w-4" />{t("Export FHIR")}{' '}</Button>
             <Button variant="outline" size="sm" onClick={() => openReportPdf(r.id).catch((err) => setError((err as Error).message))}>
-              <FileText className="mr-1.5 h-4 w-4" />Rapport PDF
-            </Button>
+              <FileText className="me-1.5 h-4 w-4" />{t("Rapport PDF")}{' '}</Button>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <LevelBadge level={c.level} className="text-sm" />
           <span className="font-mono text-sm text-muted-foreground">{c.referenceCode}</span>
-          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">{STATUS[r.status] ?? r.status}</span>
+          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">{t(STATUS[r.status] ?? r.status)}</span>
           {detail.patientAge && <Fact icon={User}>{detail.patientAge}</Fact>}
           <Fact icon={Clock}>{r.distanceKm ?? "?"} km · ~{detail.ambulance ? detail.ambulance.etaMinutes : r.etaMinutes} min</Fact>
-          {r.arrivalMode && <Fact icon={r.arrivalMode === "AMBULANCE" ? Ambulance : Footprints}>{r.arrivalMode === "AMBULANCE" ? "Ambulance (simulée)" : "Vient seul"}</Fact>}
-          <span className="text-xs text-muted-foreground">reçu {ago(r.createdAt)} · {LANG[c.language] ?? c.language}</span>
+          {r.arrivalMode && <Fact icon={r.arrivalMode === "AMBULANCE" ? Ambulance : Footprints}>{r.arrivalMode === "AMBULANCE" ? t("Ambulance (simulée)") : t("Vient seul")}</Fact>}
+          <span className="text-xs text-muted-foreground">{t("reçu")}{ago(r.createdAt)} · {t(LANG[c.language] ?? c.language)}</span>
         </div>
         <p className="truncate text-base font-semibold" dir="auto">{report.chiefComplaint}</p>
         {criticalFlags.length > 0 && (
@@ -133,20 +131,19 @@ export function CaseView({ detail, onBack, onChanged }: { detail: CaseDetail; on
         )}
         {pending && !rejecting && !rerouting && (
           <div className="flex flex-wrap gap-2">
-            <Button disabled={busy} onClick={() => run(() => api.accept(r.id, "AMBULANCE"))}><Ambulance className="mr-2 h-4 w-4" />Accepter · ambulance</Button>
-            <Button disabled={busy} variant="outline" onClick={() => run(() => api.accept(r.id, "SELF"))}><Footprints className="mr-2 h-4 w-4" />Accepter · vient seul</Button>
-            <Button disabled={busy} variant="ghost" onClick={() => setRerouting(true)}><ArrowRightLeft className="mr-2 h-4 w-4" />Réorienter</Button>
-            <Button disabled={busy} variant="ghost" onClick={() => setRejecting(true)}><X className="mr-2 h-4 w-4" />Ne peut pas recevoir</Button>
+            <Button disabled={busy} onClick={() => run(() => api.accept(r.id, "AMBULANCE"))}><Ambulance className="me-2 h-4 w-4" />{t("Accepter · ambulance")}</Button>
+            <Button disabled={busy} variant="outline" onClick={() => run(() => api.accept(r.id, "SELF"))}><Footprints className="me-2 h-4 w-4" />{t("Accepter · vient seul")}</Button>
+            <Button disabled={busy} variant="ghost" onClick={() => setRerouting(true)}><ArrowRightLeft className="me-2 h-4 w-4" />{t("Réorienter")}</Button>
+            <Button disabled={busy} variant="ghost" onClick={() => setRejecting(true)}><X className="me-2 h-4 w-4" />{t("Ne peut pas recevoir")}</Button>
           </div>
         )}
         {r.status === "ACCEPTED" && !rerouting && (
           <div className="flex flex-wrap gap-2">
-            <Button disabled={busy} onClick={() => run(() => api.arrived(r.id))}><Check className="mr-2 h-4 w-4" />Patient arrivé</Button>
-            <Button disabled={busy} variant="outline" onClick={() => setRerouting(true)}><ArrowRightLeft className="mr-2 h-4 w-4" />Réorienter</Button>
+            <Button disabled={busy} onClick={() => run(() => api.arrived(r.id))}><Check className="me-2 h-4 w-4" />{t("Patient arrivé")}</Button>
+            <Button disabled={busy} variant="outline" onClick={() => setRerouting(true)}><ArrowRightLeft className="me-2 h-4 w-4" />{t("Réorienter")}</Button>
             {c.level !== "EMERGENCY" && (
-              <Button disabled={busy} variant="destructive" onClick={() => run(() => api.escalate(r.id, "EMERGENCY", "Appelez le 190 maintenant et ne conduisez pas."))}>
-                <TriangleAlert className="mr-2 h-4 w-4" />Passer en urgence vitale
-              </Button>
+              <Button disabled={busy} variant="destructive" onClick={() => run(() => api.escalate(r.id, "EMERGENCY", t("Appelez le 190 maintenant et ne conduisez pas.")))}>
+                <TriangleAlert className="me-2 h-4 w-4" />{t("Passer en urgence vitale")}{' '}</Button>
             )}
           </div>
         )}
@@ -156,112 +153,110 @@ export function CaseView({ detail, onBack, onChanged }: { detail: CaseDetail; on
         <FeedbackPanel referralId={r.id} aiLevel={c.level} onCancel={() => setReporting(false)}
           onDone={() => { setReporting(false); setReported(true); }} />
       )}
-      {reported && <p className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">Merci : le signalement est transmis à l'équipe IA.</p>}
-      {moved && <p className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">Patient réorienté vers {moved}. Le dossier reste consultable dans l'historique.</p>}
+      {reported && <p className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{t("Merci : le signalement est transmis à l'équipe IA.")}</p>}
+      {moved && <p className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{t("Patient réorienté vers")}{' '}{moved}{t(". Le dossier reste consultable dans l'historique.")}</p>}
       {rerouting && (
         <ReroutePanel referralId={r.id} accepted={r.status === "ACCEPTED"} onCancel={() => setRerouting(false)}
-          onDone={(name) => { setRerouting(false); setMoved(name ?? "un autre hôpital"); onChanged(); }} />
+          onDone={(name) => { setRerouting(false); setMoved(name ?? t("un autre hôpital")); onChanged(); }} />
       )}
       {rejecting && (
         <Card className="border-amber-300">
           <CardContent className="space-y-3 pt-5">
-            <p className="text-sm font-medium">Le dossier sera proposé automatiquement à l'hôpital adapté suivant.</p>
+            <p className="text-sm font-medium">{t("Le dossier sera proposé automatiquement à l'hôpital adapté suivant.")}</p>
             <div className="flex flex-wrap gap-1.5">
               {REJECT_REASONS.map((x) => (
-                <button key={x} onClick={() => setReason(x)} className={cn("rounded-full border px-3 py-1 text-sm", reason === x && "border-primary bg-accent text-accent-foreground")}>{x}</button>
+                <button key={x} onClick={() => setReason(x)} className={cn("rounded-full border px-3 py-1 text-sm", reason === x && "border-primary bg-accent text-accent-foreground")}>{t(x)}</button>
               ))}
             </div>
             <Textarea value={explanation} onChange={(e) => setExplanation(e.target.value)} maxLength={1000} rows={3}
-              placeholder="Expliquez pourquoi vous ne pouvez pas recevoir ce patient (obligatoire)." />
+              placeholder={t("Expliquez pourquoi vous ne pouvez pas recevoir ce patient (obligatoire).")} />
             <p className="text-xs text-muted-foreground">
-              {explanation.trim().length < 10 ? "Au moins 10 caractères." : "Journalisé et transmis à l'hôpital suivant. Le patient reçoit seulement un message neutre."}
+              {explanation.trim().length < 10 ? t("Au moins 10 caractères.") : t("Journalisé et transmis à l'hôpital suivant. Le patient reçoit seulement un message neutre.")}
             </p>
             <div className="flex gap-2">
-              <Button variant="destructive" disabled={busy || explanation.trim().length < 10} onClick={() => run(() => api.reject(r.id, reason, explanation.trim()))}>Confirmer le refus</Button>
-              <Button variant="ghost" onClick={() => setRejecting(false)}>Annuler</Button>
+              <Button variant="destructive" disabled={busy || explanation.trim().length < 10} onClick={() => run(() => api.reject(r.id, reason, explanation.trim()))}>{t("Confirmer le refus")}</Button>
+              <Button variant="ghost" onClick={() => setRejecting(false)}>{t("Annuler")}</Button>
             </div>
           </CardContent>
         </Card>
       )}
-      {error && <p className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{error}</p>}
+      {error && <p className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive" role="alert">{t(error)}</p>}
 
       <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
         <Tabs defaultValue="summary" value={tab} onValueChange={setTab}>
           <TabsList>
-            <TabsTrigger value="summary">Résumé</TabsTrigger>
-            <TabsTrigger value="conversation">Conversation</TabsTrigger>
-            <TabsTrigger value="journey">Parcours{detail.journey.length > 1 ? ` (${detail.journey.length})` : ""}</TabsTrigger>
-            <TabsTrigger value="report">Rapport</TabsTrigger>
+            <TabsTrigger value="summary">{t("Résumé")}</TabsTrigger>
+            <TabsTrigger value="conversation">{t("Conversation")}</TabsTrigger>
+            <TabsTrigger value="journey">{t("Parcours")}{detail.journey.length > 1 ? ` (${detail.journey.length})` : ""}</TabsTrigger>
+            <TabsTrigger value="report">{t("Rapport")}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="summary" className="space-y-4 pt-4">
             {/* Why this level, in plain words; numbers only on demand */}
             <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-base">Pourquoi ce niveau</CardTitle></CardHeader>
+              <CardHeader className="pb-2"><CardTitle className="text-base">{t("Pourquoi ce niveau")}</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 <p className="text-sm font-medium" dir="auto">{why.headline}</p>
                 <List items={why.points} />
                 {why.modelFactors && why.modelFactors.length > 0 && <ModelFactors factors={why.modelFactors} />}
                 <p className="text-xs">
                   <span className={cn("rounded-full px-2 py-0.5 font-medium",
-                    why.confidence === "élevée" ? "bg-emerald-100 text-emerald-800" : why.confidence === "moyenne" ? "bg-amber-100 text-amber-900" : "bg-red-100 text-red-800")}>
-                    Confiance {why.confidence}
+                    why.confidence === t("élevée") ? "bg-emerald-100 text-emerald-800" : why.confidence === "moyenne" ? "bg-amber-100 text-amber-900" : "bg-red-100 text-red-800")}>
+                    {t("Confiance")}{' '}{why.confidence}
                   </span>{" "}<span className="text-muted-foreground">{why.confidenceNote}</span>
                 </p>
                 <details className="group rounded-lg border bg-secondary/30 p-3">
                   <summary className="flex cursor-pointer list-none items-center gap-1 text-xs font-medium text-muted-foreground">
-                    <ChevronDown className="h-3.5 w-3.5 transition group-open:rotate-180" />Détails techniques
-                  </summary>
+                    <ChevronDown className="h-3.5 w-3.5 transition group-open:rotate-180" />{t("Détails techniques")}{' '}</summary>
                   <div className="mt-3 space-y-3">
                     <div className="grid gap-4 sm:grid-cols-3">
-                      <Bar label="Modèle NLP (p_nlp)" value={a.pNlp} hint={a.pNlp == null ? `modèle : ${a.nlpStatus}` : undefined} />
-                      <Bar label="Moteur de règles (s_rule)" value={a.sRule} />
-                      <Bar label="Score fusionné (p_final)" value={a.pFinal} hint={`incertitude : ${a.uncertainty}`} />
+                      <Bar label={t("Modèle NLP (p_nlp)")} value={a.pNlp} hint={a.pNlp == null ? `modèle : ${a.nlpStatus}` : undefined} />
+                      <Bar label={t("Moteur de règles (s_rule)")} value={a.sRule} />
+                      <Bar label={t("Score fusionné (p_final)")} value={a.pFinal} hint={`incertitude : ${a.uncertainty}`} />
                     </div>
                     {a.triggeredRules.length > 0 && (
                       <table className="w-full text-xs">
-                        <thead><tr className="text-left text-muted-foreground"><th className="py-1">Règle</th><th>Gravité</th><th>Poids</th></tr></thead>
+                        <thead><tr className="text-start text-muted-foreground"><th className="py-1">{t("Règle")}</th><th>{t("Gravité")}</th><th>{t("Poids")}</th></tr></thead>
                         <tbody>{a.triggeredRules.map((x) => (
                           <tr key={x.id} className="border-t"><td className="py-1"><span className="font-mono">{x.id}</span> {x.name}</td><td>{x.severity}</td><td>{x.weight ?? "—"}</td></tr>))}</tbody>
                       </table>
                     )}
-                    {a.uncertaintyReasons.length > 0 && <p className="text-xs text-muted-foreground">Incertitude : {a.uncertaintyReasons.join(" ; ")}</p>}
-                    <p className="text-[11px] text-muted-foreground">Scores non calibrés cliniquement : aide à la décision, pas une probabilité.</p>
+                    {a.uncertaintyReasons.length > 0 && <p className="text-xs text-muted-foreground">{t("Incertitude :")}{' '}{a.uncertaintyReasons.join(" ; ")}</p>}
+                    <p className="text-[11px] text-muted-foreground">{t("Scores non calibrés cliniquement : aide à la décision, pas une probabilité.")}</p>
                   </div>
                 </details>
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-base">Ce que le patient a signalé</CardTitle></CardHeader>
+              <CardHeader className="pb-2"><CardTitle className="text-base">{t("Ce que le patient a signalé")}</CardTitle></CardHeader>
               <CardContent className="grid gap-4 sm:grid-cols-2">
-                <div><p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">Symptômes</p><List items={report.positives} /></div>
-                <div><p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">Absents</p><List items={report.negatives} /></div>
-                <div><p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">Informations recueillies</p><List items={report.history} /></div>
-                <div><p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">Traitements</p><List items={report.medications} /></div>
+                <div><p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">{t("Symptômes")}</p><List items={report.positives} /></div>
+                <div><p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">{t("Absents")}</p><List items={report.negatives} /></div>
+                <div><p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">{t("Informations recueillies")}</p><List items={report.history} /></div>
+                <div><p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">{t("Traitements")}</p><List items={report.medications} /></div>
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-base">Orientation</CardTitle></CardHeader>
+              <CardHeader className="pb-2"><CardTitle className="text-base">{t("Orientation")}</CardTitle></CardHeader>
               <CardContent className="space-y-2 text-sm">
                 {c.decision && (c.decision.suggestedSpecialty || c.decision.requiredEquipment.length > 0) && (
-                  <p>Spécialité : <span className="font-medium">{c.decision.suggestedSpecialty ?? "Urgences"}</span>
-                    {c.decision.requiredEquipment.length > 0 && <> · plateau : {c.decision.requiredEquipment.map((e) => EQUIPMENT[e] ?? e).join(", ")}</>}</p>
+                  <p>{t("Spécialité :")}{' '}<span className="font-medium">{c.decision.suggestedSpecialty ?? t("Urgences")}</span>
+                    {c.decision.requiredEquipment.length > 0 && <> {' '}{t("· plateau :")}{' '}{c.decision.requiredEquipment.map((e) => EQUIPMENT[e] ?? e).join(", ")}</>}</p>
                 )}
-                <p className="text-muted-foreground">Pourquoi votre hôpital : {r.matchReason}</p>
+                <p className="text-muted-foreground">{t("Pourquoi votre hôpital :")}{' '}{r.matchReason}</p>
                 {c.location && (
                   <a className="inline-flex items-center gap-1 text-primary hover:underline" target="_blank" rel="noreferrer"
                     href={`https://www.openstreetmap.org/?mlat=${c.location.lat}&mlon=${c.location.lng}#map=16/${c.location.lat}/${c.location.lng}`}>
-                    <MapPin className="h-4 w-4" />Position du patient
-                  </a>
+                    <MapPin className="h-4 w-4" />{t("Position du patient")}{' '}</a>
                 )}
                 {r.status === "ACCEPTED" && (
                   <p className="flex items-center gap-2 rounded-lg bg-accent/60 p-2">
                     {r.arrivalMode === "AMBULANCE" ? <Ambulance className="h-4 w-4 text-primary" /> : <Hospital className="h-4 w-4 text-primary" />}
-                    {r.arrivalMode === "AMBULANCE" ? "Ambulance (simulée)" : "Vient par ses propres moyens"}
-                    {detail.ambulance && <span className="text-muted-foreground">· {detail.ambulance.unitName} · {AMBULANCE[detail.ambulance.status] ?? detail.ambulance.status}</span>}
-                    {r.decidedBy && <span className="text-muted-foreground">· accepté par {r.decidedBy}</span>}
+                    {r.arrivalMode === "AMBULANCE" ? t("Ambulance (simulée)") : t("Vient par ses propres moyens")}
+                    {detail.ambulance && <span className="text-muted-foreground">· {detail.ambulance.unitName} · {t(AMBULANCE[detail.ambulance.status] ?? detail.ambulance.status)}</span>}
+                    {r.decidedBy && <span className="text-muted-foreground">{t("· accepté par")}{r.decidedBy}</span>}
                   </p>
                 )}
               </CardContent>
@@ -271,9 +266,9 @@ export function CaseView({ detail, onBack, onChanged }: { detail: CaseDetail; on
           <TabsContent value="conversation" className="pt-4">
             <Card>
               <CardContent className="space-y-1.5 pt-5">
-                {detail.transcript.map((t) => (
-                  <p key={t.id} className="text-sm" dir="auto"><span className="mr-2 font-mono text-xs text-muted-foreground">{time(t.createdAt)}</span>
-                    <span className="font-medium">{t.role === "PATIENT" ? "Patient" : t.role === "ASSISTANT" ? "Assistant" : "Système"} :</span> {t.text}</p>
+                {detail.transcript.map((turn) => (
+                  <p key={turn.id} className="text-sm" dir="auto"><span className="me-2 font-mono text-xs text-muted-foreground">{time(turn.createdAt)}</span>
+                    <span className="font-medium">{turn.role === "PATIENT" ? t("Patient") : turn.role === "ASSISTANT" ? t("Assistant") : t("Système")} :</span> {turn.text}</p>
                 ))}
               </CardContent>
             </Card>
@@ -303,19 +298,19 @@ export function CaseView({ detail, onBack, onChanged }: { detail: CaseDetail; on
             <Card>
               <CardContent className="space-y-3 pt-5 text-sm">
                 <p dir="auto">{report.summary}</p>
-                {report.redFlags.length > 0 && <div><p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">Signes d'alerte</p><List items={report.redFlags} /></div>}
-                <div><p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">Conduite à tenir</p><List items={report.recommendedActions} /></div>
-                <div><p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">Questions ouvertes</p><List items={report.openQuestions} /></div>
+                {report.redFlags.length > 0 && <div><p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">{t("Signes d'alerte")}</p><List items={report.redFlags} /></div>}
+                <div><p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">{t("Conduite à tenir")}</p><List items={report.recommendedActions} /></div>
+                <div><p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">{t("Questions ouvertes")}</p><List items={report.openQuestions} /></div>
                 <p className="text-xs text-muted-foreground">{report.disclaimer}</p>
-                <Button variant="outline" size="sm" onClick={() => openReportPdf(r.id).catch((err) => setError((err as Error).message))}><FileText className="mr-1.5 h-4 w-4" />Télécharger le PDF</Button>
+                <Button variant="outline" size="sm" onClick={() => openReportPdf(r.id).catch((err) => setError((err as Error).message))}><FileText className="me-1.5 h-4 w-4" />{t("Télécharger le PDF")}</Button>
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
 
         <Card className="flex h-[640px] flex-col lg:sticky lg:top-56">
-          <CardHeader className="border-b pb-3"><CardTitle className="text-base">Échange direct avec le patient</CardTitle></CardHeader>
-          <div className="min-h-0 flex-1"><ChatPanel referralId={r.id} messages={detail.chat} disabled={!open} onSent={onChanged} /></div>
+          <CardHeader className="border-b pb-3"><CardTitle className="text-base">{t("Échange direct avec le patient")}</CardTitle></CardHeader>
+          <div className="min-h-0 flex-1"><ChatPanel patientLanguage={c.language === "ar" || c.language === "en" || c.language === "darija" ? c.language : "fr"} referralId={r.id} messages={detail.chat} disabled={!open} onSent={onChanged} /></div>
         </Card>
       </div>
     </div>
