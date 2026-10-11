@@ -11,6 +11,7 @@ import { Button } from '@/components/button';
 import { ChatInput } from '@/components/chat/chat-input';
 import { EdMessage } from '@/components/ed-chat/ed-message';
 import { EdTyping } from '@/components/ed-chat/ed-typing';
+import { WebCamera, webCameraSupported } from '@/components/ed-chat/web-camera';
 import { Colors, Fonts, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useI18n } from '@/i18n';
 import { api } from '@/lib/api';
@@ -36,6 +37,7 @@ export default function EdChatScreen() {
   const [escalation, setEscalation] = useState<string | null>(null);
   const [sendError, setSendError] = useState(false);
   const [photoMenu, setPhotoMenu] = useState(false);
+  const [webCamera, setWebCamera] = useState(false);
   const [photoSending, setPhotoSending] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
@@ -108,19 +110,8 @@ export default function EdChatScreen() {
   };
 
   /** Photo for the ED team: camera or gallery, compressed, sent as base64. */
-  const sendPhoto = async (source: 'camera' | 'library') => {
-    setPhotoMenu(false);
+  const upload = async (data: string) => {
     if (!referralId) return;
-    setPhotoError(null);
-    const permission = source === 'camera'
-      ? await ImagePicker.requestCameraPermissionsAsync()
-      : await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) { setPhotoError(t('photoPermission')); return; }
-    const options: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], quality: 0.5, base64: true, exif: false };
-    const picked = source === 'camera' ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
-    const asset = picked.canceled ? null : picked.assets[0];
-    const data = asset?.base64 ?? (asset?.uri.startsWith('data:') ? asset.uri : null);   // web gives a data: URL
-    if (!data) return;
     setPhotoSending(true);
     try {
       upsert(await api.sendChatImage(referralId, data));
@@ -130,6 +121,34 @@ export default function EdChatScreen() {
       setPhotoSending(false);
     }
   };
+
+  const sendPhoto = async (source: 'camera' | 'library') => {
+    setPhotoMenu(false);
+    if (!referralId) return;
+    setPhotoError(null);
+    // Web: open the camera itself (a file input only offers "upload a file" on computers).
+    if (source === 'camera' && Platform.OS === 'web' && webCameraSupported()) {
+      setWebCamera(true);
+      return;
+    }
+    const permission = source === 'camera'
+      ? await ImagePicker.requestCameraPermissionsAsync()
+      : await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) { setPhotoError(t('photoPermission')); return; }
+    const options: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], quality: 0.5, base64: true, exif: false };
+    const picked = source === 'camera' ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
+    const asset = picked.canceled ? null : picked.assets[0];
+    const data = asset?.base64 ?? (asset?.uri.startsWith('data:') ? asset.uri : null);   // web gives a data: URL
+    if (!data) return;
+    await upload(data);
+  };
+
+  const onWebCameraError = useCallback(() => {
+    setWebCamera(false);
+    setPhotoError(t('cameraUnavailable'));
+    sendPhoto('library');   // no camera, or access refused: choose a file instead
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [referralId]);
 
   const answerOf = (q: ChatMessage) => messages.find((m) => m.sender === 'PATIENT' && m.replyTo === q.id);
 
@@ -176,6 +195,9 @@ export default function EdChatScreen() {
 
           <ChatInput onSend={(text) => send(text)} disabled={!referralId}
             onAttach={photoSending ? undefined : () => setPhotoMenu(true)} />
+
+          <WebCamera visible={webCamera} onClose={() => setWebCamera(false)} onError={onWebCameraError}
+            onCapture={(dataUrl) => { setWebCamera(false); upload(dataUrl); }} />
 
           <Modal visible={photoMenu} transparent animationType="fade" onRequestClose={() => setPhotoMenu(false)}>
             <Pressable style={styles.sheetBackdrop} onPress={() => setPhotoMenu(false)}>
