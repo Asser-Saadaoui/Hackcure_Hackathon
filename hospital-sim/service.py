@@ -6,6 +6,7 @@ GET  /hospitals                 simulated availability of every active hospital
 GET  /hospitals/{key}           one hospital
 POST /hospitals/{key}/incoming  the backend announces a patient on the way: holds a bed for a while
 GET  /health
+/api/v1/*                       OpenHospital Sim dashboard API (compat.py) + network scenario controls
 
 The SimPy engines (ohsim/, vendored from OpenHospital Sim, MIT) model arrivals, triage, treatment,
 ICU transfers, surges and staff shortages. This service adds what the triage platform needs on top:
@@ -26,6 +27,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
+from ohsim.agents.registry import AgentRegistry
 from ohsim.config import SimulationConfig
 from ohsim.engine import EngineStatus, HospitalSimEngine
 
@@ -69,10 +71,21 @@ class Hospital:
                                        prob_icu_transfer=0.04, **self.settings)
         self.engine = HospitalSimEngine()
         self.engine.start(self.config)
-        self.engine.step(warmup)
+        self.agents = AgentRegistry()      # the 7 OpenHospital Sim agents watch this hospital's events
+        self.last_events, self.last_decisions = [], []
+        self._run(warmup)
         self.outages = {}   # equipment -> simulated time when it comes back
         self.holds = []     # simulated times when held beds are released
         self.apply_surge()
+
+    def _run(self, minutes):
+        """Advance the engine and feed the new events to the agents (kept for the OpenHospital Sim dashboard)."""
+        before = self.engine.event_count
+        self.engine.step(minutes)
+        events = self.engine.get_raw_events(since_index=before)
+        self.last_events = [e.to_dict() for e in events]
+        self.last_decisions = [d.to_dict() for d in self.agents.process_events(events, self.engine.get_state_snapshot())]
+        self.agents.trim()
 
     def now(self):
         return self.engine.simulation_time
@@ -114,7 +127,8 @@ class Hospital:
         if self.engine.status != EngineStatus.ACTIVE:
             self.engine.reset()
             self.engine.start(self.config)
-        self.engine.step(minutes)
+            self.agents.reset()
+        self._run(minutes)
         now = self.engine.simulation_time
         hours = minutes / 60
         if auto_outages:
@@ -401,3 +415,9 @@ def preset(preset: str):
 @app.get('/health')
 def health():
     return dict(ok=sim is not None, hospitals=len(sim.hospitals) if sim else 0, speed=SIM_SPEED, version=VERSION)
+
+
+# The OpenHospital Sim dashboard (dashboard/) talks to /api/v1 (compat.py), imported last: it uses the names above.
+from compat import router as dashboard_router  # noqa: E402
+
+app.include_router(dashboard_router)

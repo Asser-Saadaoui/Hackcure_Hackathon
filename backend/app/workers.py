@@ -1,4 +1,4 @@
-"""Background loops: simulator availability, referral timeouts, simulated ambulances."""
+"""Background loops: simulator availability, referral timeouts, simulated ambulances, unassigned cases."""
 import asyncio
 import logging
 
@@ -30,4 +30,5 @@ def start():
         asyncio.create_task(_every(config.SIM_POLL_S, hospitals.refresh_sim)),
         asyncio.create_task(_every(5, lambda: _with_db(services.expire_referrals))),
         asyncio.create_task(_every(2, lambda: _with_db(services.tick_ambulances))),
+        asyncio.create_task(_every(15, lambda: _with_db(services.assign_waiting))),
     ]

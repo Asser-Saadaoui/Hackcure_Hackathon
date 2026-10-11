@@ -134,8 +134,9 @@ class RuleEngine:
 
     # ---- evaluation ----------------------------------------------------------------
 
-    def evaluate(self, patient_state, screens=None):
-        """Evaluate every rule on the conversation so far. `screens` = clinical_rules.evaluate_rules output."""
+    def evaluate(self, patient_state, screens=None, exclude=()):
+        """Evaluate every rule on the conversation so far. `screens` = clinical_rules.evaluate_rules output.
+        `exclude`: rule ids the patient ruled out in a confirmation question (e.g. a long-standing speech problem)."""
         if screens is None:
             from clinical_rules import evaluate_rules
             screens = evaluate_rules(patient_state)
@@ -149,6 +150,8 @@ class RuleEngine:
         )
         triggered = []
         for rule in self.rules:
+            if rule['id'] in exclude:
+                continue
             ok, evidence = self._check(rule['when'], ctx)
             if not ok:
                 continue
@@ -230,5 +233,5 @@ def default_engine():
     return RuleEngine()
 
 
-def evaluate(patient_state, screens=None):
-    return default_engine().evaluate(patient_state, screens)
+def evaluate(patient_state, screens=None, exclude=()):
+    return default_engine().evaluate(patient_state, screens, exclude)

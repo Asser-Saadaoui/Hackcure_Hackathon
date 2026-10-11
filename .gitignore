@@ -32,3 +32,7 @@ web-build/
 *.db
 *.db.bak-*
 .vite/
+
+# Next.js (hospital-sim/dashboard)
+.next/
+next-env.d.ts

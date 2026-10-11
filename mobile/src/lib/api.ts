@@ -32,6 +32,8 @@ export interface PatientApi {
   getChat(referralId: string): Promise<ChatMessage[]>;
   /** kind: TEXT, WORSE ("I feel worse") or ANSWER (reply to a hospital QUESTION; pass questionId). */
   sendChat(referralId: string, text: string, kind?: ChatKind, questionId?: string): Promise<ChatMessage>;
+  /** Photo for the ED team, base64 JPEG/PNG/WebP (max 8 MB). Never read by the AI. */
+  sendChatImage(referralId: string, base64: string, caption?: string): Promise<ChatMessage>;
 
   /** Map data: hospital, patient position, route, and the (simulated) ambulance if one was dispatched. */
   getTracking(caseId: string): Promise<TrackingView>;

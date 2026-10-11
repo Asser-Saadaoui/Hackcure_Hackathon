@@ -101,17 +101,19 @@ def rank(location, level, specialty, equipment, overrides, exclude=(), relax=Fal
     Never returns an empty list while a hospital is open: equipment, then specialty, are relaxed."""
     specialty = specialty or 'EMERG'
     equipment = list(equipment or [])
-    rows = []
+    rows, full = [], []
     for key, f in FACILITIES.items():
         if key in exclude:
             continue
         a = availability(key, overrides.get(key))
-        if not a['accepting'] or a['bedsAvailable'] == 0:
-            continue
         has_ed = f.get('hasGeneralEd') or any(d.get('hasEmergency') for d in f.get('departments', []))
-        if not has_ed:
+        if not a['accepting'] or not has_ed:
             continue
-        rows.append((f, a))
+        (full if a['bedsAvailable'] == 0 else rows).append((f, a))
+    # Every ED full: an emergency still goes to the nearest one that receives patients (an ED does not
+    # turn away a life-threatening case); other levels wait for a bed (the retry loop tries again).
+    if not rows and level == 'EMERGENCY':
+        rows = full
 
     def capable(f, a, need_equipment, need_specialty):
         if need_equipment and not all(e in f.get('equipment', []) and e not in a['equipmentDown'] for e in equipment):
@@ -132,7 +134,7 @@ def rank(location, level, specialty, equipment, overrides, exclude=(), relax=Fal
         score = eta + unknown_penalty if level == 'EMERGENCY' else eta + wait / 2 + (0 if has_specialty else 10) + unknown_penalty
         beds = a['bedsAvailable']
         label = specialty if has_specialty else 'Urgences'
-        reason = f"{label} · {'?' if beds is None else beds} lit(s) libre(s) · {km:.1f} km · ~{eta} min"
+        reason = f"{label} · {'saturé' if beds == 0 else ('?' if beds is None else beds)} {'' if beds == 0 else 'lit(s) libre(s) '}· {km:.1f} km · ~{eta} min"
         if a['simulated'] and a['source'] == 'simulator':
             reason += ' · disponibilité simulée'
         out.append(dict(key=f['key'], name=f['name'], km=round(km, 1), eta=eta, score=score, reason=reason,

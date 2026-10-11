@@ -1,8 +1,11 @@
 """Patient app API (mobile/src/lib/api.ts PatientApi). Anonymous device sessions, no account."""
 from typing import Literal
 
+import base64
+import binascii
+
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -43,6 +46,11 @@ class ChatIn(BaseModel):
     text: str = Field(min_length=1, max_length=2000)
     kind: Literal['TEXT', 'WORSE', 'ANSWER'] = 'TEXT'
     questionId: str | None = None
+
+
+class ImageIn(BaseModel):
+    data: str = Field(min_length=16, max_length=12_000_000)   # base64, ~8 MB decoded
+    caption: str = Field(default='', max_length=500)
 
 
 def own_case(db, s, case_id):
@@ -134,6 +142,23 @@ def get_chat(referral_id: str, s: PatientSession = Depends(patient), db: Session
 def send_chat(referral_id: str, body: ChatIn, s: PatientSession = Depends(patient), db: Session = Depends(get_db)):
     case, r = own_referral(db, s, referral_id)
     return services.chat_view(services.patient_chat(db, case, r, body.text.strip(), body.kind, body.questionId))
+
+
+@router.post('/referrals/{referral_id}/chat/image')
+def send_image(referral_id: str, body: ImageIn, s: PatientSession = Depends(patient), db: Session = Depends(get_db)):
+    case, r = own_referral(db, s, referral_id)
+    try:
+        data = base64.b64decode(body.data.split(',', 1)[-1], validate=True)   # accepts a data: URL too
+    except (binascii.Error, ValueError):
+        raise HTTPException(422, 'Invalid image data.')
+    return services.chat_view(services.patient_image(db, case, r, data, body.caption.strip()))
+
+
+@router.get('/referrals/{referral_id}/chat/{message_id}/image')
+def get_image(referral_id: str, message_id: str, s: PatientSession = Depends(patient), db: Session = Depends(get_db)):
+    own_referral(db, s, referral_id)
+    img = services.chat_image(db, referral_id, message_id)
+    return Response(img.data, media_type=img.content_type, headers={'Cache-Control': 'private, max-age=86400'})
 
 
 @router.get('/cases/{case_id}/events')

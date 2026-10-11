@@ -65,6 +65,8 @@ def triage_turn(state, message, previous_question_id=None, *, language='fr', mod
     intake_field = None
     if previous_question_id and previous_question_id.startswith('intake:'):
         intake_field, previous_question_id = previous_question_id[len('intake:'):], None
+    if previous_question_id and previous_question_id.startswith('confirm:'):
+        previous_question_id = None   # answer to a confirmation question (handled below), not an NLP field
     try:
         r = process_turn(state, message, previous_question_id, language=plang, ml_bundle=ml_bundle)
     except ValueError:
@@ -76,14 +78,20 @@ def triage_turn(state, message, previous_question_id=None, *, language='fr', mod
     meta = st.setdefault('sahhanito', {'asked': {}, 'llm_notes': {}})
     meta.setdefault('intake', {})
     meta.setdefault('intake_turns', {})
+    # Answer to "did this start suddenly / recently?": an old, long-standing sign is ruled out for this case.
+    pending_confirm = meta.pop('pending_confirm', None)
+    if pending_confirm:
+        key = 'dismissed_rules' if interviewer_module.answer_rules_out(message, language, message) else 'confirmed_rules'
+        meta.setdefault(key, []).extend(x for x in pending_confirm if x not in meta.get(key, []))
     pending = meta.get('pending_intake')
     if pending and intake_field in (None, pending):
         meta['intake'][pending] = message   # also when the client did not send the id: never ask twice
     meta.pop('pending_intake', None)
 
-    rules = evaluate_rules(st, r['rules'])
+    rules = evaluate_rules(st, r['rules'], exclude=set(meta.get('dismissed_rules', [])))
     assessment = fusion.fuse(r['ml'], rules)
     assessment['nlp_explanation'] = _explain(st, r['ml'], ml_bundle)
+    meta['nlp_explanation'] = assessment['nlp_explanation']
     decided = decision_policy.decide(assessment, rules, language)
 
     asked = len(st.get('asked_questions', []))
@@ -98,11 +106,19 @@ def triage_turn(state, message, previous_question_id=None, *, language='fr', mod
         question = None
         st.pop('pending_question', None)
     reply = None
+    confirm_ids = _needs_confirmation(st, rules, meta, message) if mode == 'interview' and decided['level'] == 'EMERGENCY' else None
     if mode == 'monitor':
         status = 'monitor'
+    elif confirm_ids:
+        # A critical sign that rests only on a "Yes" to our own question: one quick confirmation first.
+        status = 'question'
+        text, options = interviewer_module.confirm_question(confirm_ids[0], language, message)
+        meta['pending_confirm'] = confirm_ids
+        meta['intake_turns'][str(len(st['turns']))] = text
+        reply = dict(text=text, quick_replies=options, question_id='confirm:' + ','.join(confirm_ids), field='confirm', source='template')
     elif decided['level'] == 'EMERGENCY':
         status = 'emergency'
-        reply = dict(text=EMERGENCY_MESSAGE[language], quick_replies=[], source='fixed')
+        reply = _decision_reply(st, rules, decided, language, interviewer)
     elif question and asked < MAX_QUESTIONS:
         status = 'question'
         repeats[str(question['field'])] = repeats.get(str(question['field']), 0) + 1
@@ -124,10 +140,10 @@ def triage_turn(state, message, previous_question_id=None, *, language='fr', mod
                      question_id=f'intake:{field}', field=field, source=asked_reply['source'])
     elif decided['level'] == 'UNCERTAIN':
         status = 'under_review'
-        reply = dict(text=REVIEW_MESSAGE[language], quick_replies=[], source='fixed')
+        reply = _decision_reply(st, rules, decided, language, interviewer)
     else:
         status = 'result'
-        reply = dict(text=RESULT_MESSAGE[language], quick_replies=[], source='fixed')
+        reply = _decision_reply(st, rules, decided, language, interviewer)
     if status != 'question':
         st.pop('pending_question', None)
 
@@ -152,6 +168,60 @@ def triage_turn(state, message, previous_question_id=None, *, language='fr', mod
                       decision=decision_policy.VERSION, interviewer=interviewer_module.VERSION,
                       nlp_model=r['ml'].get('model_version')),
     )
+
+
+def _needs_confirmation(state, rules, meta, message):
+    """Critical rules whose only support is a "Yes" to one of our questions (nothing in the patient's own words)."""
+    critical = [x for x in rules['triggered_rules'] if x['severity'] == 'critical']
+    if not critical or not interviewer_module.POLAR_YES.match(message or ''):
+        return None
+    if any(x['id'] in meta.get('confirmed_rules', []) for x in critical):
+        return None
+    said = [(t.get('answer') or '').lower() for t in state.get('turns', [])]
+    def own_words(e):
+        text = (e.get('text') or '').strip()
+        return e.get('source') == 'text' or (text and not interviewer_module.POLAR_YES.match(text)
+                                               and any(text.lower() in s for s in said))
+    if any(own_words(e) for x in critical for e in x['evidence']):
+        return None
+    return [x['id'] for x in critical]
+
+
+def _reported(state, lang):
+    """The symptoms the patient reported, as simple labels in their language."""
+    from explain_labels import LABELS, label
+    target = state.get('patient_experiencer', 'patient')
+    names = [f['name'] for f in state.get('facts', []) if f.get('kind') == 'symptom' and f.get('experiencer') == target
+             and f.get('status') == 'confirmed' and f.get('temporality') == 'current']
+    return list(dict.fromkeys(label(n, 'present', lang) for n in names if n in LABELS))[:3]
+
+
+def _decision_reply(state, rules, decided, language, interviewer):
+    """Chat message explaining the decided level (LLM wording, system reasons). The app shows a button to the
+    decision page under it; the level itself never comes from the LLM."""
+    lang = language if language in ('fr', 'en', 'ar', 'darija') else 'fr'
+    reasons = list(dict.fromkeys(r['rationale'].get(lang, r['rationale']['fr']).rstrip('.') for r in rules['triggered_rules']))
+    reasons = [x for x in reasons if not any(x != y and x in y for y in reasons)][:3]
+    if not reasons and decided.get('rationale_all'):
+        reasons = [decided['rationale_all'].get(lang, decided['rationale_all']['fr']).rstrip('.')]
+    reported = _reported(state, lang)
+    # The LLM explains every decision, emergencies included; for an emergency it gets a short time budget and the
+    # reviewed template (which always says "call 190") is used if it is slower or its text fails the checks.
+    out = interviewer_module.explain_decision(interviewer or default_interviewer(), decided['level'], reasons,
+                                              _history(state), lang, reported,
+                                              budget_s=5.0 if decided['level'] == 'EMERGENCY' else None)
+    return dict(text=out['text'], quick_replies=[], source=out['source'], kind='decision', level=decided['level'],
+                explain=_patient_explain(state, decided, reasons, lang))
+
+
+def _patient_explain(state, decided, reasons, lang):
+    """Explainability card for the patient's chat: the reasons + the main elements behind the NLP score."""
+    from explain_labels import label
+    exp = (state.get('sahhanito') or {}).get('nlp_explanation') or {}
+    factors = [dict(label=label(f['concept'], f.get('status'), lang), direction='up' if f['contribution'] > 0 else 'down',
+                    weight=round(abs(f['contribution']), 3))
+               for f in exp.get('factors', [])[:4]]
+    return dict(level=decided['level'], reasons=reasons, factors=factors, saturated=bool(exp.get('saturated')))
 
 
 def _explain(state, ml, ml_bundle):

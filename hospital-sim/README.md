@@ -16,3 +16,18 @@ curl -s localhost:8200/hospitals
 - Clock: `SIM_SPEED` simulated minutes per real minute (default 6), advanced every `SIM_TICK_SECONDS` (default 15).
 
 Every value is **simulated** (`simulated: true`). ED staff overrides from the dashboard are applied by the backend and win over these values.
+
+## Simulator dashboard (OpenHospital Sim)
+
+`dashboard/` is the original OpenHospital Sim Next.js dashboard (MIT, see `dashboard/LICENSE`), connected to these engines by `compat.py` (`/api/v1/*`):
+
+```sh
+cd dashboard && npm install
+npm run dev -- -p 3100          # http://localhost:3100 (proxies /api/v1 to SIM_URL, default http://localhost:8200)
+```
+
+- **Hospital selector** (top bar): every page shows one Grand Tunis hospital (`?hospital=<key>`): Dashboard, Simulation, Agents, Forecasting, Optimization, Replay. The 7 agents, the forecasts and the optimizers are the original ones (vendored in `ohsim/agents`, `ohsim/forecasting`, `ohsim/optimization`), one agent registry per hospital.
+- **Simulation › Apply configuration**: rebuilds the selected hospital's engine with your beds, ICU, doctors, nurses, arrival interval and seed. **Step** advances the whole network (one clock), **Reset** returns the hospital to its default profile.
+- **Simulation › Grand Tunis scenario**: network clock (pause, speed), random outages, presets, and custom events (surge, staff shortage, equipment outage, closure, beds occupied) for the selected hospital or the whole network.
+
+Every change hits the engines the Sahhanito backend reads, so referrals, the staff dashboard and the patient app react. Beds and doctors shown are the values Sahhanito uses (ED trolleys, held beds, scenario shortage). The service has no authentication: keep port 8200 and the dashboard on a private network.
