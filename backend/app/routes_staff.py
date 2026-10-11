@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app import config, hospitals, photo_security, services
+from app import config, hospitals, iot, photo_security, services
 from app.db import get_db
 from app.deps import clinician, hospital_staff, staff
 from app.events import sse
@@ -199,6 +199,13 @@ def escalate(referral_id: str, body: Escalate, user: StaffUser = Depends(hospita
 def chat(referral_id: str, body: ChatIn, user: StaffUser = Depends(hospital_staff), db: Session = Depends(get_db)):
     r = my_referral(db, user, referral_id)
     return services.chat_view(services.staff_chat(db, r, user, body.text.strip(), body.kind, body.options))
+
+
+@router.get('/referrals/{referral_id}/vitals')
+def vitals(referral_id: str, user: StaffUser = Depends(hospital_staff), db: Session = Depends(get_db)):
+    """Live readings of the SIMULATED ambulance monitor (iot-sim/). Display only: never used by the AI."""
+    my_referral(db, user, referral_id)
+    return dict(readings=iot.recent(db, referral_id), simulated=True)
 
 
 @router.get('/referrals/{referral_id}/photos/{image_id}')

@@ -113,6 +113,9 @@ export default function App() {
   useEffect(() => {
     if (!user) return;
     const unsubscribe = subscribe((e) => {
+      // Ambulance monitor telemetry (every few seconds): the monitor card polls it; only an alert beeps.
+      if (e.type === "iot.alert") { beep(); return; }
+      if (e.type === "iot.vitals") return;
       if (e.type === "referral.new") {
         if (e.level === "EMERGENCY" || e.level === "HIGH") beep();
         if (alerts && document.visibilityState !== "visible") new Notification(`Sahhanito · ${t("Nouveau patient")}`, { body: `${t("Niveau")} : ${e.level}`, icon: "/mascot.png" });

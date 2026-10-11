@@ -14,6 +14,7 @@ import { LiveTrackingMap } from "@/components/LiveTrackingMap";
 import { FeedbackPanel } from "@/components/FeedbackPanel";
 import { ReroutePanel } from "@/components/ReroutePanel";
 import { VerifiedPhoto } from "@/components/VerifiedPhoto";
+import { AmbulanceMonitor } from "@/components/AmbulanceMonitor";
 import { api, downloadFhir, openReportPdf } from "@/api";
 import { AMBULANCE, ago, EQUIPMENT, LANG, pct, STATUS, time } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -196,6 +197,7 @@ export function CaseView({ detail, onBack, onChanged }: { detail: CaseDetail; on
 
           <TabsContent value="summary" className="space-y-4 pt-4">
             {c.location && <LiveTrackingMap referralId={r.id} />}
+            {detail.ambulance && <AmbulanceMonitor referralId={r.id} />}
             {photos.length > 0 && (
               <Card>
                 <CardHeader className="pb-2">

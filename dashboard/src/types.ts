@@ -102,3 +102,10 @@ export interface ReviewItem {
     triggered_rules: TriggeredRule[] } | null;
   transcript: Turn[]; report: Report;
 }
+
+/** One message of the SIMULATED ambulance monitor (iot-sim/). Display only: never used by the AI. */
+export interface VitalReading {
+  seq: number; deviceId: string; measuredAt: string | null; simulated: true; signed: true; alerts: string[];
+  vitals: { heartRate?: number; spo2?: number; respRate?: number; systolic?: number; diastolic?: number; temperature?: number };
+  position: { lat: number; lng: number } | null;
+}

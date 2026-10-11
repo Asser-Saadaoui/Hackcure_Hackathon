@@ -126,6 +126,21 @@ class Ambulance(Base):
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
+class VitalReading(Base):
+    """One telemetry message of a SIMULATED ambulance monitor (iot-sim/). Shown to the hospital; never used by the AI."""
+    __tablename__ = 'vital_readings'
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    referral_id: Mapped[str] = mapped_column(ForeignKey('referrals.id'), index=True)
+    case_id: Mapped[str] = mapped_column(ForeignKey('cases.id'), index=True)
+    device_id: Mapped[str] = mapped_column(String(40))
+    seq: Mapped[int] = mapped_column(Integer)
+    measured_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    vitals: Mapped[dict] = mapped_column(JSON)          # heartRate, spo2, respRate, systolic, diastolic, temperature
+    position: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    alerts: Mapped[list] = mapped_column(JSON, default=list)
+
+
 class StaffUser(Base):
     __tablename__ = 'staff_users'
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
