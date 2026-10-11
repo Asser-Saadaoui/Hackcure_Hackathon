@@ -1,4 +1,4 @@
-import { router, Stack, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { ArrowRight, Clock3, FileText, MessageCircle, Phone, RefreshCw, ShieldCheck } from 'lucide-react-native';
 import { useCallback, useId, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
@@ -68,7 +68,6 @@ export default function HomeScreen() {
   const statusLabels = { TRIAGING:companionCopy.caseTriaging, EMERGENCY:companionCopy.caseEmergency, UNDER_REVIEW:companionCopy.caseReview, RESULT_READY:companionCopy.caseResult, REFERRED:companionCopy.caseReferred, CLOSED:companionCopy.caseClosed };
   const overviewMetrics = <View style={styles.metrics}>{metrics.map(({ Icon, label, value },index) => <Pressable key={label} nativeID={`magic-card-${surfaceId}-metric-${index}`} accessibilityRole="button" accessibilityLabel={`${label}: ${value ?? '—'}. ${copy('View history','Voir l’historique','عرض المحادثات')}`} onPress={() => router.push('/history')} style={({pressed}) => [styles.card, styles.metric, pressed && {backgroundColor:Colors.accent}]}><View style={styles.metricIcon}><Icon size={20} color={Colors.primary} /></View><View style={styles.grow}>{cases === null && !failed ? <ActivityIndicator color={Colors.primary} /> : <AppText variant="label" style={{fontSize:24,lineHeight:30}}>{value ?? '—'}</AppText>}<AppText variant="small">{label}</AppText></View><ArrowRight size={16} color={Colors.mutedFg} /></Pressable>)}</View>;
   return <Screen maxWidth={1150}>
-    <Stack.Screen options={{ headerRight: () => <Button label="190" accessibilityLabel={t('call190')} size="sm" variant="outline" icon={Phone} onPress={() => Linking.openURL('tel:190')} /> }} />
     <View style={[styles.pageContent, docked && styles.mascotGutter]}>
     <View style={[styles.pageHeader, columns && styles.horizontal]}>
     <View style={[styles.heading, columns && styles.grow]}>
