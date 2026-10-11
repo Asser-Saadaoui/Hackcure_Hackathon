@@ -211,9 +211,16 @@ With mutual TLS, the connection itself authenticates the device. Keep an applica
 
 To show the real chain (sensor → signed message → live dashboard) with physical hardware. **Never use it on patients**: a real ambulance uses its certified monitor through a gateway (§3.1–3.2).
 
-![Wiring of the demo kit](iot-wiring.png)
+![Wiring of the demo kit](iot-wiring-illustration.png)
 
-Source: `iot-wiring.dot` (render with `dot -Tsvg docs/iot-wiring.dot -o docs/iot-wiring.svg`).
+> **The pin table below is the reference for wiring.** The illustration has a few label errors:
+> - **ECG output must go to GPIO1 (ADC1_CH0), not GPIO13.** GPIO13 is on ADC2, which the ESP32-S3 cannot read reliably while Wi-Fi/radio is active: the ECG signal would drop out.
+> - **ECG LO+ is GPIO2** (not GPIO12); **LO− is GPIO3**.
+> - **GPIO17 is the 4G UART TX only; the 4G PWRKEY is GPIO16.** The illustration labels GPIO17 twice.
+> - **GPIO18 is the 4G UART RX** (shown as "U1C").
+> - The SIM7600E module appears twice: it is a single module.
+>
+> Exact schematic (generated from source): [`iot-wiring.svg`](iot-wiring.svg) / [`iot-wiring.png`](iot-wiring.png), source `iot-wiring.dot` (`dot -Tsvg docs/iot-wiring.dot -o docs/iot-wiring.svg`).
 
 | Part | Role | Connection | ESP32-S3 pin |
 |---|---|---|---|
