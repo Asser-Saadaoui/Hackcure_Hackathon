@@ -1,5 +1,5 @@
 import { router, Stack, useFocusEffect } from 'expo-router';
-import { ArrowRight, Clock3, FileText, MessageCircle, Phone, ShieldCheck } from 'lucide-react-native';
+import { ArrowRight, Clock3, FileText, MessageCircle, Phone, RefreshCw, ShieldCheck } from 'lucide-react-native';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 
@@ -29,12 +29,16 @@ export default function HomeScreen() {
   const copy = (en: string, french: string, arabic: string) => ar ? arabic : fr ? french : en;
   const [cases, setCases] = useState<CaseSummary[] | null>(null);
   const [failed, setFailed] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [updated, setUpdated] = useState<Date | null>(null);
   const focused = useRef(false);
   const request = useRef(0);
   const load = useCallback(() => {
     const id = ++request.current;
-    api.listCases().then(value => { if (focused.current && id === request.current) { setCases(value); setFailed(false); } })
-      .catch(() => { if (focused.current && id === request.current) setFailed(true); });
+    setRefreshing(true);
+    api.listCases().then(value => { if (focused.current && id === request.current) { setCases(value); setFailed(false); setUpdated(new Date()); } })
+      .catch(() => { if (focused.current && id === request.current) setFailed(true); })
+      .finally(() => { if (focused.current && id === request.current) setRefreshing(false); });
   }, []);
   useFocusEffect(useCallback(() => {
     focused.current = true;
@@ -59,6 +63,8 @@ export default function HomeScreen() {
     { Icon: Clock3, label: copy('Open cases', 'Dossiers ouverts', 'الحالات المفتوحة'), value: overview.open },
     { Icon: FileText, label: copy('Closed cases', 'Dossiers clôturés', 'الحالات المغلقة'), value: overview.closed },
   ];
+  const current = cases ? [...cases].filter(item => item.status !== 'CLOSED').sort((a,b) => Date.parse(b.createdAt)-Date.parse(a.createdAt))[0] : undefined;
+  const statusLabels = { TRIAGING:companionCopy.caseTriaging, EMERGENCY:companionCopy.caseEmergency, UNDER_REVIEW:companionCopy.caseReview, RESULT_READY:companionCopy.caseResult, REFERRED:companionCopy.caseReferred, CLOSED:companionCopy.caseClosed };
   return <Screen maxWidth={1150}>
     <Stack.Screen options={{ headerRight: () => <Button label="190" accessibilityLabel={t('call190')} size="sm" variant="outline" icon={Phone} onPress={() => Linking.openURL('tel:190')} /> }} />
     <View style={styles.heading}>
@@ -66,6 +72,19 @@ export default function HomeScreen() {
       <AppText variant="title">{copy('Your care starts here.', 'Votre parcours commence ici.', 'رحلة العناية تبدأ هنا.')}</AppText>
       <AppText style={styles.muted}>{copy('One space for your conversations and next steps.', 'Un espace pour vos échanges et les prochaines étapes.', 'بلاصة واحدة للمحادثات والخطوات الجاية.')}</AppText>
     </View>
+    <View style={styles.sectionHead}>
+      <AppText variant="small" accessibilityLiveRegion="polite">{refreshing ? companionCopy.overviewRefreshing : updated ? `${companionCopy.overviewUpdated} · ${updated.toLocaleTimeString(language === 'darija' ? 'ar-TN' : language, {hour:'2-digit',minute:'2-digit'})}` : ''}</AppText>
+      <Button label={companionCopy.overviewRefresh} size="sm" variant="outline" icon={RefreshCw} disabled={refreshing} onPress={load} />
+    </View>
+    {failed && <View accessibilityRole="alert" style={styles.failure}><AppText variant="small">{cases ? companionCopy.overviewStale : companionCopy.historyError}</AppText></View>}
+    {current && <View style={[styles.card, styles.resume, columns && styles.horizontal]}>
+      <View style={[styles.grow, {gap:6}]}>
+        <AppText variant="subtitle">{companionCopy.overviewResume}</AppText>
+        <AppText variant="small">{companionCopy.overviewResumeNote}</AppText>
+        <View style={styles.heroTag}><AppText variant="label">{current.referenceCode} · {statusLabels[current.status]}</AppText>{current.level && <RiskBadge level={current.level} />}</View>
+      </View>
+      <Button label={companionCopy.overviewResumeAction} iconRight={ArrowRight} onPress={() => open(current)} />
+    </View>}
     <View style={[styles.hero, columns && styles.horizontal]}>
       <View style={styles.orbit} pointerEvents="none" />
       <View style={styles.heroCopy}>
@@ -87,14 +106,14 @@ export default function HomeScreen() {
       </View>
     </View>
     <CareNetwork />
-    <View style={styles.metrics}>{metrics.map(({ Icon, label, value }) => <View key={label} style={[styles.card, styles.metric]}><Icon size={20} color={Colors.primary} /><AppText variant="title">{failed ? '—' : value ?? '—'}</AppText><AppText variant="small">{label}</AppText></View>)}</View>
+    <View style={styles.metrics}>{metrics.map(({ Icon, label, value }) => <Pressable key={label} accessibilityRole="button" accessibilityLabel={`${label}: ${value ?? '—'}. ${copy('View history','Voir l’historique','عرض المحادثات')}`} onPress={() => router.push('/history')} style={({pressed}) => [styles.card, styles.metric, pressed && {backgroundColor:Colors.accent}]}><View style={styles.sectionHead}><Icon size={20} color={Colors.primary} /><ArrowRight size={16} color={Colors.mutedFg} /></View>{cases === null && !failed ? <ActivityIndicator color={Colors.primary} /> : <AppText variant="label" style={{fontSize:27,lineHeight:34}}>{value ?? '—'}</AppText>}<AppText variant="small">{label}</AppText></Pressable>)}</View>
     <View style={[styles.row, columns && styles.horizontal]}>
     <View style={[styles.card, styles.grow]}>
       <View style={styles.sectionHead}><AppText variant="subtitle">{copy('Recent activity', 'Activité récente', 'آخر النشاطات')}</AppText><Button size="sm" variant="ghost" label={copy('View history', 'Voir l’historique', 'عرض المحادثات')} onPress={() => router.push('/history')} /></View>
-      {failed ? <><AppText>{t('errorRetry')}</AppText><Button label={t('retry')} onPress={() => { setFailed(false); setCases(null); load(); }} /></>
+      {failed && cases === null ? <><AppText>{t('errorRetry')}</AppText><Button label={t('retry')} disabled={refreshing} onPress={load} /></>
         : cases === null ? <ActivityIndicator color={Colors.primary} />
         : overview.recent.length === 0 ? <View style={styles.empty}><MessageCircle size={26} color={Colors.mutedFg} /><AppText>{t('historyEmpty')}</AppText><AppText variant="small">{copy('Your conversations on this device will appear here.', 'Les conversations de cet appareil apparaîtront ici.', 'المحادثات في الجهاز هذا تظهر هنا.')}</AppText></View>
-        : overview.recent.map(item => <Pressable key={item.id} accessibilityRole="button" onPress={() => open(item)} style={styles.caseRow}><View style={styles.grow}><AppText style={{ fontFamily: Fonts.semibold }}>{item.referenceCode}</AppText><AppText variant="small">{new Date(item.createdAt).toLocaleDateString(language === 'darija' ? 'ar-TN' : language)}{item.facilityName ? ` · ${item.facilityName}` : ''}</AppText></View>{item.level && <RiskBadge level={item.level} />}<ArrowRight size={16} color={Colors.primary} /></Pressable>)}
+        : overview.recent.map(item => <Pressable key={item.id} accessibilityRole="button" onPress={() => open(item)} style={styles.caseRow}><View style={styles.grow}><AppText style={{ fontFamily: Fonts.semibold }}>{item.referenceCode}</AppText><AppText variant="small">{statusLabels[item.status]}</AppText><AppText variant="small">{new Date(item.createdAt).toLocaleDateString(language === 'darija' ? 'ar-TN' : language)}{item.facilityName ? ` · ${item.facilityName}` : ''}</AppText></View>{item.level && <RiskBadge level={item.level} />}<ArrowRight size={16} color={Colors.primary} /></Pressable>)}
     </View>
     <View style={[styles.card, columns && styles.side]}>
       <View style={styles.emergencyIcon}><Phone size={20} color={Colors.destructive} /></View>
@@ -112,6 +131,8 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  resume: {backgroundColor:'#F7FAFF',borderColor:'#C6D9F3',alignItems:'stretch'},
+  failure: {padding:14,borderRadius:14,backgroundColor:Colors.warningBg,borderWidth:1,borderColor:Colors.warningBorder},
   heading: { gap: 8, paddingBottom: 8 },
   eyebrow: { fontSize: 10, letterSpacing: 1.8, fontFamily: Fonts.semibold, color: Colors.primary },
   muted: { color: Colors.mutedFg, lineHeight: 23 },
