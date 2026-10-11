@@ -1,6 +1,6 @@
 import { router, Stack, useFocusEffect } from 'expo-router';
 import { ArrowRight, Clock3, FileText, MessageCircle, Phone, RefreshCw, ShieldCheck } from 'lucide-react-native';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useId, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { AppText } from '@/components/app-text';
@@ -19,6 +19,7 @@ import type { CaseSummary } from '@/lib/types';
 
 /** Device-scoped overview: counts and cases come from the existing patient API. */
 export default function HomeScreen() {
+  const surfaceId = useId();
   const { language, t } = useI18n();
   const companionCopy = EXPERIENCE[language];
   const { width, fontScale } = useWindowDimensions();
@@ -76,8 +77,8 @@ export default function HomeScreen() {
       <AppText variant="small" accessibilityLiveRegion="polite">{refreshing ? companionCopy.overviewRefreshing : updated ? `${companionCopy.overviewUpdated} · ${updated.toLocaleTimeString(language === 'darija' ? 'ar-TN' : language, {hour:'2-digit',minute:'2-digit'})}` : ''}</AppText>
       <Button label={companionCopy.overviewRefresh} size="sm" variant="outline" icon={RefreshCw} disabled={refreshing} onPress={load} />
     </View>
-    {failed && <View accessibilityRole="alert" style={styles.failure}><AppText variant="small">{cases ? companionCopy.overviewStale : companionCopy.historyError}</AppText></View>}
-    {current && <View style={[styles.card, styles.resume, columns && styles.horizontal]}>
+    {failed && <View nativeID={`magic-card-warning-${surfaceId}`} accessibilityRole="alert" style={styles.failure}><AppText variant="small">{cases ? companionCopy.overviewStale : companionCopy.historyError}</AppText></View>}
+    {current && <View nativeID={`magic-card-${surfaceId}-resume`} style={[styles.card, styles.resume, columns && styles.horizontal]}>
       <View style={[styles.grow, {gap:6}]}>
         <AppText variant="subtitle">{companionCopy.overviewResume}</AppText>
         <AppText variant="small">{companionCopy.overviewResumeNote}</AppText>
@@ -85,7 +86,7 @@ export default function HomeScreen() {
       </View>
       <Button label={companionCopy.overviewResumeAction} iconRight={ArrowRight} onPress={() => open(current)} />
     </View>}
-    <View style={[styles.hero, columns && styles.horizontal]}>
+    <View nativeID={`magic-card-${surfaceId}-hero`} style={[styles.hero, columns && styles.horizontal]}>
       <View style={styles.orbit} pointerEvents="none" />
       <View style={styles.heroCopy}>
         <View style={styles.heroTag}><ShieldCheck size={16} color={Colors.primary} /><AppText variant="small">{copy('Here to guide you', 'Pour vous orienter', 'هنا باش نوجّهك')}</AppText></View>
@@ -98,7 +99,7 @@ export default function HomeScreen() {
         <View style={docked ? { width:0 } : undefined}><Hassanito state="idle" presentation="hero" message={copy('I’m Hassanito. We’ll take it one step at a time.', 'Je suis Hassanito. Une étape à la fois.', 'أنا حسنّيتو. نمشيو خطوة بخطوة.')} /></View>
         <AppText variant="small" style={styles.messageTitle}>{companionCopy.mascotMessagesTitle}</AppText>
         <AnimatedList key={language} delay={600}>
-          {[companionCopy.mascotMessage1, companionCopy.mascotMessage2, companionCopy.mascotMessage3].map(message => <View key={message} style={styles.mascotMessage}>
+          {[companionCopy.mascotMessage1, companionCopy.mascotMessage2, companionCopy.mascotMessage3].map((message,index) => <View key={message} nativeID={`magic-card-${surfaceId}-message-${index}`} style={styles.mascotMessage}>
             <MessageCircle size={16} color={Colors.primary} />
             <AppText variant="small" style={styles.messageText}>{message}</AppText>
           </View>)}
@@ -106,16 +107,16 @@ export default function HomeScreen() {
       </View>
     </View>
     <CareNetwork />
-    <View style={styles.metrics}>{metrics.map(({ Icon, label, value }) => <Pressable key={label} accessibilityRole="button" accessibilityLabel={`${label}: ${value ?? '—'}. ${copy('View history','Voir l’historique','عرض المحادثات')}`} onPress={() => router.push('/history')} style={({pressed}) => [styles.card, styles.metric, pressed && {backgroundColor:Colors.accent}]}><View style={styles.sectionHead}><Icon size={20} color={Colors.primary} /><ArrowRight size={16} color={Colors.mutedFg} /></View>{cases === null && !failed ? <ActivityIndicator color={Colors.primary} /> : <AppText variant="label" style={{fontSize:27,lineHeight:34}}>{value ?? '—'}</AppText>}<AppText variant="small">{label}</AppText></Pressable>)}</View>
+    <View style={styles.metrics}>{metrics.map(({ Icon, label, value },index) => <Pressable key={label} nativeID={`magic-card-${surfaceId}-metric-${index}`} accessibilityRole="button" accessibilityLabel={`${label}: ${value ?? '—'}. ${copy('View history','Voir l’historique','عرض المحادثات')}`} onPress={() => router.push('/history')} style={({pressed}) => [styles.card, styles.metric, pressed && {backgroundColor:Colors.accent}]}><View style={styles.sectionHead}><Icon size={20} color={Colors.primary} /><ArrowRight size={16} color={Colors.mutedFg} /></View>{cases === null && !failed ? <ActivityIndicator color={Colors.primary} /> : <AppText variant="label" style={{fontSize:27,lineHeight:34}}>{value ?? '—'}</AppText>}<AppText variant="small">{label}</AppText></Pressable>)}</View>
     <View style={[styles.row, columns && styles.horizontal]}>
-    <View style={[styles.card, styles.grow]}>
+    <View nativeID={`magic-card-${surfaceId}-activity`} style={[styles.card, styles.grow]}>
       <View style={styles.sectionHead}><AppText variant="subtitle">{copy('Recent activity', 'Activité récente', 'آخر النشاطات')}</AppText><Button size="sm" variant="ghost" label={copy('View history', 'Voir l’historique', 'عرض المحادثات')} onPress={() => router.push('/history')} /></View>
       {failed && cases === null ? <><AppText>{t('errorRetry')}</AppText><Button label={t('retry')} disabled={refreshing} onPress={load} /></>
         : cases === null ? <ActivityIndicator color={Colors.primary} />
         : overview.recent.length === 0 ? <View style={styles.empty}><MessageCircle size={26} color={Colors.mutedFg} /><AppText>{t('historyEmpty')}</AppText><AppText variant="small">{copy('Your conversations on this device will appear here.', 'Les conversations de cet appareil apparaîtront ici.', 'المحادثات في الجهاز هذا تظهر هنا.')}</AppText></View>
         : overview.recent.map(item => <Pressable key={item.id} accessibilityRole="button" onPress={() => open(item)} style={styles.caseRow}><View style={styles.grow}><AppText style={{ fontFamily: Fonts.semibold }}>{item.referenceCode}</AppText><AppText variant="small">{statusLabels[item.status]}</AppText><AppText variant="small">{new Date(item.createdAt).toLocaleDateString(language === 'darija' ? 'ar-TN' : language)}{item.facilityName ? ` · ${item.facilityName}` : ''}</AppText></View>{item.level && <RiskBadge level={item.level} />}<ArrowRight size={16} color={Colors.primary} /></Pressable>)}
     </View>
-    <View style={[styles.card, columns && styles.side]}>
+    <View nativeID={`magic-card-danger-${surfaceId}`} style={[styles.card, columns && styles.side]}>
       <View style={styles.emergencyIcon}><Phone size={20} color={Colors.destructive} /></View>
       <AppText variant="subtitle">{t('emergencyQuestion')}</AppText>
       <AppText variant="small">{copy('If you need emergency help, contact 190 directly. Do not wait for the app.', 'Besoin de secours ? Appelez directement le 190. N’attendez pas l’application.', 'إذا تستحق إسعاف اتصل مباشرة بـ190. ما تستناش التطبيق.')}</AppText>

@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { ArrowRight, Phone, ShieldAlert } from 'lucide-react-native';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { ActivityIndicator, Linking, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -28,6 +28,7 @@ export const CONSENT_VERSION = '2026-10-v1';
 type Phase = 'consent' | 'starting';
 
 export default function WelcomeScreen() {
+  const surfaceId = useId();
   const { t, language, setLanguage } = useI18n();
   const copy = EXPERIENCE[language];
   const { width, fontScale } = useWindowDimensions();
@@ -65,7 +66,7 @@ export default function WelcomeScreen() {
       />
 
       <View style={[styles.layout, wide && styles.desktopLayout]}>
-      <View style={styles.panel}>
+      <View nativeID={`magic-card-${surfaceId}-welcome`} style={styles.panel}>
       <Floating3DParticles />
       <View style={styles.foreground}>
       <View style={styles.intro}>
@@ -81,7 +82,7 @@ export default function WelcomeScreen() {
       </View>
       </View>
 
-      <View style={[styles.panel, styles.consentPanel]}>
+      <View nativeID={`magic-card-${surfaceId}-consent`} style={[styles.panel, styles.consentPanel]}>
       {phase === 'consent' && (
         <>
           <Card>

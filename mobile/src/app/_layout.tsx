@@ -12,6 +12,7 @@ import { Linking, Platform, useWindowDimensions, View } from 'react-native';
 import { Phone } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/button';
+import { MagicSurfaceEffects } from '@/components/magic-surface-effects';
 
 import { BrandTitle } from '@/components/brand-title';
 import { ConnectionBanner } from '@/components/connection-banner';
@@ -71,6 +72,7 @@ export default function RootLayout() {
 
   return (
     <LanguageProvider>
+      <MagicSurfaceEffects />
       <Navigator />
     </LanguageProvider>
   );

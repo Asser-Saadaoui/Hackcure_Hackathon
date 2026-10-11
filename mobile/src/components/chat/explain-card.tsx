@@ -1,4 +1,5 @@
 import { ArrowDown, ArrowUp, Info } from 'lucide-react-native';
+import { useId } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/app-text';
@@ -9,10 +10,11 @@ import type { PatientExplain } from '@/lib/types';
 
 /** Explainability in the chat: why this level (system reasons) and what the analysis relied on. */
 export function ExplainCard({ explain }: { explain: PatientExplain }) {
+  const id = useId();
   const { t } = useI18n();
   const max = Math.max(...explain.factors.map((f) => f.weight), 0.05);
   return (
-    <View style={styles.card} accessibilityLabel={t('explainTitle')}>
+    <View nativeID={`magic-card-${id}`} style={styles.card} accessibilityLabel={t('explainTitle')}>
       <View style={styles.head}>
         <Info size={16} color={Colors.primary} strokeWidth={2.25} />
         <AppText variant="label" style={styles.flex}>{t('explainTitle')}</AppText>

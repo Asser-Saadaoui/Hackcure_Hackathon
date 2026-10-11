@@ -16,7 +16,7 @@ export function CareNetwork() {
   const emergency = useRef<HTMLDivElement>(null);
   const doctor = useRef<HTMLDivElement>(null);
   const copy = (key: keyof typeof EXPERIENCE.en) => EXPERIENCE[language][key];
-  return <section className="care-network" dir={rtl ? 'rtl' : 'ltr'} aria-labelledby="care-network-title">
+  return <section className="care-network magic-surface" dir={rtl ? 'rtl' : 'ltr'} aria-labelledby="care-network-title">
     <style>{`
       .care-network { border:1px solid #DDE6F1; border-radius:24px; background:linear-gradient(115deg,#fff,#F5F9FF); padding:22px 26px; color:#183455; font-family:Inter_400Regular,Arial,sans-serif; }
       .care-network h2 { margin:0; font-size:17px; line-height:26px; font-weight:600; letter-spacing:-.2px; }
@@ -54,7 +54,7 @@ export function CareNetwork() {
 }
 
 function CareOption({ nodeRef, Icon, label, urgent = false }: { nodeRef: RefObject<HTMLDivElement | null>; Icon: typeof Hospital; label: string; urgent?: boolean }) {
-  return <div className={`care-network-option${urgent ? ' is-urgent' : ''}`}>
+  return <div className={`care-network-option magic-surface${urgent ? ' is-urgent' : ''}`}>
     <div ref={nodeRef} className="care-network-option-icon"><Icon size={18} color={urgent ? '#C52020' : '#245CAF'} /></div><span>{label}</span>
   </div>;
 }
