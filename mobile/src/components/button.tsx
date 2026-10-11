@@ -27,13 +27,13 @@ const FG: Record<Variant, string> = {
   destructive: '#FFFFFF',
 };
 
-/** shadcn-style button (central-park): rounded-md, h-10/h-11, optional Lucide icons. */
+/** Shared actions use Magic UI's pill treatment; quiet controls keep their compact style. */
 export function Button({ label, variant = 'default', size = 'default', icon: Icon, iconRight: IconRight, disabled, style, ...rest }: Props) {
   const emergencyCall = Icon === Phone && /190/.test(label);
-  // Main calls to action (large primary): Magic UI interactive hover button.
-  if (variant === 'default' && size === 'lg' && !emergencyCall) {
-    return <InteractiveButton label={label} icon={Icon} disabled={disabled ?? undefined} accessibilityLabel={rest.accessibilityLabel}
-      onPress={rest.onPress ? () => rest.onPress?.(undefined as never) : undefined} style={typeof style === 'function' ? undefined : style} />;
+  // Shared action treatment, including every emergency call. Quiet controls stay compact.
+  if (variant !== 'ghost' || emergencyCall) {
+    return <InteractiveButton {...rest} label={label} icon={Icon} iconRight={IconRight}
+      variant={emergencyCall || variant === 'ghost' ? 'destructive' : variant} size={size} shiny={emergencyCall} disabled={disabled} style={style} />;
   }
   const fg = FG[variant];
   return (
