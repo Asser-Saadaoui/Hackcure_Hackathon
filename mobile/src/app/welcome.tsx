@@ -70,11 +70,11 @@ export default function WelcomeScreen() {
         <AppText variant="title" style={styles.welcomeTitle}>{copy.welcomeTitle}</AppText>
         <AppText style={styles.lead}>{copy.welcomeIntro}</AppText>
       </View>
-      <Hassanito state={phase === 'starting' ? 'thinking' : 'idle'} presentation="hero" />
-      <PrototypeNotice />
       <Card><AppText variant="subtitle">{copy.howTitle}</AppText>
         {[copy.how1, copy.how2, copy.how3].map((step, i) => <View key={i} style={styles.step}><AppText style={styles.number}>{i + 1}</AppText><AppText style={{ flex: 1 }}>{step}</AppText></View>)}
       </Card>
+      <Hassanito state={phase === 'starting' ? 'thinking' : 'idle'} presentation="hero" />
+      <PrototypeNotice />
       <Button label={copy.explore} variant="ghost" onPress={() => router.push('/home')} />
       </View>
 

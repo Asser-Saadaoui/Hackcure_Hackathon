@@ -65,7 +65,7 @@ export function IncomingView({ rows, scope, onScope, onOpen, error, loading }: P
         </div>
         <div className="flex gap-1 rounded-lg bg-secondary p-1">
           {(["active", "history"] as const).map((s) => (
-            <button key={s} aria-pressed={scope === s} onClick={() => onScope(s)}
+            <button key={s} aria-pressed={scope === s} onClick={() => { setStatus("ALL"); onScope(s); }}
               className={cn("rounded-md px-3 py-1.5 text-sm font-medium", scope === s ? "bg-card shadow-sm" : "text-muted-foreground")}>
               {s === "active" ? t("En cours") : t("Historique")}
             </button>

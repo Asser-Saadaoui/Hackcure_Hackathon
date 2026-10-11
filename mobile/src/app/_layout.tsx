@@ -3,11 +3,15 @@ import { Inter_500Medium } from '@expo-google-fonts/inter/500Medium';
 import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
 import { Inter_700Bold } from '@expo-google-fonts/inter/700Bold';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { Platform, useWindowDimensions, View } from 'react-native';
+import { Linking, Platform, useWindowDimensions, View } from 'react-native';
+
+import { Phone } from 'lucide-react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Button } from '@/components/button';
 
 import { BrandTitle } from '@/components/brand-title';
 import { ConnectionBanner } from '@/components/connection-banner';
@@ -18,6 +22,7 @@ import { LanguageProvider, useI18n } from '@/i18n';
 SplashScreen.preventAutoHideAsync();
 
 function Navigator() {
+  const pathname = usePathname();
   const { rtl, t } = useI18n();
   const { width, fontScale } = useWindowDimensions();
   const desktop = Platform.OS === 'web' && width >= 900 && fontScale <= 1.4;
@@ -48,6 +53,9 @@ function Navigator() {
         <Stack.Screen name="history" />
         <Stack.Screen name="settings" />
       </Stack></PlatformShell>
+      {!desktop && pathname !== '/welcome' && <SafeAreaView edges={['bottom', 'left', 'right']} style={{ padding: 8, borderTopWidth: 1, borderColor: Colors.border, backgroundColor: Colors.card }}>
+        <Button label={t('call190')} icon={Phone} variant="destructive" size="sm" onPress={() => Linking.openURL('tel:190')} />
+      </SafeAreaView>}
     </View>
   );
 }

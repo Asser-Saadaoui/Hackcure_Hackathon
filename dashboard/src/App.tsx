@@ -10,7 +10,7 @@ import { IncomingView } from "@/components/IncomingView";
 import { LoginScreen } from "@/components/LoginScreen";
 import { NetworkView } from "@/components/NetworkView";
 import { ReviewView } from "@/components/ReviewView";
-import { api, session, setUnauthorizedHandler, subscribe } from "@/api";
+import { api, ApiError, session, setUnauthorizedHandler, subscribe } from "@/api";
 import { cn } from "@/lib/utils";
 import type { CaseDetail, Hospital, ReferralRow, ReviewItem, StaffUser, TriageFeedback } from "@/types";
 
@@ -74,8 +74,15 @@ export default function App() {
   useEffect(() => {
     setUnauthorizedHandler(() => setUser(null));
     if (!session.get()) { setBooting(false); return; }
-    api.me().then(setUser).catch(() => session.clear()).finally(() => setBooting(false));
+    api.me().then(setUser).catch(err => { if (err instanceof ApiError && err.status === 401) session.clear(); }).finally(() => setBooting(false));
   }, []);
+
+  useEffect(() => {
+    if (user) return;
+    Object.keys(requests.current).forEach(key => requests.current[key]++);
+    setRows([]); setDetail(null); setHospital(null); setReviews([]); setFeedback([]); setOpenId(null);
+    setNetwork({ hospitals: [], ok: false }); setLoading({}); setLoaded({}); setFailures({}); setUpdated({});
+  }, [user]);
 
   useEffect(() => { if (user) setView(isHospital ? "incoming" : "reviews"); }, [user, isHospital]);
 
@@ -130,7 +137,7 @@ export default function App() {
     document.title = waiting ? `(${waiting}) Sahhanito · Urgences` : "Sahhanito · Urgences";
   }, [rows]);
 
-  if (booting) return <div className="flex min-h-screen items-center justify-center"><img src="/mascot-thinking.png" alt="" className="h-16 w-16 animate-pulse" /></div>;
+  if (booting) return <div className="flex min-h-screen items-center justify-center"><p role="status">{t("Chargement…")}</p></div>;
   if (!user) return <LoginScreen onLogin={setUser} />;
 
   const nav: { id: View; label: string; icon: typeof Inbox; show: boolean }[] = [

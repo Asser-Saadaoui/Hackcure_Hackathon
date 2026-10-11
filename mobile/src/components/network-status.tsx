@@ -28,7 +28,7 @@ export function NetworkStatus() {
         const res = await fetch(`${API_URL}/api/v1/health`, { signal: controller.signal });
         if (!res.ok) throw new Error('Unavailable');
         const data = await res.json();
-        if (!Number.isInteger(data.hospitals) || typeof data.simulator?.ok !== 'boolean') throw new Error('Invalid status');
+        if (!Number.isInteger(data.hospitals) || data.hospitals < 0 || typeof data.simulator?.ok !== 'boolean') throw new Error('Invalid status');
         if (active) { setStatus({ hospitals: data.hospitals, connected: data.simulator.ok, checked: new Date() }); setFailed(false); }
       } catch { if (active) setFailed(true); }
       finally { clearTimeout(timeout); if (active) setLoading(false); }
@@ -44,9 +44,9 @@ export function NetworkStatus() {
     <AppText variant="subtitle">{copy.statusTitle}</AppText>
     <View accessibilityLiveRegion="polite" style={{ gap: 6 }}>
       {loading && !failed ? <><ActivityIndicator color={Colors.primary} /><AppText>{copy.statusLoading}</AppText></> :
-        failed ? <><AppText accessibilityRole="alert">{copy.statusError}</AppText><Button variant="outline" label={t('retry')} onPress={() => { setLoading(true); setRetry(x => x + 1); }} /></> :
+        failed ? <><AppText accessibilityRole="alert">{copy.statusError}</AppText><Button variant="outline" label={t('retry')} onPress={() => { setLoading(true); setFailed(false); setRetry(x => x + 1); }} /></> :
         status && <><AppText>{status.connected ? copy.statusReady : copy.statusOffline}</AppText>
-          <AppText variant="small">{copy.statusCount}: {status.hospitals} · {copy.statusUpdated}: {status.checked.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}</AppText></>}
+          <AppText variant="small">{copy.statusCount}: {status.hospitals} · {copy.statusUpdated}: {status.checked.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: false })}</AppText></>}
     </View>
     <AppText variant="small">{copy.statusNote}</AppText>
   </Card>;
