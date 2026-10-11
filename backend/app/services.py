@@ -16,7 +16,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app import config, hospitals
+from app import config, hospitals, photo_security
 from app.events import broker
 from app.models import Ambulance, AuditLog, AvailabilityOverride, Case, ChatImage, ChatMessage, Referral, Turn, utcnow
 
@@ -114,6 +114,8 @@ def chat_view(m):
         out['options'] = m.options
     if m.reply_to:
         out['replyTo'] = m.reply_to
+    if m.kind == 'IMAGE' and m.image is not None and m.image.sha256:
+        out['sha256'] = m.image.sha256     # lets the receiver verify the photo it downloads
     return out
 
 
@@ -455,28 +457,17 @@ def patient_chat(db, case, r, text, kind, question_id):
     return m
 
 
-# Sniffed from the bytes, never trusted from the client.
-IMAGE_MAGIC = ((b'\xff\xd8\xff', 'image/jpeg'), (b'\x89PNG\r\n\x1a\n', 'image/png'))
-MAX_IMAGE_BYTES = 8 * 1024 * 1024
-
-
-def image_type(data):
-    if data[:4] == b'RIFF' and data[8:12] == b'WEBP':
-        return 'image/webp'
-    return next((t for magic, t in IMAGE_MAGIC if data.startswith(magic)), None)
-
-
 def patient_image(db, case, r, data, caption):
-    """A photo for the ED team (wound, rash, medication box...). Shown to humans only: the AI never reads it."""
-    if len(data) > MAX_IMAGE_BYTES:
-        raise HTTPException(413, 'Image too large (max 8 MB).')
-    content_type = image_type(data)
-    if not content_type:
-        raise HTTPException(415, 'Only JPEG, PNG or WebP photos are accepted.')
+    """A photo for the ED team (wound, rash, medication box...), already verified (photo_security.verify_upload).
+    Shown to humans only: the AI never reads it. Stored sanitized and encrypted, with its SHA-256."""
+    clean = photo_security.sanitize(data)
     m = ChatMessage(referral_id=r.id, case_id=case.id, sender='PATIENT', kind='IMAGE', text=caption)
     db.add(m)
     db.flush()
-    db.add(ChatImage(message_id=m.id, case_id=case.id, content_type=content_type, data=data))
+    digest = photo_security.sha256_hex(clean)
+    m.image = ChatImage(message_id=m.id, case_id=case.id, content_type='image/jpeg', sha256=digest,
+                        encryption=photo_security.ENC, data=photo_security.encrypt(clean, m.id))
+    audit(db, 'patient', 'chat.image_received', case.id, sha256=digest, bytes=len(clean))
     db.commit()
     view = chat_view(m)
     publish_case(case, dict(type='chat.message', message=view))
@@ -487,11 +478,18 @@ def patient_image(db, case, r, data, caption):
 
 
 def chat_image(db, referral_id, message_id):
+    """Decrypted image bytes + SHA-256, after checking the stored image was not altered."""
     m = db.get(ChatMessage, message_id)
     img = db.get(ChatImage, message_id) if m and m.referral_id == referral_id else None
     if not img:
         raise HTTPException(404, 'Image not found.')
-    return img
+    try:
+        data = photo_security.decrypt(img.data, img.message_id) if img.encryption == photo_security.ENC else img.data
+    except Exception:
+        raise HTTPException(500, 'Stored photo failed its integrity check.')
+    if img.sha256 and photo_security.sha256_hex(data) != img.sha256:
+        raise HTTPException(500, 'Stored photo failed its integrity check.')
+    return img, data
 
 
 def screen_patient_text(db, case, r, text):

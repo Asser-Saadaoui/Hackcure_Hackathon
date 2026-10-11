@@ -46,6 +46,7 @@ services:
       REFERRAL_TIMEOUT_EMERGENCY_S: ${REFERRAL_TIMEOUT_EMERGENCY_S:-180}
       REFERRAL_TIMEOUT_HIGH_S: ${REFERRAL_TIMEOUT_HIGH_S:-600}
       AMBULANCE_TIME_SCALE: ${AMBULANCE_TIME_SCALE:-1}
+      IMAGE_KEY: ${IMAGE_KEY:?set IMAGE_KEY (python3 -c "import base64,os;print(base64.b64encode(os.urandom(32)).decode())")}
 
   web:
     build: { context: ., dockerfile: deploy/web.Dockerfile }

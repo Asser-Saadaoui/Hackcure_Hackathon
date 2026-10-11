@@ -28,7 +28,7 @@
 	encode zstd gzip
 	import security
 	import api
-	header Permissions-Policy "geolocation=(self), camera=(), microphone=()"
+	header Permissions-Policy "geolocation=(self), camera=(self), microphone=(self)"
 	handle {
 		root * /srv/patient
 		try_files {path} /index.html

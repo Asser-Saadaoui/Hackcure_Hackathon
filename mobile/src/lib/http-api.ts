@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 
 import type { PatientApi } from '@/lib/api';
 import { connection } from '@/lib/connection';
+import { signPhoto } from '@/lib/photo-signing';
 import { getJSON, Keys, setJSON } from '@/lib/storage';
 import type {
   AmbulanceView, CaseDetail, ChatMessage, PatientEvent, Referral, Session,
@@ -147,7 +148,8 @@ export const httpApi: PatientApi = {
   getReport: (caseId) => call('GET', `/cases/${caseId}/report`),
   getChat: (referralId) => call('GET', `/referrals/${referralId}/chat`),
   sendChat: (referralId, text, kind = 'TEXT', questionId) => call('POST', `/referrals/${referralId}/chat`, { text, kind, questionId }),
-  sendChatImage: (referralId, data, caption = '') => call('POST', `/referrals/${referralId}/chat/image`, { data, caption }),
+  sendChatImage: async (referralId, base64, caption = '') =>
+    call('POST', `/referrals/${referralId}/chat/image`, { ...(await signPhoto(await token(), referralId, base64)), caption }),
   getTracking: (caseId) => call('GET', `/cases/${caseId}/tracking`),
   subscribe: (caseId, onEvent) => (hasEventSource ? subscribeSse(caseId, onEvent) : subscribePolling(caseId, onEvent)),
 };

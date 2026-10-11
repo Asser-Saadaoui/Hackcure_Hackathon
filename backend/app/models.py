@@ -86,15 +86,18 @@ class ChatMessage(Base):
     options: Mapped[list | None] = mapped_column(JSON, nullable=True)
     reply_to: Mapped[str | None] = mapped_column(String(32), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    image: Mapped['ChatImage | None'] = relationship(uselist=False, lazy='select')
 
 
 class ChatImage(Base):
-    """Photo attached to an IMAGE chat message (kept in the database so backups and Docker need nothing else)."""
+    """Photo attached to an IMAGE chat message: sanitized, encrypted (AES-256-GCM), with its SHA-256."""
     __tablename__ = 'chat_images'
     message_id: Mapped[str] = mapped_column(ForeignKey('chat_messages.id'), primary_key=True)
     case_id: Mapped[str] = mapped_column(ForeignKey('cases.id'), index=True)
     content_type: Mapped[str] = mapped_column(String(32))
-    data: Mapped[bytes] = mapped_column(LargeBinary)
+    data: Mapped[bytes] = mapped_column(LargeBinary)        # AES-256-GCM ciphertext (see photo_security.py)
+    sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)      # of the stored (sanitized) image
+    encryption: Mapped[str | None] = mapped_column(String(16), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 

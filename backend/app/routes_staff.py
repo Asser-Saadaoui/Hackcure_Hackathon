@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app import config, hospitals, services
+from app import config, hospitals, photo_security, services
 from app.db import get_db
 from app.deps import clinician, hospital_staff, staff
 from app.events import sse
@@ -204,10 +204,10 @@ def chat(referral_id: str, body: ChatIn, user: StaffUser = Depends(hospital_staf
 @router.get('/referrals/{referral_id}/chat/{message_id}/image')
 def chat_image(referral_id: str, message_id: str, user: StaffUser = Depends(hospital_staff), db: Session = Depends(get_db)):
     my_referral(db, user, referral_id)
-    img = services.chat_image(db, referral_id, message_id)
-    services.audit(db, user.email, 'chat.image_viewed', img.case_id)
+    img, data = services.chat_image(db, referral_id, message_id)
+    services.audit(db, user.email, 'chat.image_viewed', img.case_id, sha256=img.sha256)
     db.commit()
-    return Response(img.data, media_type=img.content_type, headers={'Cache-Control': 'private, max-age=86400'})
+    return Response(data, media_type=img.content_type, headers={**photo_security.HEADERS, 'X-Content-SHA256': img.sha256 or ''})
 
 
 # ---- availability (simulator + staff override) -----------------------------------

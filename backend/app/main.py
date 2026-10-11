@@ -32,7 +32,7 @@ async def lifespan(_app):
 
 app = FastAPI(title='Sahhanito backend', version=VERSION, lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=config.CORS_ORIGINS, allow_methods=['GET', 'POST', 'PUT', 'DELETE'],
-                   allow_headers=['Authorization', 'Content-Type'])
+                   allow_headers=['Authorization', 'Content-Type'], expose_headers=['X-Content-SHA256'])
 app.include_router(patient_router)
 app.include_router(staff_router)
 app.include_router(public_router)

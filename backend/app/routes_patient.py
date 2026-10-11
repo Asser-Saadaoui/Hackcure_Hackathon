@@ -1,16 +1,13 @@
 """Patient app API (mobile/src/lib/api.ts PatientApi). Anonymous device sessions, no account."""
 from typing import Literal
 
-import base64
-import binascii
-
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app import services
+from app import photo_security, services
 from app.db import get_db
 from app.deps import patient
 from app.events import sse
@@ -49,8 +46,13 @@ class ChatIn(BaseModel):
 
 
 class ImageIn(BaseModel):
+    """Signed photo upload (see photo_security.py)."""
     data: str = Field(min_length=16, max_length=12_000_000)   # base64, ~8 MB decoded
     caption: str = Field(default='', max_length=500)
+    sha256: str = Field(pattern=r'^[0-9a-fA-F]{64}$')          # SHA-256 of `data`
+    ts: int                                                    # client time, ms
+    nonce: str = Field(pattern=r'^[0-9a-fA-F]{32}$')
+    sig: str = Field(pattern=r'^[0-9a-fA-F]{64}$')             # HMAC-SHA256, key = SHA-256(session token)
 
 
 def own_case(db, s, case_id):
@@ -147,18 +149,15 @@ def send_chat(referral_id: str, body: ChatIn, s: PatientSession = Depends(patien
 @router.post('/referrals/{referral_id}/chat/image')
 def send_image(referral_id: str, body: ImageIn, s: PatientSession = Depends(patient), db: Session = Depends(get_db)):
     case, r = own_referral(db, s, referral_id)
-    try:
-        data = base64.b64decode(body.data.split(',', 1)[-1], validate=True)   # accepts a data: URL too
-    except (binascii.Error, ValueError):
-        raise HTTPException(422, 'Invalid image data.')
+    data = photo_security.verify_upload(s.token_hash, referral_id, body.data, body.sha256, body.ts, body.nonce, body.sig)
     return services.chat_view(services.patient_image(db, case, r, data, body.caption.strip()))
 
 
 @router.get('/referrals/{referral_id}/chat/{message_id}/image')
 def get_image(referral_id: str, message_id: str, s: PatientSession = Depends(patient), db: Session = Depends(get_db)):
     own_referral(db, s, referral_id)
-    img = services.chat_image(db, referral_id, message_id)
-    return Response(img.data, media_type=img.content_type, headers={'Cache-Control': 'private, max-age=86400'})
+    img, data = services.chat_image(db, referral_id, message_id)
+    return Response(data, media_type=img.content_type, headers={**photo_security.HEADERS, 'X-Content-SHA256': img.sha256 or ''})
 
 
 @router.get('/cases/{case_id}/events')

@@ -121,6 +121,7 @@ export interface ChatMessage {
   text: string;
   options?: string[];         // QUESTION: answer choices (empty = free text)
   replyTo?: string;           // ANSWER: id of the QUESTION it answers
+  sha256?: string;            // IMAGE: SHA-256 of the stored photo (integrity check)
                               // IMAGE: text is the optional caption; the photo is at chatImageSource()
   createdAt: string;
 }

@@ -8,6 +8,7 @@ export interface ChatMessage {
   id: string; referralId: string; sender: "PATIENT" | "STAFF" | "SYSTEM"; senderName?: string;
   kind: "TEXT" | "QUESTION" | "ANSWER" | "INSTRUCTION" | "WORSE" | "SYSTEM" | "RED_FLAG" | "IMAGE";  // IMAGE: text = optional caption
   text: string; options?: string[]; replyTo?: string; createdAt: string;
+  sha256?: string;  // IMAGE: SHA-256 of the stored photo
 }
 
 export interface ReferralRow {
