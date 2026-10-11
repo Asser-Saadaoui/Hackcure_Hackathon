@@ -130,11 +130,6 @@ export default function HomeScreen() {
       </View>
     </View>
     <CareNetwork />
-    <View style={styles.steps}>{[
-      copy('Tell us what is happening', 'Expliquez ce qui se passe', 'احكيلنا شنوّة صاير'),
-      copy('Answer a few questions', 'Répondez à quelques questions', 'جاوب على الأسئلة'),
-      copy('Follow your next steps', 'Consultez les prochaines étapes', 'شوف الخطوات الجاية'),
-    ].map((label, index) => <View key={label} style={styles.step}><View style={styles.number}><AppText style={{ color: Colors.primary }}>{index + 1}</AppText></View><AppText style={styles.grow}>{label}</AppText></View>)}</View>
     </View>
   </Screen>;
 }
@@ -166,9 +161,6 @@ const styles = StyleSheet.create({
   heroTag: {flexDirection:'row', flexWrap:'wrap', alignItems:'center', gap:8},
   card: { padding: 22, borderWidth: 1, borderColor: Colors.border, borderRadius: 22, backgroundColor: Colors.card, gap: 16 },
   emergencyIcon: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFF0F2' },
-  step: { flex: 1, minWidth: 180, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  number: { width: 30, height: 30, borderRadius: 10, backgroundColor: '#DCEBF2', alignItems: 'center', justifyContent: 'center' },
-  steps: { flexDirection: 'row', flexWrap: 'wrap', gap: 20, paddingVertical: 12 },
   metrics: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 }, metric: {flex:1, minWidth:220, gap:12, padding:16, flexDirection:'row', alignItems:'center'},
   metricIcon: {width:42, height:42, borderRadius:13, backgroundColor:'#EAF3F6', alignItems:'center', justifyContent:'center'},
   sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' },

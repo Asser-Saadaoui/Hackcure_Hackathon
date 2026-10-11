@@ -68,7 +68,6 @@ export function PlatformShell({ children }: { children: ReactNode }) {
         {collapsed ? <ChevronRight size={20} color="#DCEBF2" /> : <ChevronLeft size={20} color="#DCEBF2" />}
         {!collapsed && <AppText variant="small" style={{ color: '#DCEBF2' }}>{arabic ? 'تصغير القائمة' : language === 'fr' ? 'Réduire' : 'Collapse'}</AppText>}
       </Pressable>
-      {!collapsed && <AppText variant="small" style={styles.footer}>Sahhanito · صحة نيتو</AppText>}
     </View>
     <View style={styles.workspace}>
       <View style={styles.topbar}>
@@ -109,7 +108,6 @@ const styles = StyleSheet.create({
   link: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9, paddingHorizontal: 10, borderRadius: 10 },
   active: { backgroundColor: '#95BFD126', borderStartWidth: 3, borderColor: '#95BFD1' },
   linkText: { fontSize: 12.5, fontFamily: Fonts.medium, color: '#DCEBF2' },
-  footer: { color: '#95BFD1', fontSize: 11 },
   workspace: { flex: 1, minWidth: 0 },
   topbar: { backgroundColor: '#FFFFFF', paddingHorizontal: 24, paddingVertical: 12, borderBottomWidth: 1, borderColor: Colors.border, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' },
   context: { flexDirection: 'row', alignItems: 'center', gap: 8 },
