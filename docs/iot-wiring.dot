@@ -1,0 +1,155 @@
+// Sahhanito IoT demo kit (NOT a medical device): wiring of the ambulance-monitor prototype.
+// Render: dot -Tsvg docs/iot-wiring.dot -o docs/iot-wiring.svg && dot -Tpng -Gdpi=160 docs/iot-wiring.dot -o docs/iot-wiring.png
+digraph wiring {
+  graph [rankdir=LR, splines=spline, nodesep=0.35, ranksep=1.3, fontname="Helvetica", bgcolor="white",
+         label=<<b>Sahhanito · ambulance monitor demo kit (ESP32-S3) · wiring</b><br/><font point-size="10">Demo only, not a medical device. Red = power, black = GND, blue = I²C (shared bus), green = UART, orange = analog / interrupts, purple = Bluetooth LE</font>>,
+         labelloc=t, fontsize=16];
+  node [shape=plain, fontname="Helvetica", fontsize=11];
+  edge [fontname="Helvetica", fontsize=9, arrowhead=none, penwidth=1.6];
+
+  // ---------------- power ----------------
+  lipo [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="4" bgcolor="#FFF7ED">
+    <tr><td bgcolor="#FDBA74"><b>LiPo 3.7 V · 3000 mAh</b></td></tr>
+    <tr><td port="pos" align="left">+ (BAT)</td></tr>
+    <tr><td port="neg" align="left">− (BAT)</td></tr></table>>];
+
+  tp4056 [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="4" bgcolor="#FFF7ED">
+    <tr><td colspan="2" bgcolor="#FDBA74"><b>TP4056 charger + protection</b><br/><font point-size="9">USB-C in for charging</font></td></tr>
+    <tr><td port="bp" align="left">B+</td><td port="op" align="right">OUT+</td></tr>
+    <tr><td port="bn" align="left">B−</td><td port="on" align="right">OUT−</td></tr></table>>];
+
+  boost [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="4" bgcolor="#FFF7ED">
+    <tr><td colspan="2" bgcolor="#FDBA74"><b>MT3608 boost → 5.0 V</b><br/><font point-size="9">≥ 2 A peak (4G module)</font></td></tr>
+    <tr><td port="vin" align="left">VIN+</td><td port="vout" align="right">VOUT+ 5 V</td></tr>
+    <tr><td port="gin" align="left">VIN−</td><td port="gout" align="right">VOUT−</td></tr></table>>];
+
+  // ---------------- MCU ----------------
+  esp [label=<<table border="2" cellborder="1" cellspacing="0" cellpadding="5" bgcolor="#EFF6FF" color="#1E3A8A">
+    <tr><td colspan="2" bgcolor="#1E3A8A"><font color="white"><b>ESP32-S3 DevKitC-1</b></font><br/><font color="white" point-size="9">Wi-Fi · BLE 5 · runs MQTT/TLS client</font></td></tr>
+    <tr><td port="v5" align="left">5V (in)</td><td port="v33" align="right">3V3 (out)</td></tr>
+    <tr><td port="gnd" align="left">GND</td><td port="gnd2" align="right">GND</td></tr>
+    <tr><td port="g8" align="left">GPIO8 · SDA</td><td port="g9" align="right">GPIO9 · SCL</td></tr>
+    <tr><td port="g17" align="left">GPIO17 · U1 TX</td><td port="g18" align="right">GPIO18 · U1 RX</td></tr>
+    <tr><td port="g16" align="left">GPIO16 · 4G PWRKEY</td><td port="g15" align="right">GPIO15 · 4G STATUS</td></tr>
+    <tr><td port="g5" align="left">GPIO5 · U2 TX</td><td port="g4" align="right">GPIO4 · U2 RX</td></tr>
+    <tr><td port="g1" align="left">GPIO1 · ADC1_CH0</td><td port="g2" align="right">GPIO2 · LO+</td></tr>
+    <tr><td port="g3" align="left">GPIO3 · LO−</td><td port="g21" align="right">GPIO21 · ECG SDN</td></tr>
+    <tr><td port="g6" align="left">GPIO6 · SpO2 INT</td><td port="g7" align="right">GPIO7 · IMU INT</td></tr>
+    <tr><td port="ble" colspan="2">BLE radio (blood-pressure cuff)</td></tr></table>>];
+
+  // ---------------- I2C devices ----------------
+  max30102 [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="4" bgcolor="#F0F9FF">
+    <tr><td bgcolor="#93C5FD"><b>MAX30102</b> · I²C 0x57<br/><font point-size="9">heart rate + SpO₂ (finger clip)</font></td></tr>
+    <tr><td port="vin" align="left">VIN (3V3)</td></tr><tr><td port="gnd" align="left">GND</td></tr>
+    <tr><td port="sda" align="left">SDA</td></tr><tr><td port="scl" align="left">SCL</td></tr><tr><td port="int" align="left">INT</td></tr></table>>];
+
+  max30205 [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="4" bgcolor="#F0F9FF">
+    <tr><td bgcolor="#93C5FD"><b>MAX30205</b> · I²C 0x48<br/><font point-size="9">skin temperature ±0.1 °C</font></td></tr>
+    <tr><td port="vin" align="left">VCC (3V3)</td></tr><tr><td port="gnd" align="left">GND</td></tr>
+    <tr><td port="sda" align="left">SDA</td></tr><tr><td port="scl" align="left">SCL</td></tr></table>>];
+
+  mpu [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="4" bgcolor="#F0F9FF">
+    <tr><td bgcolor="#93C5FD"><b>MPU6050</b> · I²C 0x68<br/><font point-size="9">chest motion → breathing rate, artefact flag</font></td></tr>
+    <tr><td port="vin" align="left">VCC (3V3)</td></tr><tr><td port="gnd" align="left">GND</td></tr>
+    <tr><td port="sda" align="left">SDA</td></tr><tr><td port="scl" align="left">SCL</td></tr><tr><td port="int" align="left">INT</td></tr></table>>];
+
+  atecc [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="4" bgcolor="#F5F3FF">
+    <tr><td bgcolor="#C4B5FD"><b>ATECC608B</b> · I²C 0x60<br/><font point-size="9">secure element: device key, signatures</font></td></tr>
+    <tr><td port="vin" align="left">VCC (3V3)</td></tr><tr><td port="gnd" align="left">GND</td></tr>
+    <tr><td port="sda" align="left">SDA</td></tr><tr><td port="scl" align="left">SCL</td></tr></table>>];
+
+  oled [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="4" bgcolor="#F0F9FF">
+    <tr><td bgcolor="#93C5FD"><b>SSD1306 OLED 0.96″</b> · I²C 0x3C<br/><font point-size="9">local display (optional)</font></td></tr>
+    <tr><td port="vin" align="left">VCC (3V3)</td></tr><tr><td port="gnd" align="left">GND</td></tr>
+    <tr><td port="sda" align="left">SDA</td></tr><tr><td port="scl" align="left">SCL</td></tr></table>>];
+
+  pullups [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="3" bgcolor="#FFFFFF" style="dashed">
+    <tr><td><b>I²C pull-ups</b><br/><font point-size="9">4.7 kΩ SDA→3V3, SCL→3V3<br/>(skip if the breakouts have them)</font></td></tr></table>>];
+
+  // ---------------- UART devices ----------------
+  sim [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="4" bgcolor="#F0FDF4">
+    <tr><td bgcolor="#86EFAC"><b>SIM7600E 4G LTE</b><br/><font point-size="9">LTE B1/B3/B7/B8/B20 · Tunisian operators<br/>+ LTE and GNSS antennas, nano-SIM</font></td></tr>
+    <tr><td port="v5" align="left">VIN 5 V (module board regulator)</td></tr><tr><td port="gnd" align="left">GND</td></tr>
+    <tr><td port="rx" align="left">RXD</td></tr><tr><td port="tx" align="left">TXD</td></tr>
+    <tr><td port="pwr" align="left">PWRKEY</td></tr><tr><td port="st" align="left">STATUS</td></tr></table>>];
+
+  gps [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="4" bgcolor="#F0FDF4">
+    <tr><td bgcolor="#86EFAC"><b>u-blox NEO-M8N GPS</b><br/><font point-size="9">optional: SIM7600 GNSS can replace it</font></td></tr>
+    <tr><td port="vin" align="left">VCC (3V3)</td></tr><tr><td port="gnd" align="left">GND</td></tr>
+    <tr><td port="rx" align="left">RX</td></tr><tr><td port="tx" align="left">TX</td></tr></table>>];
+
+  // ---------------- analog ----------------
+  ecg [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="4" bgcolor="#FFF7ED">
+    <tr><td bgcolor="#FDBA74"><b>AD8232 ECG front end</b><br/><font point-size="9">3 electrodes RA / LA / RL · battery power only</font></td></tr>
+    <tr><td port="vin" align="left">3.3V</td></tr><tr><td port="gnd" align="left">GND</td></tr>
+    <tr><td port="out" align="left">OUTPUT</td></tr><tr><td port="lop" align="left">LO+</td></tr>
+    <tr><td port="lon" align="left">LO−</td></tr><tr><td port="sdn" align="left">SDN</td></tr></table>>];
+
+  cuff [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="4" bgcolor="#FAF5FF">
+    <tr><td bgcolor="#D8B4FE"><b>Bluetooth BP cuff</b><br/><font point-size="9">BLE Blood Pressure Service (0x1810)<br/>no wires: paired over BLE</font></td></tr></table>>];
+
+  // ---------------- edges: power ----------------
+  lipo:pos -> tp4056:bp [color="#DC2626", label="3.7 V"];
+  lipo:neg -> tp4056:bn [color="#111111"];
+  tp4056:op -> boost:vin [color="#DC2626"];
+  tp4056:on -> boost:gin [color="#111111"];
+  boost:vout -> esp:v5 [color="#DC2626", label="5 V"];
+  boost:gout -> esp:gnd [color="#111111"];
+  boost:vout -> sim:v5 [color="#DC2626", label="5 V, 2 A peaks"];
+  boost:gout -> sim:gnd [color="#111111"];
+
+  // 3V3 rail from the DevKit regulator to the low-power parts
+  esp:v33 -> max30102:vin [color="#DC2626"];
+  esp:v33 -> max30205:vin [color="#DC2626"];
+  esp:v33 -> mpu:vin [color="#DC2626"];
+  esp:v33 -> atecc:vin [color="#DC2626"];
+  esp:v33 -> oled:vin [color="#DC2626"];
+  esp:v33 -> gps:vin [color="#DC2626"];
+  esp:v33 -> ecg:vin [color="#DC2626"];
+  esp:v33 -> pullups [color="#DC2626", style=dashed];
+
+  esp:gnd2 -> max30102:gnd [color="#111111"];
+  esp:gnd2 -> max30205:gnd [color="#111111"];
+  esp:gnd2 -> mpu:gnd [color="#111111"];
+  esp:gnd2 -> atecc:gnd [color="#111111"];
+  esp:gnd2 -> oled:gnd [color="#111111"];
+  esp:gnd2 -> gps:gnd [color="#111111"];
+  esp:gnd2 -> ecg:gnd [color="#111111"];
+
+  // ---------------- edges: I2C ----------------
+  esp:g8 -> max30102:sda [color="#2563EB", label="SDA"];
+  esp:g9 -> max30102:scl [color="#2563EB", label="SCL"];
+  esp:g8 -> max30205:sda [color="#2563EB"];
+  esp:g9 -> max30205:scl [color="#2563EB"];
+  esp:g8 -> mpu:sda [color="#2563EB"];
+  esp:g9 -> mpu:scl [color="#2563EB"];
+  esp:g8 -> atecc:sda [color="#2563EB"];
+  esp:g9 -> atecc:scl [color="#2563EB"];
+  esp:g8 -> oled:sda [color="#2563EB"];
+  esp:g9 -> oled:scl [color="#2563EB"];
+  esp:g8 -> pullups [color="#2563EB", style=dashed];
+  esp:g9 -> pullups [color="#2563EB", style=dashed];
+
+  // ---------------- edges: UART (TX → RX crossed) ----------------
+  esp:g17 -> sim:rx [color="#16A34A", label="TX → RXD"];
+  esp:g18 -> sim:tx [color="#16A34A", label="RX ← TXD"];
+  esp:g16 -> sim:pwr [color="#16A34A", style=dashed, label="power-on pulse"];
+  esp:g15 -> sim:st [color="#16A34A", style=dashed];
+  esp:g5 -> gps:rx [color="#16A34A", label="TX → RX"];
+  esp:g4 -> gps:tx [color="#16A34A", label="RX ← TX (NMEA)"];
+
+  // ---------------- edges: analog / interrupts ----------------
+  esp:g1 -> ecg:out [color="#EA580C", label="ECG signal"];
+  esp:g2 -> ecg:lop [color="#EA580C"];
+  esp:g3 -> ecg:lon [color="#EA580C", label="lead-off"];
+  esp:g21 -> ecg:sdn [color="#EA580C", style=dashed];
+  esp:g6 -> max30102:int [color="#EA580C", style=dashed, label="data ready"];
+  esp:g7 -> mpu:int [color="#EA580C", style=dashed];
+
+  // ---------------- BLE ----------------
+  esp:ble -> cuff [color="#9333EA", style=dotted, penwidth=2.2, label="Bluetooth LE"];
+
+  { rank=same; lipo; }
+  { rank=same; tp4056; boost; }
+  { rank=same; max30102; max30205; mpu; atecc; oled; pullups; sim; gps; ecg; cuff; }
+}
