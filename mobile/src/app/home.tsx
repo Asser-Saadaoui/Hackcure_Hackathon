@@ -4,6 +4,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { AppText } from '@/components/app-text';
+import { AnimatedList } from '@/components/animated-list';
 import { Button } from '@/components/button';
 import { CareNetwork } from '@/components/care-network';
 import { Hassanito } from '@/components/hassanito';
@@ -11,6 +12,7 @@ import { RiskBadge } from '@/components/risk-badge';
 import { Screen } from '@/components/screen';
 import { Colors, Fonts } from '@/constants/theme';
 import { useI18n } from '@/i18n';
+import { EXPERIENCE } from '@/i18n/experience';
 import { api } from '@/lib/api';
 import { getJSON, Keys, setJSON } from '@/lib/storage';
 import type { CaseSummary } from '@/lib/types';
@@ -18,6 +20,7 @@ import type { CaseSummary } from '@/lib/types';
 /** Device-scoped overview: counts and cases come from the existing patient API. */
 export default function HomeScreen() {
   const { language, t } = useI18n();
+  const companionCopy = EXPERIENCE[language];
   const { width, fontScale } = useWindowDimensions();
   const docked = Platform.OS === 'web' && width >= 1400 && fontScale <= 1.4;
   const columns = width >= 1000 && fontScale <= 1.4;
@@ -72,7 +75,16 @@ export default function HomeScreen() {
         <Button label={copy('Describe my symptoms', 'Décrire mes symptômes', 'نحكي على الأعراض')} size="lg" iconRight={ArrowRight} onPress={start} />
         <AppText variant="small">{copy('No account needed · Choose your language', 'Sans compte · Choisissez votre langue', 'بلا حساب · اختار لغتك')}</AppText>
       </View>
-      <View style={docked ? { width: 0 } : columns ? styles.heroMascot : undefined}><Hassanito state="idle" presentation="hero" message={copy('I’m Hassanito. We’ll take it one step at a time.', 'Je suis Hassanito. Une étape à la fois.', 'أنا حسنّيتو. نمشيو خطوة بخطوة.')} /></View>
+      <View style={[styles.heroAside, columns && { width:320 }]}>
+        <View style={docked ? { width:0 } : undefined}><Hassanito state="idle" presentation="hero" message={copy('I’m Hassanito. We’ll take it one step at a time.', 'Je suis Hassanito. Une étape à la fois.', 'أنا حسنّيتو. نمشيو خطوة بخطوة.')} /></View>
+        <AppText variant="small" style={styles.messageTitle}>{companionCopy.mascotMessagesTitle}</AppText>
+        <AnimatedList key={language} delay={600}>
+          {[companionCopy.mascotMessage1, companionCopy.mascotMessage2, companionCopy.mascotMessage3].map(message => <View key={message} style={styles.mascotMessage}>
+            <MessageCircle size={16} color={Colors.primary} />
+            <AppText variant="small" style={styles.messageText}>{message}</AppText>
+          </View>)}
+        </AnimatedList>
+      </View>
     </View>
     <CareNetwork />
     <View style={styles.metrics}>{metrics.map(({ Icon, label, value }) => <View key={label} style={[styles.card, styles.metric]}><Icon size={20} color={Colors.primary} /><AppText variant="title">{failed ? '—' : value ?? '—'}</AppText><AppText variant="small">{label}</AppText></View>)}</View>
@@ -108,7 +120,10 @@ const styles = StyleSheet.create({
   orbit: { position: 'absolute', width: 340, height: 340, borderRadius: 170, backgroundColor: '#D7E9FC', right: -85, top: -110 },
   heroCopy: { flex: 1, gap: 18, minWidth: 0 },
   heroTitle: { fontSize: 38, lineHeight: 46, fontFamily: Fonts.bold, letterSpacing: -1.4, color: Colors.navy },
-  heroMascot: { width: 225, alignSelf: 'center' },
+  heroAside: { gap:12, justifyContent:'center', minWidth:0 },
+  messageTitle: { fontFamily:Fonts.semibold, color:Colors.primary },
+  mascotMessage: { flexDirection:'row', alignItems:'flex-start', gap:10, padding:13, backgroundColor:'#FFFFFF', borderRadius:16, borderWidth:1, borderColor:'#D8E6F7' },
+  messageText: { flex:1, color:Colors.foreground, lineHeight:21 },
   heroTag: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   card: { padding: 22, borderWidth: 1, borderColor: Colors.border, borderRadius: 22, backgroundColor: Colors.card, gap: 16 },
   side: { width: 235 },
