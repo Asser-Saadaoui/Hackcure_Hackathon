@@ -204,3 +204,42 @@ With mutual TLS, the connection itself authenticates the device. Keep an applica
 4. Pilot one real ambulance with its monitor's official interface (SDC, HL7 or vendor API) and a real gateway; measure latency, gaps and false alerts.
 5. Clinically validate alert thresholds and the screen with SAMU and receiving EDs; INPDP declaration; data processing agreements with hospitals.
 6. Roll out to the fleet; integrate the device ↔ mission binding with the dispatch system; retire `iot-sim` from production (keep it for tests and demos).
+
+---
+
+## 10. Hardware demo kit (prototype, not a medical device)
+
+To show the real chain (sensor → signed message → live dashboard) with physical hardware. **Never use it on patients**: a real ambulance uses its certified monitor through a gateway (§3.1–3.2).
+
+![Wiring of the demo kit](iot-wiring-illustration.png)
+
+> **The pin table below is the reference for wiring.** The illustration has a few label errors:
+> - **ECG output must go to GPIO1 (ADC1_CH0), not GPIO13.** GPIO13 is on ADC2, which the ESP32-S3 cannot read reliably while Wi-Fi/radio is active: the ECG signal would drop out.
+> - **ECG LO+ is GPIO2** (not GPIO12); **LO− is GPIO3**.
+> - **GPIO17 is the 4G UART TX only; the 4G PWRKEY is GPIO16.** The illustration labels GPIO17 twice.
+> - **GPIO18 is the 4G UART RX** (shown as "U1C").
+> - The SIM7600E module appears twice: it is a single module.
+>
+> Exact schematic (generated from source): [`iot-wiring.svg`](iot-wiring.svg) / [`iot-wiring.png`](iot-wiring.png), source `iot-wiring.dot` (`dot -Tsvg docs/iot-wiring.dot -o docs/iot-wiring.svg`).
+
+| Part | Role | Connection | ESP32-S3 pin |
+|---|---|---|---|
+| ESP32-S3 DevKitC-1 | Microcontroller (Wi-Fi, BLE, TLS/MQTT client) | 5 V in from the boost converter | 5V, GND |
+| LiPo 3.7 V 3000 mAh → TP4056 → MT3608 (5 V) | Battery, charging, 5 V rail | LiPo → TP4056 B+/B−, OUT → MT3608 VIN, VOUT 5 V → ESP32 + SIM7600 | — |
+| MAX30102 (0x57) | Heart rate + SpO₂ | I²C + interrupt, 3V3 | SDA GPIO8, SCL GPIO9, INT GPIO6 |
+| MAX30205 (0x48) | Skin temperature ±0.1 °C | I²C, 3V3 | GPIO8 / GPIO9 |
+| MPU6050 (0x68) | Chest motion → breathing rate, motion-artefact flag | I²C + interrupt, 3V3 | GPIO8 / GPIO9, INT GPIO7 |
+| ATECC608B (0x60) | Secure element: device private key, signatures | I²C, 3V3 | GPIO8 / GPIO9 |
+| SSD1306 OLED (0x3C) | Local display (optional) | I²C, 3V3 | GPIO8 / GPIO9 |
+| SIM7600E | 4G LTE (B1/B3/B7/B8/B20), MQTT/TLS uplink | UART1 (TX→RXD, RX←TXD), 5 V from the boost (2 A peaks) | TX GPIO17, RX GPIO18, PWRKEY GPIO16, STATUS GPIO15 |
+| u-blox NEO-M8N | GPS (optional: the SIM7600 GNSS can replace it) | UART2, 3V3 | TX GPIO5 → RX, RX GPIO4 ← TX |
+| AD8232 | One-lead ECG (3 electrodes) | Analog out + lead-off pins, 3V3 | OUTPUT GPIO1 (ADC1), LO+ GPIO2, LO− GPIO3, SDN GPIO21 |
+| BLE blood-pressure cuff | Blood pressure (Blood Pressure Service 0x1810) | Bluetooth LE, no wire | BLE radio |
+
+**Notes**
+- All I²C parts share one bus; the addresses do not clash. Add 4.7 kΩ pull-ups to 3V3 on SDA and SCL unless the breakout boards already have them.
+- Cross UART lines (TX → RX). Keep a common ground for everything.
+- The SIM7600E draws up to 2 A in bursts: power it from the 5 V boost rail, never from the ESP32's 3V3 regulator; add a 1000 µF capacitor near its input if it resets during transmission.
+- ECG safety: only attach electrodes while the kit runs on battery (no USB to a mains-powered laptop).
+- The MAX30102 is sensitive to movement: flag readings taken while the MPU6050 detects motion.
+- The firmware publishes the same signed message format as `iot-sim` (per-device key in the ATECC608B), so the dashboard's *Moniteur ambulance* card shows the kit's readings unchanged.
