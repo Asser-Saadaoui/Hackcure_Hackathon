@@ -1,6 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 import { Camera, Image as ImageIcon } from 'lucide-react-native';
-import { useCallback, useRef, useState } from 'react';
+import { useState } from 'react';
 import { Modal, Platform, Pressable, StyleSheet } from 'react-native';
 
 import { AppText } from '@/components/app-text';
@@ -20,21 +20,18 @@ export function usePhotoCapture(upload: (data: string) => Promise<void>, hint: s
   const [webCamera, setWebCamera] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const uploadRef = useRef(upload);
-  uploadRef.current = upload;
-
-  const send = useCallback(async (data: string) => {
+  const send = async (data: string) => {
     setSending(true);
     try {
-      await uploadRef.current(data);
+      await upload(data);
     } catch {
       setError(t('photoFailed'));
     } finally {
       setSending(false);
     }
-  }, [t]);
+  };
 
-  const pick = useCallback(async (source: 'camera' | 'library') => {
+  const pick = async (source: 'camera' | 'library') => {
     setMenu(false);
     setError(null);
     // Web: open the camera itself (a file input only offers "upload a file" on computers).
@@ -51,13 +48,13 @@ export function usePhotoCapture(upload: (data: string) => Promise<void>, hint: s
     const asset = picked.canceled ? null : picked.assets[0];
     const data = asset?.base64 ?? (asset?.uri.startsWith('data:') ? asset.uri : null);   // web gives a data: URL
     if (data) await send(data);
-  }, [send, t]);
+  };
 
-  const onWebCameraError = useCallback(() => {
+  const onWebCameraError = () => {
     setWebCamera(false);
     setError(t('cameraUnavailable'));
     pick('library');   // no camera, or access refused: choose a file instead
-  }, [pick, t]);
+  };
 
   const element = (
     <>

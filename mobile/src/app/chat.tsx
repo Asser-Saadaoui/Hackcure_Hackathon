@@ -16,6 +16,7 @@ import { TypingIndicator } from '@/components/chat/typing-indicator';
 import { ChatPhoto } from '@/components/ed-chat/chat-photo';
 import { Hassanito } from '@/components/hassanito';
 import { usePhotoCapture } from '@/components/photo/use-photo-capture';
+import { GridPattern } from '@/components/grid-pattern';
 import { Colors, Fonts, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useI18n } from '@/i18n';
 import { api } from '@/lib/api';
@@ -210,6 +211,7 @@ export default function ChatScreen() {
         }}
       />
       <SafeAreaView style={styles.safe} edges={['bottom', 'left', 'right']}>
+        <GridPattern />
         <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
           <View style={styles.column}>
             {/* Always reachable: emergencies never wait for the conversation. */}

@@ -11,6 +11,7 @@ import { ChatInput } from '@/components/chat/chat-input';
 import { EdMessage } from '@/components/ed-chat/ed-message';
 import { EdTyping } from '@/components/ed-chat/ed-typing';
 import { usePhotoCapture } from '@/components/photo/use-photo-capture';
+import { GridPattern } from '@/components/grid-pattern';
 import { Colors, Fonts, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useI18n } from '@/i18n';
 import { api } from '@/lib/api';
@@ -115,6 +116,7 @@ export default function EdChatScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom', 'left', 'right']}>
+      <GridPattern />
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
         <View style={styles.column}>
           <View style={styles.top}>

@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View, type PressableProps } from 'react-native';
 
 import { Colors, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
 import { AppText } from './app-text';
+import { InteractiveButton } from './interactive-button';
 
 type Variant = 'default' | 'outline' | 'ghost' | 'secondary' | 'destructive';
 type Size = 'default' | 'sm' | 'lg';
@@ -27,6 +28,11 @@ const FG: Record<Variant, string> = {
 
 /** shadcn-style button (central-park): rounded-md, h-10/h-11, optional Lucide icons. */
 export function Button({ label, variant = 'default', size = 'default', icon: Icon, iconRight: IconRight, disabled, style, ...rest }: Props) {
+  // Main calls to action (large primary): Magic UI interactive hover button.
+  if (variant === 'default' && size === 'lg') {
+    return <InteractiveButton label={label} icon={Icon} disabled={disabled ?? undefined} accessibilityLabel={rest.accessibilityLabel}
+      onPress={rest.onPress ? () => rest.onPress?.(undefined as never) : undefined} style={typeof style === 'function' ? undefined : style} />;
+  }
   const fg = FG[variant];
   return (
     <Pressable

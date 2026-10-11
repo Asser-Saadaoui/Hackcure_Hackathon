@@ -24,11 +24,12 @@ export function WebCamera({ visible, onCapture, onClose, onError }: Props) {
   const stream = useRef<MediaStream | null>(null);
   const [facing, setFacing] = useState<'environment' | 'user'>('environment');
   const [ready, setReady] = useState(false);
+  const onErrorRef = useRef(onError);   // latest callback, without restarting the camera when it changes
+  useEffect(() => { onErrorRef.current = onError; });
 
   useEffect(() => {
     if (!visible) return;
     let cancelled = false;
-    setReady(false);
     navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: facing }, width: { ideal: 1920 } }, audio: false })
       .then((s) => {
         if (cancelled) { s.getTracks().forEach((x) => x.stop()); return; }
@@ -38,13 +39,14 @@ export function WebCamera({ visible, onCapture, onClose, onError }: Props) {
           video.current.play().then(() => setReady(true)).catch(() => setReady(true));
         }
       })
-      .catch(() => { if (!cancelled) onError(); });
+      .catch(() => { if (!cancelled) onErrorRef.current(); });
     return () => {
       cancelled = true;
+      setReady(false);
       stream.current?.getTracks().forEach((x) => x.stop());   // the camera light goes off as soon as we leave
       stream.current = null;
     };
-  }, [visible, facing, onError]);
+  }, [visible, facing]);
 
   const capture = () => {
     const v = video.current;
