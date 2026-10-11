@@ -1,7 +1,8 @@
 import { t, useLanguage, LanguageSelect } from "@/i18n";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bell, ClipboardCheck, Flag, Gauge, Inbox, LogOut, Network, RefreshCw } from "lucide-react";
+import { Bell, ClipboardCheck, Flag, Gauge, Hospital as HospitalIcon, Inbox, LogOut, Network, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Brand } from "@/components/Brand";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { FeedbackView } from "@/components/FeedbackView";
@@ -166,7 +167,13 @@ export default function App() {
       <a className="skip-link" href="#main-content">{t("Aller au contenu")}</a>
       <header className="border-b bg-card">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
-          <Brand section={user.hospitalName ?? t("Régulation")} />
+          <div className="flex min-w-0 flex-wrap items-center gap-3">
+            <Brand />
+            <Badge variant="secondary" className="max-w-full gap-2 rounded-xl border-primary/15 px-3 py-2 text-sm font-semibold text-primary">
+              {user.hospitalName ? <HospitalIcon className="h-4 w-4 shrink-0" aria-hidden="true" /> : <ClipboardCheck className="h-4 w-4 shrink-0" aria-hidden="true" />}
+              <span className="min-w-0 break-words">{user.hospitalName ?? t("Régulation")}</span>
+            </Badge>
+          </div>
           <nav aria-label={t("Urgences")} className="order-3 flex w-full flex-wrap gap-1 sm:order-none sm:ms-6 sm:w-auto">
             {nav.filter((n) => n.show).map((n) => (
               <button key={n.id} aria-current={view === n.id ? 'page' : undefined} onClick={() => { setView(n.id); setOpenId(null); setError(null); }}
@@ -182,7 +189,6 @@ export default function App() {
               <button onClick={() => Notification.requestPermission().then((p) => setAlerts(p === "granted"))}
                 className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs text-muted-foreground hover:text-foreground"><Bell className="h-3.5 w-3.5" />{t("Activer les alertes")}</button>
             )}
-            <span className="hidden text-muted-foreground md:inline">{user.name}</span>
             <button onClick={logout} className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground" aria-label={t("Se déconnecter")}><LogOut className="h-4 w-4" /></button>
           </div>
         </div>
