@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { router, Stack } from 'expo-router';
 import { ArrowRight, ClipboardList, History, Phone, RotateCcw, Settings, ShieldAlert, Stethoscope } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -42,7 +43,11 @@ type Item = {
   failed?: boolean;
   /** A photo for the hospital team (never sent to the AI: no effect on the triage). */
   photoId?: string;
+  /** Taken before the first message: kept on the device, uploaded once the case exists. */
+  photoLocal?: string;
 };
+
+const dataUri = (data: string) => (data.startsWith('data:') ? data : `data:image/jpeg;base64,${data}`);
 
 const timeOf = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 const localId = () => 'local-' + Math.random().toString(36).slice(2);
@@ -63,10 +68,26 @@ export default function ChatScreen() {
   const scrollRef = useRef<ScrollView>(null);
   // Photos go to the hospital team with the case; they are never sent to the AI (no effect on the triage).
   const photo = usePhotoCapture(async (data) => {
-    if (!caseId) return;
+    if (!caseId) {
+      // No case yet: keep it here, it goes with the first message.
+      setItems((list) => [...list, { id: localId(), role: 'PATIENT', text: '', time: timeOf(new Date().toISOString()), photoLocal: data }]);
+      return;
+    }
     const p = await api.addCasePhoto(caseId, data);
     setItems((list) => [...list, { id: p.id, role: 'PATIENT', text: '', time: timeOf(p.createdAt), photoId: p.id }]);
   }, t('photoHintTriage'));
+
+  /** Upload the photos taken before the case existed. */
+  const uploadPending = async (newCaseId: string, pending: Item[]) => {
+    for (const item of pending) {
+      try {
+        const p = await api.addCasePhoto(newCaseId, item.photoLocal!);
+        setItems((list) => list.map((i) => (i.id === item.id ? { ...i, photoId: p.id, photoLocal: undefined } : i)));
+      } catch {
+        setItems((list) => list.map((i) => (i.id === item.id ? { ...i, failed: true } : i)));
+      }
+    }
+  };
 
   // Resume the case in progress (if the backend still has it).
   const resume = useCallback(() => {
@@ -143,6 +164,7 @@ export default function ChatScreen() {
       if (!caseId) {
         setCaseId(result.caseId);
         await setJSON(Keys.currentCase, result.caseId);
+        uploadPending(result.caseId, items.filter((i) => i.photoLocal));
       }
       setDegraded(result.kind === 'degraded' ? text : null);
       handleResult(result);
@@ -220,10 +242,17 @@ export default function ChatScreen() {
                       <ChatPhoto path={casePhotoPath(caseId, item.photoId)} />
                       <AppText variant="small" style={styles.photoNote}>{t('photoNotUsed')} · {item.time}</AppText>
                     </View>
+                  ) : item.photoLocal ? (
+                    <View style={styles.photoItem}>
+                      <Image source={{ uri: dataUri(item.photoLocal) }} style={styles.photoLocal} contentFit="cover" />
+                      <AppText variant="small" style={[styles.photoNote, item.failed && styles.photoError]}>
+                        {item.failed ? t('photoFailed') : t('photoPending')} · {item.time}
+                      </AppText>
+                    </View>
                   ) : (
                     <ChatBubble role={item.role} text={item.text} time={item.time} failed={item.failed} />
                   )}
-                  {item.failed && (
+                  {item.failed && !item.photoLocal && (
                     <Pressable accessibilityRole="button" onPress={() => send(item.text, item.id)} style={styles.retry}>
                       <AppText variant="small" style={styles.retryText}>{t('sendFailed')} {t('retry')} ↻</AppText>
                     </Pressable>
@@ -266,7 +295,7 @@ export default function ChatScreen() {
             {/* After a decision only a case under review can still receive information. */}
             {(!outcome || outcome.kind === 'under_review') && (
               <ChatInput onSend={(text) => send(text)} disabled={sending} onActivity={setListening}
-                onAttach={caseId && !photo.sending ? photo.open : undefined} />
+                onAttach={photo.sending ? undefined : photo.open} />
             )}
             {photo.element}
           </View>
@@ -281,6 +310,7 @@ const styles = StyleSheet.create({
   photoItem: { alignSelf: 'flex-end', alignItems: 'flex-end', gap: 4, maxWidth: '82%' },
   photoNote: { color: Colors.mutedFg, textAlign: 'right' },
   photoSending: { alignSelf: 'flex-end' },
+  photoLocal: { width: 200, height: 200, borderRadius: 10 },
   photoError: { color: Colors.destructive, alignSelf: 'flex-end' },
   flex: { flex: 1 },
   column: { flex: 1, width: '100%', maxWidth: MaxContentWidth + 200, alignSelf: 'center' },
