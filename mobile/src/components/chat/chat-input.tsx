@@ -10,7 +10,7 @@ type Props = {
   onSend: (text: string) => void;
   disabled?: boolean;
   onActivity?: (active: boolean) => void;
-  /** Shows a photo button (ED chat only: the triage AI does not read images). */
+  /** Shows a photo button. Photos are for the hospital team: the AI never reads them. */
   onAttach?: () => void;
 };
 

@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { AppText } from '@/components/app-text';
 import { Chip } from '@/components/chip';
 import { ChatPhoto } from '@/components/ed-chat/chat-photo';
+import { chatPhotoPath } from '@/lib/http-api';
 import { Colors, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useI18n } from '@/i18n';
 import type { ChatMessage } from '@/lib/types';
@@ -39,7 +40,7 @@ export function EdMessage({ message: m, answer, onAnswer }: Props) {
               <AppText style={styles.worseText}>{t('iFeelWorse')}</AppText>
             </View>
           )}
-          {m.kind === 'IMAGE' && <ChatPhoto referralId={m.referralId} messageId={m.id} />}
+          {m.kind === 'IMAGE' && <ChatPhoto path={chatPhotoPath(m.referralId, m.id)} />}
           {!!m.text && <AppText autoDirection style={styles.mineText}>{m.text}</AppText>}
           <AppText variant="small" style={[styles.time, styles.mineTime]}>{timeOf(m.createdAt)}</AppText>
         </View>

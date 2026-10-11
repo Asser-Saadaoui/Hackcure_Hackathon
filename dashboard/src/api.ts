@@ -92,10 +92,10 @@ export async function openReportPdf(referralId: string): Promise<void> {
  *  "unchecked": no hash to compare, or no WebCrypto (plain-HTTP origin). A mismatch throws: the photo is not shown. */
 export type Integrity = "verified" | "unchecked";
 
-/** Photo sent by the patient in the chat, fetched with the session header (no token in the URL), integrity-checked.
+/** Patient photo (path under /api/v1/staff), fetched with the session header (no token in the URL), integrity-checked.
  *  Caller revokes the URL. */
-export async function chatImageUrl(referralId: string, messageId: string, expectedSha256?: string): Promise<{ url: string; integrity: Integrity; sha256: string | null }> {
-  const resp = await fetch(`${BASE}/api/v1/staff/referrals/${referralId}/chat/${messageId}/image`,
+export async function verifiedImageUrl(path: string, expectedSha256?: string): Promise<{ url: string; integrity: Integrity; sha256: string | null }> {
+  const resp = await fetch(`${BASE}/api/v1/staff${path}`,
     { headers: { Authorization: `Bearer ${session.get() ?? ""}` }, cache: "no-store" });
   if (!resp.ok) throw new ApiError(`Erreur ${resp.status}`, resp.status);
   const blob = await resp.blob();

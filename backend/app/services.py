@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 
 from app import config, hospitals, photo_security
 from app.events import broker
-from app.models import Ambulance, AuditLog, AvailabilityOverride, Case, ChatImage, ChatMessage, Referral, Turn, utcnow
+from app.models import Ambulance, AuditLog, AvailabilityOverride, Case, CaseImage, ChatImage, ChatMessage, Referral, Turn, utcnow
 
 CODE_ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ'
 ACTIVE_REFERRAL = ('SENT', 'INFO_REQUESTED', 'ACCEPTED')
@@ -92,11 +92,12 @@ def turn_view(tr):
     return dict(id=tr.id, role=tr.role, text=tr.text, createdAt=iso(tr.created_at), quickReplies=tr.quick_replies or None)
 
 
-def case_view(case):
+def case_view(case, db=None):
     r = current_referral(case)
     return dict(id=case.id, referenceCode=case.reference_code, status=case.status, level=case.level,
                 decision=decision_view(case), explain=(case.assessment or {}).get('patient_explain'),
                 turns=[turn_view(x) for x in case.turns], location=case.location,
+                photos=case_photos(db, case) if db is not None else [],
                 referral=referral_view(r) if r else None, createdAt=iso(case.created_at), closedAt=iso(case.closed_at))
 
 
@@ -475,6 +476,46 @@ def patient_image(db, case, r, data, caption):
     if caption:
         screen_patient_text(db, case, r, caption)
     return m
+
+
+def case_photo(db, case, data):
+    """Photo added in the triage chat (already verified). Stored for the hospital team; deliberately NOT passed to
+    the AI service: photos play no part in detection or classification."""
+    clean = photo_security.sanitize(data)
+    img = CaseImage(case_id=case.id, content_type='image/jpeg', sha256=photo_security.sha256_hex(clean), encryption=photo_security.ENC,
+                    data=b'')
+    db.add(img)
+    db.flush()
+    img.data = photo_security.encrypt(clean, img.id)
+    audit(db, 'patient', 'case.image_received', case.id, sha256=img.sha256, bytes=len(clean))
+    db.commit()
+    view = case_photo_view(img)
+    publish_case(case, dict(type='case.photo', photo=view))
+    r = current_referral(case)
+    if r:
+        publish_hospital(r.facility_key, dict(type='case.photo', referralId=r.id, caseId=case.id, photo=view))
+    return img
+
+
+def case_photo_view(img):
+    return dict(id=img.id, sha256=img.sha256, createdAt=iso(img.created_at))
+
+
+def case_photos(db, case):
+    return [case_photo_view(x) for x in db.scalars(select(CaseImage).where(CaseImage.case_id == case.id).order_by(CaseImage.created_at))]
+
+
+def read_case_photo(db, case_id, image_id):
+    img = db.get(CaseImage, image_id)
+    if not img or img.case_id != case_id:
+        raise HTTPException(404, 'Image not found.')
+    try:
+        data = photo_security.decrypt(img.data, img.id)
+    except Exception:
+        raise HTTPException(500, 'Stored photo failed its integrity check.')
+    if photo_security.sha256_hex(data) != img.sha256:
+        raise HTTPException(500, 'Stored photo failed its integrity check.')
+    return img, data
 
 
 def chat_image(db, referral_id, message_id):
@@ -858,6 +899,7 @@ def staff_case_view(db, r):
                                   contributions=a.get('contributions'), triggeredRules=a.get('triggered_rules', [])),
                   actions=(case.ai_decision or {}).get('actions', [])),
         transcript=[turn_view(x) for x in case.turns],
+        photos=case_photos(db, case),     # added by the patient in the triage chat (not used by the AI)
         explanation=explanation(case),
         patientAge=patient_age(case),
         journey=journey(case),

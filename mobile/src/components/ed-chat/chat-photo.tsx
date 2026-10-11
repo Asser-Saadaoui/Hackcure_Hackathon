@@ -5,15 +5,15 @@ import { ActivityIndicator, Modal, Pressable, StyleSheet, View } from 'react-nat
 
 import { Colors, Radius } from '@/constants/theme';
 import { useI18n } from '@/i18n';
-import { chatImageSource } from '@/lib/http-api';
+import { authImageSource } from '@/lib/http-api';
 
-/** Photo sent in the ED chat. Loaded with the session header; tap to see it full screen. */
-export function ChatPhoto({ referralId, messageId }: { referralId: string; messageId: string }) {
+/** A protected photo (path under /api/v1). Loaded with the session header; tap to see it full screen. */
+export function ChatPhoto({ path }: { path: string }) {
   const { t } = useI18n();
   const [source, setSource] = useState<ImageSource | null>(null);
   const [open, setOpen] = useState(false);
 
-  useEffect(() => { chatImageSource(referralId, messageId).then(setSource).catch(() => {}); }, [referralId, messageId]);
+  useEffect(() => { authImageSource(path).then(setSource).catch(() => {}); }, [path]);
 
   return (
     <>

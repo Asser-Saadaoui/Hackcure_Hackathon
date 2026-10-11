@@ -78,10 +78,13 @@ async function call<T>(method: string, path: string, body?: unknown, retry = tru
   }
 }
 
-/** Image source of a chat photo, with the session header (no token in the URL). */
-export async function chatImageSource(referralId: string, messageId: string) {
-  return { uri: `${API_URL}/api/v1/referrals/${referralId}/chat/${messageId}/image`, headers: { authorization: `Bearer ${await token()}` } };
+/** Image source of a protected photo (path under /api/v1), with the session header (no token in the URL). */
+export async function authImageSource(path: string) {
+  return { uri: `${API_URL}/api/v1${path}`, headers: { authorization: `Bearer ${await token()}` } };
 }
+
+export const chatPhotoPath = (referralId: string, messageId: string) => `/referrals/${referralId}/chat/${messageId}/image`;
+export const casePhotoPath = (caseId: string, imageId: string) => `/cases/${caseId}/photos/${imageId}`;
 
 // ---------- live updates ----------
 
@@ -148,6 +151,8 @@ export const httpApi: PatientApi = {
   getReport: (caseId) => call('GET', `/cases/${caseId}/report`),
   getChat: (referralId) => call('GET', `/referrals/${referralId}/chat`),
   sendChat: (referralId, text, kind = 'TEXT', questionId) => call('POST', `/referrals/${referralId}/chat`, { text, kind, questionId }),
+  addCasePhoto: async (caseId, base64) =>
+    call('POST', `/cases/${caseId}/photos`, await signPhoto(await token(), caseId, base64)),
   sendChatImage: async (referralId, base64, caption = '') =>
     call('POST', `/referrals/${referralId}/chat/image`, { ...(await signPhoto(await token(), referralId, base64)), caption }),
   getTracking: (caseId) => call('GET', `/cases/${caseId}/tracking`),

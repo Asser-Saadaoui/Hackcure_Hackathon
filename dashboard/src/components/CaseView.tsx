@@ -13,6 +13,7 @@ import { LevelBadge } from "@/components/LevelBadge";
 import { LiveTrackingMap } from "@/components/LiveTrackingMap";
 import { FeedbackPanel } from "@/components/FeedbackPanel";
 import { ReroutePanel } from "@/components/ReroutePanel";
+import { VerifiedPhoto } from "@/components/VerifiedPhoto";
 import { api, downloadFhir, openReportPdf } from "@/api";
 import { AMBULANCE, ago, EQUIPMENT, LANG, pct, STATUS, time } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -67,6 +68,7 @@ function Fact({ icon: Icon, children }: { icon: typeof Clock; children: React.Re
 
 export function CaseView({ detail, onBack, onChanged }: { detail: CaseDetail; onBack: () => void; onChanged: () => void }) {
   const { referral: r, case: c, report, explanation: why } = detail;
+  const photos = detail.photos ?? [];   // added during triage; never used by the AI
   const a = c.assessment;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -194,6 +196,22 @@ export function CaseView({ detail, onBack, onChanged }: { detail: CaseDetail; on
 
           <TabsContent value="summary" className="space-y-4 pt-4">
             {c.location && <LiveTrackingMap referralId={r.id} />}
+            {photos.length > 0 && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">{t("Photos du patient ({n})", { n: photos.length })}</CardTitle>
+                  <p className="text-xs text-muted-foreground">{t("Ajoutées pendant le triage. Non utilisées par l’IA : elles n’ont pas influencé le niveau.")}</p>
+                </CardHeader>
+                <CardContent className="flex flex-wrap gap-3">
+                  {photos.map((p) => (
+                    <div key={p.id} className="space-y-1">
+                      <VerifiedPhoto path={`/referrals/${r.id}/photos/${p.id}`} sha256={p.sha256} />
+                      <p className="text-[10px] text-muted-foreground">{time(p.createdAt)}</p>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
             {/* Why this level, in plain words; numbers only on demand */}
             <Card>
               <CardHeader className="pb-2"><CardTitle className="text-base">{t("Pourquoi ce niveau")}</CardTitle></CardHeader>
@@ -268,10 +286,19 @@ export function CaseView({ detail, onBack, onChanged }: { detail: CaseDetail; on
           <TabsContent value="conversation" className="pt-4">
             <Card>
               <CardContent className="space-y-1.5 pt-5">
-                {detail.transcript.map((turn) => (
-                  <p key={turn.id} className="text-sm" dir="auto"><span className="me-2 font-mono text-xs text-muted-foreground">{time(turn.createdAt)}</span>
-                    <span className="font-medium">{turn.role === "PATIENT" ? t("Patient") : turn.role === "ASSISTANT" ? t("Assistant") : t("Système")} :</span> {turn.text}</p>
-                ))}
+                {[...detail.transcript.map((turn) => ({ at: turn.createdAt, turn, photo: null })),
+                  ...photos.map((photo) => ({ at: photo.createdAt, turn: null, photo }))]
+                  .sort((a, b) => a.at.localeCompare(b.at))
+                  .map(({ turn, photo }) => turn ? (
+                    <p key={turn.id} className="text-sm" dir="auto"><span className="me-2 font-mono text-xs text-muted-foreground">{time(turn.createdAt)}</span>
+                      <span className="font-medium">{turn.role === "PATIENT" ? t("Patient") : turn.role === "ASSISTANT" ? t("Assistant") : t("Système")} :</span> {turn.text}</p>
+                  ) : photo && (
+                    <div key={photo.id} className="flex items-start gap-2 py-1">
+                      <span className="me-2 font-mono text-xs text-muted-foreground">{time(photo.createdAt)}</span>
+                      <span className="text-sm font-medium">{t("Patient")} :</span>
+                      <VerifiedPhoto path={`/referrals/${r.id}/photos/${photo.id}`} sha256={photo.sha256} />
+                    </div>
+                  ))}
               </CardContent>
             </Card>
           </TabsContent>

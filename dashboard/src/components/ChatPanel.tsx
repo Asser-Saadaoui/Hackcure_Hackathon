@@ -1,10 +1,11 @@
 import { t, type Language } from "@/i18n";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { BookmarkPlus, HelpCircle, ImageOff, Send, Settings2, ShieldCheck, ShieldAlert, TriangleAlert } from "lucide-react";
+import { BookmarkPlus, HelpCircle, Send, Settings2, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { api, chatImageUrl, type Integrity } from "@/api";
+import { api } from "@/api";
+import { VerifiedPhoto } from "@/components/VerifiedPhoto";
 import { time } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { ChatMessage } from "@/types";
@@ -76,7 +77,7 @@ export function ChatPanel({ referralId, messages, disabled, onSent, patientLangu
                 m.kind === "INSTRUCTION" && "bg-amber-600 text-white")}>
                 {m.kind === "ANSWER" && m.replyTo && <p className="mb-1 text-xs opacity-70">↳ {questions[m.replyTo] ?? t("Réponse")}</p>}
                 {m.kind === "WORSE" && <p className="mb-1 flex items-center gap-1 text-xs font-semibold"><TriangleAlert className="h-3.5 w-3.5" /> {' '}{t("Le patient signale une aggravation")}</p>}
-                {m.kind === "IMAGE" && <ChatImage referralId={referralId} messageId={m.id} sha256={m.sha256} />}
+                {m.kind === "IMAGE" && <VerifiedPhoto path={`/referrals/${referralId}/chat/${m.id}/image`} sha256={m.sha256} />}
                 {m.text && <p dir="auto" className="whitespace-pre-wrap">{m.text}</p>}
                 {m.options && m.options.length > 0 && <p className="mt-1 text-xs opacity-80">{t("Choix :")}{' '}{m.options.join(" / ")}</p>}
                 <p className="mt-1 text-[10px] opacity-60">{m.senderName ? `${m.senderName} · ` : ""}{time(m.createdAt)}</p>
@@ -130,35 +131,6 @@ export function ChatPanel({ referralId, messages, disabled, onSent, patientLangu
           {error && <p className="text-xs text-destructive" role="alert">{t(error)}</p>}
         </div>
       )}
-    </div>
-  );
-}
-
-/** Patient photo: integrity-checked (SHA-256), thumbnail in the bubble, full size in a new tab. */
-function ChatImage({ referralId, messageId, sha256 }: { referralId: string; messageId: string; sha256?: string }) {
-  const [img, setImg] = useState<{ url: string; integrity: Integrity; sha256: string | null } | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  useEffect(() => {
-    let current: string | null = null;
-    chatImageUrl(referralId, messageId, sha256)
-      .then((r) => { current = r.url; setImg(r); })
-      .catch((e: Error) => setError(e.message));
-    return () => { if (current) URL.revokeObjectURL(current); };
-  }, [referralId, messageId, sha256]);
-  const blocked = error?.includes("Intégrité");
-  if (error) {
-    return <p role="alert" className="flex items-center gap-1 text-xs opacity-80">{blocked ? <ShieldAlert className="h-3.5 w-3.5" /> : <ImageOff className="h-3.5 w-3.5" />} {blocked ? t("Intégrité de la photo non vérifiée : affichage bloqué.") : t("Photo indisponible")}</p>;
-  }
-  if (!img) return <div role="status" aria-label={t("Chargement de la photo…")} className="h-40 w-56 motion-safe:animate-pulse rounded-lg bg-secondary" />;
-  return (
-    <div className="space-y-1">
-      <a href={img.url} target="_blank" rel="noreferrer" title={t("Ouvrir en taille réelle")}>
-        <img src={img.url} alt={t("Photo envoyée par le patient")} className="max-h-64 w-56 rounded-lg object-cover" />
-      </a>
-      <p className="flex items-center gap-1 text-[10px] opacity-70" title={img.sha256 ? `SHA-256 ${img.sha256}` : undefined}>
-        <ShieldCheck className="h-3 w-3" />
-        {img.integrity === "verified" ? t("Intégrité vérifiée · SHA-256 {hash}…", { hash: img.sha256?.slice(0, 12) ?? "" }) : t("Intégrité non vérifiable (connexion non sécurisée)")}
-      </p>
     </div>
   );
 }

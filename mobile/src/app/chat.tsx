@@ -1,7 +1,7 @@
 import { router, Stack } from 'expo-router';
 import { ArrowRight, ClipboardList, History, Phone, RotateCcw, Settings, ShieldAlert, Stethoscope } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Alert } from '@/components/alert';
@@ -12,12 +12,14 @@ import { ChatBubble } from '@/components/chat/chat-bubble';
 import { ChatInput } from '@/components/chat/chat-input';
 import { ExplainCard } from '@/components/chat/explain-card';
 import { TypingIndicator } from '@/components/chat/typing-indicator';
+import { ChatPhoto } from '@/components/ed-chat/chat-photo';
 import { Hassanito } from '@/components/hassanito';
+import { usePhotoCapture } from '@/components/photo/use-photo-capture';
 import { PrototypeNotice } from '@/components/prototype-notice';
 import { Colors, Fonts, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useI18n } from '@/i18n';
 import { api } from '@/lib/api';
-import { HttpError } from '@/lib/http-api';
+import { casePhotoPath, HttpError } from '@/lib/http-api';
 import { getJSON, Keys, remove, setJSON } from '@/lib/storage';
 import type { PatientExplain, Turn, TurnResult } from '@/lib/types';
 
@@ -38,6 +40,8 @@ type Item = {
   text: string;
   time: string;
   failed?: boolean;
+  /** A photo for the hospital team (never sent to the AI: no effect on the triage). */
+  photoId?: string;
 };
 
 const timeOf = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -57,6 +61,12 @@ export default function ChatScreen() {
   const [outcome, setOutcome] = useState<{ kind: 'emergency' | 'result' | 'under_review'; caseId: string } | null>(null);
   const [explain, setExplain] = useState<PatientExplain | null>(null);
   const scrollRef = useRef<ScrollView>(null);
+  // Photos go to the hospital team with the case; they are never sent to the AI (no effect on the triage).
+  const photo = usePhotoCapture(async (data) => {
+    if (!caseId) return;
+    const p = await api.addCasePhoto(caseId, data);
+    setItems((list) => [...list, { id: p.id, role: 'PATIENT', text: '', time: timeOf(p.createdAt), photoId: p.id }]);
+  }, t('photoHintTriage'));
 
   // Resume the case in progress (if the backend still has it).
   const resume = useCallback(() => {
@@ -66,7 +76,11 @@ export default function ChatScreen() {
         const c = await api.getCase(id);
         setResumeError(false);
         setCaseId(c.id);
-        setItems(c.turns.map((tr) => ({ id: tr.id, role: tr.role, text: tr.text, time: timeOf(tr.createdAt) })));
+        const entries = [
+          ...c.turns.map((tr) => ({ at: tr.createdAt, item: { id: tr.id, role: tr.role, text: tr.text, time: timeOf(tr.createdAt) } as Item })),
+          ...(c.photos ?? []).map((p) => ({ at: p.createdAt, item: { id: p.id, role: 'PATIENT', text: '', time: timeOf(p.createdAt), photoId: p.id } as Item })),
+        ].sort((a, b) => a.at.localeCompare(b.at));
+        setItems(entries.map((e) => e.item));
         setQuickReplies(c.turns.at(-1)?.quickReplies ?? []);
         if (c.status !== 'TRIAGING' && c.status !== 'CLOSED') {
           setExplain(c.explain ?? null);
@@ -201,7 +215,14 @@ export default function ChatScreen() {
               <ChatBubble role="ASSISTANT" text={t('chatGreeting')} />
               {items.map((item) => (
                 <View key={item.id} style={styles.itemWrap}>
-                  <ChatBubble role={item.role} text={item.text} time={item.time} failed={item.failed} />
+                  {item.photoId && caseId ? (
+                    <View style={styles.photoItem}>
+                      <ChatPhoto path={casePhotoPath(caseId, item.photoId)} />
+                      <AppText variant="small" style={styles.photoNote}>{t('photoNotUsed')} · {item.time}</AppText>
+                    </View>
+                  ) : (
+                    <ChatBubble role={item.role} text={item.text} time={item.time} failed={item.failed} />
+                  )}
                   {item.failed && (
                     <Pressable accessibilityRole="button" onPress={() => send(item.text, item.id)} style={styles.retry}>
                       <AppText variant="small" style={styles.retryText}>{t('sendFailed')} {t('retry')} ↻</AppText>
@@ -211,6 +232,8 @@ export default function ChatScreen() {
               ))}
               {outcome && explain && !sending && <ExplainCard explain={explain} />}
               {sending && <TypingIndicator label={t('typing')} slowLabel={t('typingLong')} />}
+              {photo.sending && <ActivityIndicator color={Colors.primary} style={styles.photoSending} />}
+              {photo.error && <AppText variant="small" style={styles.photoError}>{photo.error}</AppText>}
               {degraded && !sending && (
                 <Alert variant="destructive" icon={ShieldAlert} title={t('aiUnavailableTitle')}>
                   <AppText variant="small" style={styles.alertText}>{t('aiUnavailableBody')}</AppText>
@@ -242,8 +265,10 @@ export default function ChatScreen() {
 
             {/* After a decision only a case under review can still receive information. */}
             {(!outcome || outcome.kind === 'under_review') && (
-              <ChatInput onSend={(text) => send(text)} disabled={sending} onActivity={setListening} />
+              <ChatInput onSend={(text) => send(text)} disabled={sending} onActivity={setListening}
+                onAttach={caseId && !photo.sending ? photo.open : undefined} />
             )}
+            {photo.element}
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -253,6 +278,10 @@ export default function ChatScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
+  photoItem: { alignSelf: 'flex-end', alignItems: 'flex-end', gap: 4, maxWidth: '82%' },
+  photoNote: { color: Colors.mutedFg, textAlign: 'right' },
+  photoSending: { alignSelf: 'flex-end' },
+  photoError: { color: Colors.destructive, alignSelf: 'flex-end' },
   flex: { flex: 1 },
   column: { flex: 1, width: '100%', maxWidth: MaxContentWidth + 200, alignSelf: 'center' },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, paddingHorizontal: Spacing.sm },

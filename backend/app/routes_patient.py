@@ -98,7 +98,7 @@ def list_cases(s: PatientSession = Depends(patient), db: Session = Depends(get_d
 
 @router.get('/cases/{case_id}')
 def get_case(case_id: str, s: PatientSession = Depends(patient), db: Session = Depends(get_db)):
-    return services.case_view(own_case(db, s, case_id))
+    return services.case_view(own_case(db, s, case_id), db)
 
 
 @router.post('/cases/{case_id}/close')
@@ -151,6 +151,21 @@ def send_image(referral_id: str, body: ImageIn, s: PatientSession = Depends(pati
     case, r = own_referral(db, s, referral_id)
     data = photo_security.verify_upload(s.token_hash, referral_id, body.data, body.sha256, body.ts, body.nonce, body.sig)
     return services.chat_view(services.patient_image(db, case, r, data, body.caption.strip()))
+
+
+@router.post('/cases/{case_id}/photos')
+def add_case_photo(case_id: str, body: ImageIn, s: PatientSession = Depends(patient), db: Session = Depends(get_db)):
+    """Photo in the triage chat: kept for the hospital team, never sent to the AI (no effect on the triage)."""
+    case = own_case(db, s, case_id)
+    data = photo_security.verify_upload(s.token_hash, case_id, body.data, body.sha256, body.ts, body.nonce, body.sig)
+    return services.case_photo_view(services.case_photo(db, case, data))
+
+
+@router.get('/cases/{case_id}/photos/{image_id}')
+def get_case_photo(case_id: str, image_id: str, s: PatientSession = Depends(patient), db: Session = Depends(get_db)):
+    own_case(db, s, case_id)
+    img, data = services.read_case_photo(db, case_id, image_id)
+    return Response(data, media_type=img.content_type, headers={**photo_security.HEADERS, 'X-Content-SHA256': img.sha256})
 
 
 @router.get('/referrals/{referral_id}/chat/{message_id}/image')

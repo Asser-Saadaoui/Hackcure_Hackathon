@@ -101,6 +101,19 @@ class ChatImage(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
+class CaseImage(Base):
+    """Photo the patient adds in the triage chat. For the hospital team only: never sent to the AI service, so it
+    plays no part in detection or classification. Sanitized, encrypted (AES-256-GCM), with its SHA-256."""
+    __tablename__ = 'case_images'
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    case_id: Mapped[str] = mapped_column(ForeignKey('cases.id'), index=True)
+    content_type: Mapped[str] = mapped_column(String(32))
+    data: Mapped[bytes] = mapped_column(LargeBinary)
+    sha256: Mapped[str] = mapped_column(String(64))
+    encryption: Mapped[str] = mapped_column(String(16))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
 class Ambulance(Base):
     """Simulated ambulance (always labelled SIMULATED). Position is computed from elapsed time."""
     __tablename__ = 'ambulances'

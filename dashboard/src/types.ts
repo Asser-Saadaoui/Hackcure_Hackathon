@@ -43,6 +43,7 @@ export interface CaseDetail {
     actions: string[];
   };
   transcript: Turn[];
+  photos?: { id: string; sha256: string; createdAt: string }[];   // triage-chat photos (not used by the AI)
   explanation: { headline: string; points: string[]; confidence: string; confidenceNote: string;
     modelFactors?: { label: string; contribution: number; direction: "up" | "down" }[]; modelSaturated?: boolean };
   patientAge: string | number | null;

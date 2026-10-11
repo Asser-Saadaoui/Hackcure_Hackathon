@@ -201,6 +201,16 @@ def chat(referral_id: str, body: ChatIn, user: StaffUser = Depends(hospital_staf
     return services.chat_view(services.staff_chat(db, r, user, body.text.strip(), body.kind, body.options))
 
 
+@router.get('/referrals/{referral_id}/photos/{image_id}')
+def case_photo(referral_id: str, image_id: str, user: StaffUser = Depends(hospital_staff), db: Session = Depends(get_db)):
+    """Photo the patient added during triage (case-level), for the hospital the case is referred to."""
+    r = my_referral(db, user, referral_id)
+    img, data = services.read_case_photo(db, r.case_id, image_id)
+    services.audit(db, user.email, 'case.image_viewed', r.case_id, sha256=img.sha256)
+    db.commit()
+    return Response(data, media_type=img.content_type, headers={**photo_security.HEADERS, 'X-Content-SHA256': img.sha256})
+
+
 @router.get('/referrals/{referral_id}/chat/{message_id}/image')
 def chat_image(referral_id: str, message_id: str, user: StaffUser = Depends(hospital_staff), db: Session = Depends(get_db)):
     my_referral(db, user, referral_id)

@@ -6,6 +6,8 @@ export const LANGUAGES = [['fr', 'Français'], ['ar', 'العربية'], ['darij
 const rows: [string, string, string, string][] = [
   ["Photo indisponible", "Photo unavailable", "الصورة غير متاحة", "التصويرة موش متاحة"],
   ["Chargement de la photo…", "Loading photo…", "جارٍ تحميل الصورة…", "نحمّلوا التصويرة…"],
+  ["Photos du patient ({n})", "Patient photos ({n})", "صور المريض ({n})", "تصاور المريض ({n})"],
+  ["Ajoutées pendant le triage. Non utilisées par l’IA : elles n’ont pas influencé le niveau.", "Added during triage. Not used by the AI: they did not influence the level.", "أُضيفت أثناء الفرز. لا يستعملها الذكاء الاصطناعي: لم تؤثر على المستوى.", "تزادو وقت الفرز. الذكاء الاصطناعي ما يستعملهمش: ما أثّروش على المستوى."],
   ["Intégrité vérifiée · SHA-256 {hash}…", "Integrity verified · SHA-256 {hash}…", "تم التحقق من السلامة · SHA-256 {hash}…", "السلامة متثبّتة · SHA-256 {hash}…"],
   ["Intégrité non vérifiable (connexion non sécurisée)", "Integrity cannot be checked (insecure connection)", "لا يمكن التحقق من السلامة (اتصال غير آمن)", "ما نجموش نثبّتو السلامة (كونكسيون موش آمنة)"],
   ["Intégrité de la photo non vérifiée : affichage bloqué.", "Photo integrity check failed: display blocked.", "فشل التحقق من سلامة الصورة: تم حجب العرض.", "التصويرة ما تعدّاتش التثبّت: ما تتورّاش."],
