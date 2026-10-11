@@ -10,7 +10,6 @@ import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { Chip } from '@/components/chip';
 import { Hassanito } from '@/components/hassanito';
-import { PrototypeNotice } from '@/components/prototype-notice';
 import { Screen } from '@/components/screen';
 import { NetworkStatus } from '@/components/network-status';
 import { EXPERIENCE } from '@/i18n/experience';
@@ -74,7 +73,6 @@ export default function WelcomeScreen() {
         {[copy.how1, copy.how2, copy.how3].map((step, i) => <View key={i} style={styles.step}><AppText style={styles.number}>{i + 1}</AppText><AppText style={{ flex: 1 }}>{step}</AppText></View>)}
       </Card>
       <Hassanito state={phase === 'starting' ? 'thinking' : 'idle'} presentation="hero" />
-      <PrototypeNotice />
       </View>
 
       <View style={[styles.panel, styles.consentPanel]}>

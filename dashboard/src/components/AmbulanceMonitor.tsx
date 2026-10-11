@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Activity, HeartPulse, ShieldCheck, Siren, Thermometer, Wind } from "lucide-react";
+import { Activity, ShieldCheck, Siren } from "lucide-react";
+import { AnimatedCircularProgressBar } from "@/components/ui/animated-circular-progress-bar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { api } from "@/api";
 import { t } from "@/i18n";
@@ -19,11 +20,16 @@ function Spark({ values, color, low, high }: { values: number[]; color: string; 
   return <svg viewBox={`0 0 ${w} ${h}`} className="h-8 w-full" preserveAspectRatio="none" aria-hidden><polyline points={pts} fill="none" stroke={color} strokeWidth="2" /></svg>;
 }
 
-function Tile({ icon: Icon, label, value, unit, alert }: { icon: typeof HeartPulse; label: string; value: string; unit: string; alert: boolean }) {
+/** One vital sign as a circular gauge: the arc shows where the value sits in its range, the centre the value itself. */
+function Gauge({ label, value, display, unit, min, max, alert }: { label: string; value?: number; display?: string; unit: string; min: number; max: number; alert: boolean }) {
   return (
-    <div className={cn("rounded-lg border p-3", alert ? "border-red-300 bg-red-50 text-red-900" : "bg-card")}>
-      <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Icon className="h-3.5 w-3.5" />{label}</p>
-      <p className="mt-1 font-mono text-2xl font-semibold tabular-nums">{value}<span className="ms-1 text-xs font-normal text-muted-foreground">{unit}</span></p>
+    <div className={cn("flex flex-col items-center gap-1 rounded-lg border p-2", alert ? "border-red-300 bg-red-50" : "bg-card")}>
+      <AnimatedCircularProgressBar className="size-24 text-base" min={min} max={max} value={value ?? min}
+        gaugePrimaryColor={alert ? "#DC2626" : "#2563EB"} gaugeSecondaryColor={alert ? "#FECACA" : "#E2E8F0"}>
+        <span className={cn("font-mono text-lg font-semibold tabular-nums", alert && "text-red-700")}>{display ?? value ?? "?"}</span>
+        <span className="text-[10px] font-normal text-muted-foreground">{unit}</span>
+      </AnimatedCircularProgressBar>
+      <p className={cn("text-xs font-medium", alert ? "text-red-800" : "text-muted-foreground")}>{label}</p>
     </div>
   );
 }
@@ -64,11 +70,11 @@ export function AmbulanceMonitor({ referralId }: { referralId: string }) {
           </p>
         )}
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
-          <Tile icon={HeartPulse} label={t("FC")} value={`${v.heartRate ?? "?"}`} unit="/min" alert={has("FC")} />
-          <Tile icon={Activity} label="SpO₂" value={`${v.spo2 ?? "?"}`} unit="%" alert={has("SpO2")} />
-          <Tile icon={Activity} label={t("PA")} value={`${v.systolic ?? "?"}/${v.diastolic ?? "?"}`} unit="mmHg" alert={has("PAS")} />
-          <Tile icon={Wind} label={t("FR")} value={`${v.respRate ?? "?"}`} unit="/min" alert={has("FR")} />
-          <Tile icon={Thermometer} label={t("Temp.")} value={`${v.temperature ?? "?"}`} unit="°C" alert={has("T ")} />
+          <Gauge label={t("FC")} value={v.heartRate} unit="/min" min={30} max={200} alert={has("FC")} />
+          <Gauge label="SpO₂" value={v.spo2} unit="%" min={70} max={100} alert={has("SpO2")} />
+          <Gauge label={t("PA")} value={v.systolic} display={`${v.systolic ?? "?"}/${v.diastolic ?? "?"}`} unit="mmHg" min={50} max={220} alert={has("PAS")} />
+          <Gauge label={t("FR")} value={v.respRate} unit="/min" min={0} max={45} alert={has("FR")} />
+          <Gauge label={t("Temp.")} value={v.temperature} unit="°C" min={34} max={42} alert={has("T ")} />
         </div>
         <div className="grid grid-cols-2 gap-4 text-xs text-muted-foreground">
           <div><p>{t("FC (5 dernières min)")}</p><Spark values={series("heartRate").slice(-60)} color="#DC2626" low={40} high={160} /></div>

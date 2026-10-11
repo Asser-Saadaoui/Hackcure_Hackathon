@@ -16,7 +16,6 @@ import { TypingIndicator } from '@/components/chat/typing-indicator';
 import { ChatPhoto } from '@/components/ed-chat/chat-photo';
 import { Hassanito } from '@/components/hassanito';
 import { usePhotoCapture } from '@/components/photo/use-photo-capture';
-import { PrototypeNotice } from '@/components/prototype-notice';
 import { Colors, Fonts, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useI18n } from '@/i18n';
 import { api } from '@/lib/api';
@@ -230,7 +229,6 @@ export default function ChatScreen() {
             <View style={styles.companion}><Hassanito compact state={mascotState === 'alert' ? 'alert' : sending ? 'thinking' : listening ? 'listening' : mascotState} /></View>
 
             <ScrollView ref={scrollRef} style={styles.flex} contentContainerStyle={styles.messages} onContentSizeChange={scrollToEnd}>
-              <PrototypeNotice />
               {resumeError && <Alert variant="warning" title={t('errorRetry')}>
                 <Button label={t('retry')} variant="outline" onPress={resume} disabled={sending} />
               </Alert>}

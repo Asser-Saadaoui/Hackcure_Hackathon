@@ -11,7 +11,6 @@ import { Chip } from '@/components/chip';
 import { LocationMap } from '@/components/location/location-map';
 import { Screen } from '@/components/screen';
 import { Hassanito } from '@/components/hassanito';
-import { PrototypeNotice } from '@/components/prototype-notice';
 import { NEIGHBORHOODS } from '@/constants/neighborhoods';
 import { Colors, Spacing } from '@/constants/theme';
 import { useI18n } from '@/i18n';
@@ -98,7 +97,6 @@ export default function LocationScreen() {
 
   return (
     <Screen>
-      <PrototypeNotice />
       <Hassanito compact state={phase === 'assigning' || phase === 'locating' ? 'thinking' : 'guiding'} />
       <View style={styles.head}>
         <AppText variant="title">{t('locationTitle')}</AppText>

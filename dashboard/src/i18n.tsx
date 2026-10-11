@@ -6,6 +6,12 @@ export const LANGUAGES = [['fr', 'Français'], ['ar', 'العربية'], ['darij
 const rows: [string, string, string, string][] = [
   ["Photo indisponible", "Photo unavailable", "الصورة غير متاحة", "التصويرة موش متاحة"],
   ["Chargement de la photo…", "Loading photo…", "جارٍ تحميل الصورة…", "نحمّلوا التصويرة…"],
+  ["Le patient, relié au bon soin", "The patient, connected to the right care", "المريض متصل بالرعاية المناسبة", "المريض مربوط بالعلاج المناسب"],
+  ["Triage par l’application, orientation vers l’hôpital ou la clinique adaptés, suivi de l’ambulance en direct.", "Triage in the app, referral to the right hospital or clinic, live ambulance tracking.", "فرز عبر التطبيق، توجيه إلى المستشفى أو العيادة المناسبة، وتتبع الإسعاف مباشرة.", "فرز في التطبيقة، توجيه للسبيطار ولا الكلينيك المناسب، وتتبع الإسعاف مباشرة."],
+  ["Application", "App", "التطبيق", "التطبيقة"],
+  ["Hôpital", "Hospital", "المستشفى", "السبيطار"],
+  ["Clinique", "Clinic", "العيادة", "الكلينيك"],
+  ["Ambulance", "Ambulance", "الإسعاف", "الإسعاف"],
   ["Moniteur ambulance", "Ambulance monitor", "جهاز مراقبة الإسعاف", "مونيتور الإسعاف"],
   ["SIMULÉ", "SIMULATED", "محاكاة", "محاكاة"],
   ["Message signé par l’appareil (HMAC-SHA256), horodaté, numéro de séquence vérifié", "Message signed by the device (HMAC-SHA256), timestamped, sequence number checked", "رسالة موقعة من الجهاز (HMAC-SHA256)، مؤرخة، مع التحقق من الرقم التسلسلي", "ميساج ممضي من الجهاز (HMAC-SHA256)، بالوقت والنومرو متثبّت"],
