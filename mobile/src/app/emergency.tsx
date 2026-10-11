@@ -5,6 +5,7 @@ import { ActivityIndicator, Linking, ScrollView, StyleSheet, View } from 'react-
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/app-text';
+import { HospitalOptions } from '@/components/hospital-options';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { Chip } from '@/components/chip';
@@ -146,7 +147,7 @@ export default function EmergencyScreen() {
             {ed.kind === 'referred' && (
               <View style={styles.block}>
                 <AppText style={styles.hospitalName}>{ed.referral.facilityName}</AppText>
-                <AppText variant="small">{ed.referral.matchReason}</AppText>
+                {ed.referral.options ? <HospitalOptions options={ed.referral.options} /> : <AppText variant="small">{ed.referral.matchReason}</AppText>}
                 <View style={[styles.statusPill, ed.referral.status === 'ACCEPTED' ? styles.pillOk : styles.pillSent]}>
                   <AppText variant="small" style={ed.referral.status === 'ACCEPTED' ? styles.pillOkText : styles.pillSentText}>
                     {ed.referral.status === 'ACCEPTED' ? t('edAccepted') : t('edReceived')}

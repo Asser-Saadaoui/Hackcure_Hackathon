@@ -108,6 +108,8 @@ export interface Referral {
   etaMinutes: number;
   /** Why the system assigned this hospital, shown to the patient (e.g. "Cardiology · 2 beds free · 4.2 km"). */
   matchReason: string;
+  /** The assigned hospital vs the next two the system compared, and why it is the most adequate. */
+  options?: ReferralOptions | null;
   createdAt: string;
 }
 
@@ -200,4 +202,31 @@ export interface CasePhoto {
   id: string;
   sha256: string;
   createdAt: string;
+}
+
+export interface ReferralOption {
+  key: string;
+  name: string;
+  etaMinutes: number;
+  distanceKm: number;
+  bedsAvailable: number | null;
+  waitMinutes: number | null;
+  hasSpecialty: boolean;
+  capable: boolean;
+  simulated: boolean;
+}
+
+/** Structured reason, worded by the app in the patient's language. */
+export interface ReferralReason {
+  code: 'faster' | 'as_fast' | 'equipment' | 'specialty' | 'more_beds' | 'shorter_wait' | 'emergency_time' | 'saturated' | 'staff_choice' | 'best_overall';
+  minutes?: number;
+  beds?: number;
+  specialty?: string;
+}
+
+export interface ReferralOptions {
+  level: RiskLevel | null;
+  chosen: ReferralOption;
+  alternatives: ReferralOption[];
+  why: ReferralReason[];
 }

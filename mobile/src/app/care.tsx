@@ -11,6 +11,7 @@ import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { RiskBadge } from '@/components/risk-badge';
 import { Screen } from '@/components/screen';
+import { HospitalOptions } from '@/components/hospital-options';
 import { Hassanito } from '@/components/hassanito';
 import { Colors, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useI18n } from '@/i18n';
@@ -163,10 +164,12 @@ export default function StatusScreen() {
                 <AppText variant="small">~{referral.etaMinutes} {t('minutes')}</AppText>
               </View>
             </View>
-            <View style={styles.reason}>
-              <AppText variant="overline" style={styles.muted}>{t('whyThisHospital')}</AppText>
-              <AppText variant="small" style={styles.reasonText}>{referral.matchReason}</AppText>
-            </View>
+            {referral.options ? <HospitalOptions options={referral.options} /> : (
+              <View style={styles.reason}>
+                <AppText variant="overline" style={styles.muted}>{t('whyThisHospital')}</AppText>
+                <AppText variant="small" style={styles.reasonText}>{referral.matchReason}</AppText>
+              </View>
+            )}
           </>
         ) : (
           <View style={styles.waiting}>
