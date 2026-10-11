@@ -75,7 +75,6 @@ export default function WelcomeScreen() {
       </Card>
       <Hassanito state={phase === 'starting' ? 'thinking' : 'idle'} presentation="hero" />
       <PrototypeNotice />
-      <Button label={copy.explore} variant="ghost" onPress={() => router.push('/home')} />
       </View>
 
       <View style={[styles.panel, styles.consentPanel]}>

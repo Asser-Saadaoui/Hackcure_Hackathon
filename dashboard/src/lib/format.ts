@@ -36,5 +36,5 @@ export function ago(iso: string | null | undefined): string {
   return hrs < 24 ? relative.format(-hrs, "hour") : relative.format(-Math.round(hrs / 24), "day");
 }
 
-export const time = (iso: string) => new Date(iso).toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit" });
+export const time = (iso: string) => new Date(iso).toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit", hour12: false });
 export const pct = (x: number | null | undefined) => (x == null ? "—" : `${Math.round(x * 100)} %`);
