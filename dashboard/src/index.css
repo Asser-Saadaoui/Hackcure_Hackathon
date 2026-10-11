@@ -54,3 +54,20 @@
   .skip-link:focus { top: 1rem; }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
 }
+
+/* Magic UI expanding dot; red actions retain their emergency identity. */
+.interactive-action { position: relative; isolation: isolate; overflow: hidden; border-radius: 999px; --action-fill: hsl(var(--primary)); }
+.interactive-action[data-tone="default"] { --action-fill: #194987; }
+.interactive-action[data-tone="destructive"] { --action-fill: #a81919; }
+.interactive-action .action-fill { position: absolute; z-index: -1; width: 8px; height: 8px; inset-inline-start: 18px; top: calc(50% - 4px); background: var(--action-fill); border-radius: 50%; transform: scale(1); transition: transform .3s ease; }
+.interactive-action .action-label, .interactive-action .action-overlay { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; transition: opacity .3s ease, transform .3s ease; }
+.interactive-action .action-dot { width: 8px; height: 8px; flex-shrink: 0; }
+.interactive-action .action-overlay { position: absolute; inset: 0 12px; opacity: 0; transform: translateX(48px); color: white; pointer-events: none; }
+.interactive-action:is(:hover, :focus-visible, :active):not(:disabled) .action-fill { transform: scale(150); }
+.interactive-action:is(:hover, :focus-visible, :active):not(:disabled) .action-label { opacity: 0; transform: translateX(48px); }
+.interactive-action:is(:hover, :focus-visible, :active):not(:disabled) .action-overlay { opacity: 1; transform: translateX(0); }
+[dir="rtl"] .interactive-action .action-overlay { transform: translateX(-48px); }
+[dir="rtl"] .interactive-action:is(:hover, :focus-visible, :active):not(:disabled) .action-label { transform: translateX(-48px); }
+[dir="rtl"] .interactive-action:is(:hover, :focus-visible, :active):not(:disabled) .action-overlay { transform: translateX(0); }
+[dir="rtl"] .interactive-action .lucide-arrow-right { transform: scaleX(-1); }
+@media (forced-colors: active) { .interactive-action .action-fill, .interactive-action .action-overlay { display: none; } .interactive-action:is(:hover, :focus-visible, :active):not(:disabled) .action-label { opacity: 1; transform: none; } }
