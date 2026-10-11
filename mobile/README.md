@@ -26,4 +26,8 @@ ED phone numbers are never invented: the app always offers **190** (SAMU).
 
 ## Android APK
 
-See the repository README (`EXPO_PUBLIC_API_URL` must point to an address the phone can reach).
+Run `npm run android:apk` from this folder after signing into Expo. The `apk` profile builds a signed installable APK, not an app bundle.
+
+The current local-demo backend is `http://172.20.10.4:8101` in `eas.json`. The phone must share the computer's Wi-Fi, and the backend must remain running. If this Wi-Fi address changes, update the profile and rebuild. The production profile still requires a real hosted backend URL; this demo build is not a store deployment.
+
+The repository `.easignore` excludes unrelated server, AI, simulator and dashboard files from Android build inputs. It preserves the mobile source, assets and dependency lockfile. EAS signing credentials stay on Expo's server.

@@ -9,7 +9,8 @@ export function Chip({ label, selected, onPress, role = 'button' }: Props) {
   return (
     <Pressable
       accessibilityRole={role}
-      accessibilityState={role === 'radio' ? { selected: !!selected } : undefined}
+      aria-checked={role === 'radio' ? !!selected : undefined}
+      accessibilityState={role === 'radio' ? { checked: !!selected, selected: !!selected } : undefined}
       onPress={onPress}
       style={({ pressed }) => [styles.chip, selected && styles.selected, pressed && styles.pressed]}>
       <Text style={[styles.text, selected && styles.textSelected]}>{label}</Text>

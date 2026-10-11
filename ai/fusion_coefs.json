@@ -1,0 +1,34 @@
+{
+  "b0": -0.1515864483924571,
+  "b1": 0.8892288317213356,
+  "b2": 0.16707535388532127,
+  "eps": 0.0001,
+  "prevalence": 0.17194835680751175,
+  "C": 1.0,
+  "n_train": 1704,
+  "cv_brier": 0.03203696753448444,
+  "test_brier": null,
+  "test_auc": null,
+  "date": "2026-10-11",
+  "centered_bias": -1.5493486584868523,
+  "bootstrap_95": [
+    [
+      -0.4055647150903264,
+      0.162782822743123
+    ],
+    [
+      0.8025605511362572,
+      1.0363174598517324
+    ],
+    [
+      -0.8355093460219547,
+      1.1105441785248262
+    ]
+  ],
+  "fit_population": "noncritical, scored validation_selection cases",
+  "clinical_validation": false,
+  "deployment_approved": true,
+  "source_sha256": "85e40ee05e7241ae263ab20a9f3362ea6be9f89c86206fce13e86d0169c68520",
+  "model_sha256": "fee288298d6fafe63d053cc8fa4047442bb7949abb77022058067a27375eec5e",
+  "activation_basis": "explicit user request for prototype runtime on 2026-10-11"
+}

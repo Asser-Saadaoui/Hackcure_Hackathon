@@ -1,3 +1,4 @@
+import { t, type Language } from "@/i18n";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { BookmarkPlus, HelpCircle, ImageOff, Send, Settings2, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,7 @@ const QUICK_QUESTIONS = [
   { text: "Avez-vous des allergies connues ?", options: ["Oui", "Non", "Je ne sais pas"] },
 ];
 
-export function ChatPanel({ referralId, messages, disabled, onSent }: { referralId: string; messages: ChatMessage[]; disabled?: boolean; onSent: () => void }) {
+export function ChatPanel({ referralId, messages, disabled, onSent, patientLanguage }: { patientLanguage?: Language; referralId: string; messages: ChatMessage[]; disabled?: boolean; onSent: () => void }) {
   const [text, setText] = useState("");
   const [kind, setKind] = useState<"TEXT" | "INSTRUCTION">("TEXT");
   const [busy, setBusy] = useState(false);
@@ -35,7 +36,7 @@ export function ChatPanel({ referralId, messages, disabled, onSent }: { referral
     }
   }
   useEffect(() => {
-    end.current?.scrollIntoView({ behavior: "smooth" });
+    end.current?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
   }, [messages.length]);
 
   async function send(body: { text: string; kind: "TEXT" | "QUESTION" | "INSTRUCTION"; options?: string[] }) {
@@ -73,11 +74,11 @@ export function ChatPanel({ referralId, messages, disabled, onSent }: { referral
                 m.sender === "STAFF" ? "bg-primary text-primary-foreground" : "border bg-card",
                 m.kind === "WORSE" && "border-red-300 bg-red-50 text-red-900",
                 m.kind === "INSTRUCTION" && "bg-amber-600 text-white")}>
-                {m.kind === "ANSWER" && m.replyTo && <p className="mb-1 text-xs opacity-70">↳ {questions[m.replyTo] ?? "Réponse"}</p>}
-                {m.kind === "WORSE" && <p className="mb-1 flex items-center gap-1 text-xs font-semibold"><TriangleAlert className="h-3.5 w-3.5" /> Le patient signale une aggravation</p>}
+                {m.kind === "ANSWER" && m.replyTo && <p className="mb-1 text-xs opacity-70">↳ {questions[m.replyTo] ?? t("Réponse")}</p>}
+                {m.kind === "WORSE" && <p className="mb-1 flex items-center gap-1 text-xs font-semibold"><TriangleAlert className="h-3.5 w-3.5" /> {' '}{t("Le patient signale une aggravation")}</p>}
                 {m.kind === "IMAGE" && <ChatImage referralId={referralId} messageId={m.id} />}
                 {m.text && <p dir="auto" className="whitespace-pre-wrap">{m.text}</p>}
-                {m.options && m.options.length > 0 && <p className="mt-1 text-xs opacity-80">Choix : {m.options.join(" / ")}</p>}
+                {m.options && m.options.length > 0 && <p className="mt-1 text-xs opacity-80">{t("Choix :")}{' '}{m.options.join(" / ")}</p>}
                 <p className="mt-1 text-[10px] opacity-60">{m.senderName ? `${m.senderName} · ` : ""}{time(m.createdAt)}</p>
               </div>
             )}
@@ -89,45 +90,44 @@ export function ChatPanel({ referralId, messages, disabled, onSent }: { referral
         <div className="space-y-2 border-t p-3">
           {editing ? (
             <div className="space-y-2 rounded-lg border bg-secondary/40 p-2">
-              <p className="text-xs text-muted-foreground">Réponses enregistrées de votre service, une par ligne (partagées avec toute l'équipe).</p>
+              <p className="text-xs text-muted-foreground">{t("Réponses enregistrées de votre service, une par ligne (partagées avec toute l'équipe).")}</p>
               <Textarea rows={5} value={draft} onChange={(e) => setDraft(e.target.value)} />
               <div className="flex gap-2">
-                <Button size="sm" onClick={saveReplies}>Enregistrer</Button>
-                <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>Annuler</Button>
+                <Button size="sm" onClick={saveReplies}>{t("Enregistrer")}</Button>
+                <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>{t("Annuler")}</Button>
               </div>
             </div>
           ) : (
             <div className="flex flex-wrap items-center gap-1.5">
               {replies.map((x) => (
-                <button key={x} disabled={busy} onClick={() => send({ text: x, kind: "INSTRUCTION" })} title="Envoyer cette consigne"
+                <button key={x} disabled={busy} onClick={() => send({ text: x, kind: "INSTRUCTION" })} title={t("Envoyer cette consigne")}
                   className="max-w-full truncate rounded-full border border-primary/30 bg-accent/60 px-2.5 py-1 text-xs text-accent-foreground hover:bg-accent">
-                  <BookmarkPlus className="mr-1 inline h-3 w-3" />{x}
+                  <BookmarkPlus className="me-1 inline h-3 w-3" />{x}
                 </button>
               ))}
               <button onClick={() => { setDraft(replies.join("\n")); setEditing(true); }}
                 className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs text-muted-foreground hover:text-foreground">
-                <Settings2 className="h-3 w-3" />Gérer
-              </button>
+                <Settings2 className="h-3 w-3" />{t("Gérer")}{' '}</button>
             </div>
           )}
           <div className="flex flex-wrap gap-1.5">
             {QUICK_QUESTIONS.map((q) => (
-              <button key={q.text} disabled={busy} onClick={() => send({ text: q.text, kind: "QUESTION", options: q.options })}
+              <button key={t(q.text, {}, patientLanguage)} disabled={busy} onClick={() => send({ text: t(q.text, {}, patientLanguage), kind: "QUESTION", options: q.options.map(x => t(x, {}, patientLanguage)) })}
                 className="inline-flex items-center gap-1 rounded-full border bg-card px-2.5 py-1 text-xs hover:bg-secondary">
-                <HelpCircle className="h-3 w-3" /> {q.text}
+                <HelpCircle className="h-3 w-3" /> {t(q.text, {}, patientLanguage)}
               </button>
             ))}
           </div>
           <form onSubmit={submit} className="flex gap-2">
             <select value={kind} onChange={(e) => setKind(e.target.value as "TEXT" | "INSTRUCTION")}
-              className="rounded-md border bg-card px-2 text-sm" aria-label="Type de message">
-              <option value="TEXT">Message</option>
-              <option value="INSTRUCTION">Consigne</option>
+              className="rounded-md border bg-card px-2 text-sm" aria-label={t("Type de message")}>
+              <option value="TEXT">{t("Message")}</option>
+              <option value="INSTRUCTION">{t("Consigne")}</option>
             </select>
-            <Input value={text} onChange={(e) => setText(e.target.value)} placeholder="Écrire au patient…" dir="auto" />
-            <Button type="submit" size="icon" disabled={busy || !text.trim()} aria-label="Envoyer"><Send className="h-4 w-4" /></Button>
+            <Input aria-label={t("Écrire au patient…")} value={text} onChange={(e) => setText(e.target.value)} placeholder={t("Écrire au patient…")} dir="auto" />
+            <Button type="submit" size="icon" disabled={busy || !text.trim()} aria-label={t("Envoyer")}><Send className="h-4 w-4" /></Button>
           </form>
-          {error && <p className="text-xs text-destructive">{error}</p>}
+          {error && <p className="text-xs text-destructive" role="alert">{t(error)}</p>}
         </div>
       )}
     </div>
@@ -143,11 +143,11 @@ function ChatImage({ referralId, messageId }: { referralId: string; messageId: s
     chatImageUrl(referralId, messageId).then((u) => { current = u; setUrl(u); }).catch(() => setFailed(true));
     return () => { if (current) URL.revokeObjectURL(current); };
   }, [referralId, messageId]);
-  if (failed) return <p className="flex items-center gap-1 text-xs opacity-70"><ImageOff className="h-3.5 w-3.5" /> Photo indisponible</p>;
-  if (!url) return <div className="h-40 w-56 animate-pulse rounded-lg bg-secondary" />;
+  if (failed) return <p role="alert" className="flex items-center gap-1 text-xs opacity-70"><ImageOff className="h-3.5 w-3.5" /> {t("Photo indisponible")}</p>;
+  if (!url) return <div role="status" aria-label={t("Chargement de la photo…")} className="h-40 w-56 motion-safe:animate-pulse rounded-lg bg-secondary" />;
   return (
-    <a href={url} target="_blank" rel="noreferrer" title="Ouvrir en taille réelle">
-      <img src={url} alt="Photo envoyée par le patient" className="max-h-64 w-56 rounded-lg object-cover" />
+    <a href={url} target="_blank" rel="noreferrer" title={t("Ouvrir en taille réelle")}>
+      <img src={url} alt={t("Photo envoyée par le patient")} className="max-h-64 w-56 rounded-lg object-cover" />
     </a>
   );
 }

@@ -1,3 +1,4 @@
+import { t } from "@/i18n";
 import { useEffect } from "react";
 import { CircleMarker, MapContainer, Popup, TileLayer, useMap } from "react-leaflet";
 import { EQUIPMENT } from "@/lib/format";
@@ -9,10 +10,10 @@ const GRAND_TUNIS: [number, number] = [36.81, 10.17];
 /** Green: beds free · amber: few beds · red: full or not receiving · grey: unknown. */
 function status(h: Hospital): { color: string; label: string } {
   const a = h.availability;
-  if (!a.accepting || a.bedsAvailable === 0) return { color: "#DC2626", label: a.accepting ? "Complet" : "Ne reçoit plus" };
-  if (a.bedsAvailable == null) return { color: "#94A3B8", label: "Inconnu" };
-  if (a.bedsAvailable < 5 || a.equipmentDown.length > 0) return { color: "#F59E0B", label: "Places limitées" };
-  return { color: "#16A34A", label: "Disponible" };
+  if (!a.accepting || a.bedsAvailable === 0) return { color: "#DC2626", label: a.accepting ? t("Complet") : t("Ne reçoit plus") };
+  if (a.bedsAvailable == null) return { color: "#94A3B8", label: t("Inconnu") };
+  if (a.bedsAvailable < 5 || a.equipmentDown.length > 0) return { color: "#F59E0B", label: t("Places limitées") };
+  return { color: "#16A34A", label: t("Disponible") };
 }
 
 /** Leaflet measures its container once; recompute when the layout settles. */
@@ -29,8 +30,8 @@ export function NetworkView({ hospitals, simulatorOk }: { hospitals: Hospital[];
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">Réseau Grand Tunis</h1>
-        <p className="text-sm text-muted-foreground">{simulatorOk ? "Disponibilités simulées en direct, corrigées par les équipes quand elles les saisissent." : "Simulateur indisponible : dernières valeurs connues."}</p>
+        <h1 className="text-xl font-semibold tracking-tight">{t("Réseau Grand Tunis")}</h1>
+        <p className="text-sm text-muted-foreground">{simulatorOk ? t("Disponibilités simulées en direct, corrigées par les équipes quand elles les saisissent.") : t("Simulateur indisponible : dernières valeurs connues.")}</p>
       </div>
 
       <div className="overflow-hidden rounded-xl border bg-card">
@@ -47,10 +48,10 @@ export function NetworkView({ hospitals, simulatorOk }: { hospitals: Hospital[];
                   <div className="space-y-1 text-sm">
                     <p className="font-semibold">{h.name}</p>
                     <p style={{ color: s.color }} className="font-medium">{s.label}</p>
-                    <p>Lits libres : {a.bedsAvailable ?? "?"}{a.bedsTotal != null && ` / ${a.bedsTotal}`} · Réa : {a.icuAvailable ?? "?"}</p>
-                    <p>Attente : {a.waitMinutes != null ? `${a.waitMinutes} min` : "?"}</p>
-                    {a.equipmentDown.length > 0 && <p>Indisponible : {a.equipmentDown.map((e) => EQUIPMENT[e] ?? e).join(", ")}</p>}
-                    <p className="text-xs text-gray-500">{a.source === "staff" ? "Saisie de l'équipe" : "Valeurs simulées"}</p>
+                    <p>{t("Lits libres :")}{' '}{a.bedsAvailable ?? "?"}{a.bedsTotal != null && ` / ${a.bedsTotal}`} {' '}{t("· Réa :")}{' '}{a.icuAvailable ?? "?"}</p>
+                    <p>{t("Attente :")}{' '}{a.waitMinutes != null ? `${a.waitMinutes} min` : "?"}</p>
+                    {a.equipmentDown.length > 0 && <p>{t("Indisponible :")}{' '}{a.equipmentDown.map((e) => t(EQUIPMENT[e] ?? e)).join(", ")}</p>}
+                    <p className="text-xs text-gray-500">{a.source === "staff" ? t("Saisie de l'équipe") : t("Valeurs simulées")}</p>
                   </div>
                 </Popup>
               </CircleMarker>
@@ -58,7 +59,7 @@ export function NetworkView({ hospitals, simulatorOk }: { hospitals: Hospital[];
           })}
         </MapContainer>
         <div className="flex flex-wrap gap-4 border-t px-3 py-2 text-xs text-muted-foreground">
-          {[["#16A34A", "Disponible"], ["#F59E0B", "Places limitées"], ["#DC2626", "Complet / ne reçoit plus"], ["#94A3B8", "Inconnu"]].map(([c, l]) => (
+          {[["#16A34A", t("Disponible")], ["#F59E0B", t("Places limitées")], ["#DC2626", t("Complet / ne reçoit plus")], ["#94A3B8", t("Inconnu")]].map(([c, l]) => (
             <span key={l} className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: c }} />{l}</span>
           ))}
         </div>
@@ -66,8 +67,8 @@ export function NetworkView({ hospitals, simulatorOk }: { hospitals: Hospital[];
 
       <div className="overflow-x-auto rounded-xl border bg-card">
         <table className="w-full text-sm">
-          <thead className="bg-secondary/60 text-left text-xs text-muted-foreground">
-            <tr><th className="px-3 py-2">Hôpital</th><th>Lits libres</th><th>Réa</th><th>Attente</th><th>Indisponible</th><th className="pr-3">Source</th></tr>
+          <thead className="bg-secondary/60 text-start text-xs text-muted-foreground">
+            <tr><th className="px-3 py-2">{t("Hôpital")}</th><th>{t("Lits libres")}</th><th>{t("Réa")}</th><th>{t("Attente")}</th><th>{t("Indisponible")}</th><th className="pe-3">{t("Source")}</th></tr>
           </thead>
           <tbody>
             {hospitals.map((h) => {
@@ -81,9 +82,9 @@ export function NetworkView({ hospitals, simulatorOk }: { hospitals: Hospital[];
                   <td className={cn(a.bedsAvailable === 0 && "font-semibold text-red-700")}>{a.bedsAvailable ?? "?"}{a.bedsTotal != null && ` / ${a.bedsTotal}`}</td>
                   <td className={cn(a.icuAvailable === 0 && "text-red-700")}>{a.icuAvailable ?? "?"}{a.icuTotal != null && ` / ${a.icuTotal}`}</td>
                   <td>{a.waitMinutes != null ? `${a.waitMinutes} min` : "?"}</td>
-                  <td className="text-xs">{!a.accepting ? "Ne reçoit plus" : a.equipmentDown.map((e) => EQUIPMENT[e] ?? e).join(", ") || "—"}</td>
-                  <td className="pr-3"><span className={cn("rounded-full px-2 py-0.5 text-xs", a.source === "staff" ? "bg-primary text-primary-foreground" : "bg-amber-100 text-amber-800")}>
-                    {a.source === "staff" ? "équipe" : a.source === "simulator" ? "simulé" : "?"}</span></td>
+                  <td className="text-xs">{!a.accepting ? t("Ne reçoit plus") : a.equipmentDown.map((e) => t(EQUIPMENT[e] ?? e)).join(", ") || "—"}</td>
+                  <td className="pe-3"><span className={cn("rounded-full px-2 py-0.5 text-xs", a.source === "staff" ? "bg-primary text-primary-foreground" : "bg-amber-100 text-amber-800")}>
+                    {a.source === "staff" ? t("équipe") : a.source === "simulator" ? t("simulé") : "?"}</span></td>
                 </tr>
               );
             })}

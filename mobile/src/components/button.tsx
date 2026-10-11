@@ -1,7 +1,8 @@
 import type { LucideIcon } from 'lucide-react-native';
-import { Pressable, StyleSheet, Text, View, type PressableProps } from 'react-native';
+import { Pressable, StyleSheet, View, type PressableProps } from 'react-native';
 
 import { Colors, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
+import { AppText } from './app-text';
 
 type Variant = 'default' | 'outline' | 'ghost' | 'secondary' | 'destructive';
 type Size = 'default' | 'sm' | 'lg';
@@ -45,7 +46,7 @@ export function Button({ label, variant = 'default', size = 'default', icon: Ico
       {...rest}>
       <View style={styles.row}>
         {Icon && <Icon size={16} color={fg} strokeWidth={2.25} />}
-        <Text style={[styles.label, size === 'lg' && styles.labelLg, { color: fg }]}>{label}</Text>
+        <AppText style={[styles.label, size === 'lg' && styles.labelLg, { color: fg }]}>{label}</AppText>
         {IconRight && <IconRight size={16} color={fg} strokeWidth={2.25} />}
       </View>
     </Pressable>
@@ -54,10 +55,10 @@ export function Button({ label, variant = 'default', size = 'default', icon: Ico
 
 const styles = StyleSheet.create({
   base: { borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'transparent' },
-  row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, maxWidth: '100%' },
   pressed: { opacity: 0.88 },
   disabled: { opacity: 0.5 },
-  label: { fontSize: 14, fontFamily: Fonts.medium },
+  label: { fontSize: 14, fontFamily: Fonts.medium, flexShrink: 1, textAlign: 'center' },
   labelLg: { fontSize: 16 },
 });
 

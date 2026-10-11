@@ -124,7 +124,7 @@ patient message → process_turn (facts, NLP p_nlp, screens, next missing field)
                → interviewer (LLM phrases the next question only; never decides)
 ```
 
-- `fusion.py`: `p_final = sigmoid(-1.5 + 0.8·(logit(p_nlp) − logit(0.15)) + 4·s_rule)`. Hand-set, not fitted; contributions are returned for the dashboard.
+- `fusion.py`: loads `fusion_coefs.json`: `p_final = sigmoid(-0.151586 + 0.889229*logit(clip(p_nlp, 1e-4, 1-1e-4)) + 0.167075*s_rule)`. Contributions use the equivalent prevalence-centered form. Exploratory weak-label fit, not clinical calibration; critical overrides and rule floors remain independent. See `FUSION.md` for provenance, CV results, uncertainty and rerun instructions.
 - `decision.py`: critical rule → EMERGENCY; level never below the rule floor; NLP abstains and no rule → UNCERTAIN (clinician review).
 - `interviewer.py`: Claude via `ANTHROPIC_API_KEY` (model `SAHHANITO_LLM_MODEL`, default `claude-sonnet-5-5`; `SAHHANITO_LLM=off` to disable). Unsafe, failed or slow replies fall back to the reviewed templates (FR / EN / Darija / Arabic). Its `collected` notes go to `state.sahhanito.llm_notes` for the report, never to the decision.
 - `sahhanito.py`: `triage_turn(state, message, previous_question_id, language='fr'|'en'|'ar'|'darija', mode='interview'|'monitor')`.
