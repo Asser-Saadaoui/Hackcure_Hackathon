@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { AlertTriangle, Phone, ShieldAlert } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Alert } from '@/components/alert';
@@ -82,6 +82,8 @@ export default function EdChatScreen() {
       if (e.type === 'chat.message' && e.message.referralId === referralId) {
         upsert(e.message);
         if (e.message.sender === 'STAFF') setWaitingStaff(false);
+        // A question with answer buttons from the ED: close the keyboard so the buttons are visible.
+        if (e.message.kind === 'QUESTION' && e.message.options?.length) Keyboard.dismiss();
       }
       if (e.type === 'case.escalated') {
         setEscalation(e.instruction ?? '');

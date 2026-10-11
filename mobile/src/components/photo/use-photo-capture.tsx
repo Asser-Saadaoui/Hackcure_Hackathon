@@ -1,7 +1,7 @@
 import * as ImagePicker from 'expo-image-picker';
 import { Camera, Image as ImageIcon } from 'lucide-react-native';
 import { useState } from 'react';
-import { Modal, Platform, Pressable, StyleSheet } from 'react-native';
+import { Keyboard, Modal, Platform, Pressable, StyleSheet } from 'react-native';
 
 import { AppText } from '@/components/app-text';
 import { Button } from '@/components/button';
@@ -74,7 +74,7 @@ export function usePhotoCapture(upload: (data: string) => Promise<void>, hint: s
     </>
   );
 
-  return { open: () => setMenu(true), element, sending, error };
+  return { open: () => { Keyboard.dismiss(); setMenu(true); }, element, sending, error };
 }
 
 const styles = StyleSheet.create({

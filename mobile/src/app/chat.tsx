@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { router, Stack } from 'expo-router';
 import { ArrowRight, ClipboardList, History, Phone, RotateCcw, Settings, ShieldAlert, Stethoscope } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Alert } from '@/components/alert';
@@ -132,11 +132,14 @@ export default function ChatScreen() {
         setMascotState('guiding');
         addItem({ id: r.turn.id, role: 'ASSISTANT', text: r.turn.text, time: timeOf(r.turn.createdAt) });
         setQuickReplies(r.turn.quickReplies ?? []);
+        // Answer buttons offered: close the keyboard so they are visible and the screen does not jump.
+        if (r.turn.quickReplies?.length) Keyboard.dismiss();
         break;
       case 'emergency':
       case 'under_review':
       case 'result':
         // The assistant explains the decision here; the button below opens the decision page.
+        Keyboard.dismiss();   // the decision buttons replace the input
         setMascotState(r.kind === 'emergency' ? 'alert' : r.kind === 'result' ? 'happy' : 'idle');
         if (r.turn) addItem({ id: r.turn.id, role: 'ASSISTANT', text: r.turn.text, time: timeOf(r.turn.createdAt) });
         setExplain(r.explain ?? null);
