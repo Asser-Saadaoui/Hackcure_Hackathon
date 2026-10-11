@@ -1,6 +1,6 @@
 import { router, useFocusEffect } from 'expo-router';
 import { ChevronLeft, ChevronRight, Inbox } from 'lucide-react-native';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { Button } from '@/components/button';
@@ -12,24 +12,29 @@ import { useI18n } from '@/i18n';
 import { api } from '@/lib/api';
 import { Keys, setJSON } from '@/lib/storage';
 import type { CaseSummary } from '@/lib/types';
+import { EXPERIENCE } from '@/i18n/experience';
 
 /** Past cases on this device (or on the linked account later). */
 export default function HistoryScreen() {
   const { t, rtl, language } = useI18n();
+  const copy = EXPERIENCE[language];
+  const request = useRef(0);
   const [cases, setCases] = useState<CaseSummary[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [query, setQuery] = useState('');
-  const searchLabel = rtl ? 'ابحث برمز الحالة أو المستشفى' : language === 'fr' ? 'Rechercher un dossier ou un hôpital' : 'Search by case code or hospital';
+  const searchLabel = copy.historySearch;
   const filtered = cases?.filter(c => `${c.referenceCode} ${c.facilityName ?? ''}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
   const load = useCallback(() => {
     setFailed(false);
     setCases(null);
-    api.listCases().then(setCases).catch(() => { setFailed(true); setCases(null); });
+    const id = ++request.current;
+    api.listCases().then(data => { if (request.current === id) setCases(data); }).catch(() => { if (request.current === id) { setFailed(true); setCases(null); } });
   }, []);
   const Chevron = rtl ? ChevronLeft : ChevronRight;
 
   useFocusEffect(useCallback(() => {
     load();
+    return () => { request.current++; };
   }, [load]));
 
   const open = async (c: CaseSummary) => {
@@ -46,9 +51,10 @@ export default function HistoryScreen() {
       <TextInput accessibilityLabel={searchLabel} placeholder={searchLabel} value={query} onChangeText={setQuery}
         style={[styles.search, { textAlign: rtl ? 'right' : 'left' }]} placeholderTextColor={Colors.mutedFg} />
 
-      {cases === null && !failed && <ActivityIndicator color={Colors.primary} />}
+      {!!query && <Button label={copy.clearSearch} variant="ghost" onPress={() => setQuery('')} />}
+      {cases === null && !failed && <View accessibilityLiveRegion="polite"><ActivityIndicator color={Colors.primary} /><AppText>{copy.loadingHistory}</AppText></View>}
 
-      {failed && <Button label={t('retry')} variant="outline" onPress={load} />}
+      {failed && <View><AppText accessibilityRole="alert">{copy.historyError}</AppText><Button label={t('retry')} variant="outline" onPress={load} /></View>}
 
       {cases?.length === 0 && (
         <View style={styles.empty}>
@@ -57,7 +63,7 @@ export default function HistoryScreen() {
         </View>
       )}
 
-      {cases && cases.length > 0 && filtered?.length === 0 && <AppText>{rtl ? 'ما فماش نتائج.' : language === 'fr' ? 'Aucun résultat.' : 'No matching cases.'}</AppText>}
+      {cases && cases.length > 0 && filtered?.length === 0 && <AppText>{copy.noMatches}</AppText>}
       {filtered?.map((c) => {
         const closed = c.status === 'CLOSED';
         return (
@@ -72,7 +78,7 @@ export default function HistoryScreen() {
                 </View>
               </View>
               <AppText style={styles.code}>{c.referenceCode}</AppText>
-              <AppText variant="small">{new Date(c.createdAt).toLocaleString()}</AppText>
+              <AppText variant="small">{new Date(c.createdAt).toLocaleString(language === 'en' ? 'en-GB' : language === 'fr' ? 'fr-TN' : 'ar-TN')}</AppText>
               {c.facilityName && <AppText variant="small" style={styles.facility}>{c.facilityName}</AppText>}
             </View>
             <Chevron size={18} color={Colors.mutedFg} />

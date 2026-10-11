@@ -37,8 +37,23 @@ class FusionTests(unittest.TestCase):
         self.assertGreater(a['contributions']['nlp'], 0)
         self.assertGreater(a['contributions']['rules'], 0)
 
-    def test_score_at_threshold_is_neutral(self):
-        self.assertAlmostEqual(fusion.fuse(ml(0.15), rules())['contributions']['nlp'], 0, places=3)
+    def test_score_at_fit_prevalence_is_neutral(self):
+        self.assertAlmostEqual(fusion.fuse(ml(fusion.PREVALENCE), rules())['contributions']['nlp'], 0, places=3)
+
+    def test_fitted_formula_and_threshold_independence(self):
+        for score in (0, .01, .15, .5, .99, 1):
+            a = fusion.fuse(ml(score), rules(.4))
+            expected = fusion.sigmoid(fusion.B0 + fusion.W_NLP * fusion.logit(score) + fusion.W_RULES * .4)
+            self.assertAlmostEqual(a['p_final'], round(expected, 4))
+            altered = dict(ml(score), threshold=.48)
+            self.assertEqual(a['p_final'], fusion.fuse(altered, rules(.4))['p_final'])
+            self.assertFalse(a['clinically_calibrated'])
+
+    def test_missing_nlp_keeps_centered_omission_policy(self):
+        a = fusion.fuse(ml(status='unavailable'), rules())
+        self.assertIsNone(a['p_nlp'])
+        self.assertEqual(a['contributions']['nlp'], 0)
+        self.assertEqual(a['uncertainty'], 'HIGH')
 
     def test_monotonic(self):
         low, high = fusion.fuse(ml(0.1), rules()), fusion.fuse(ml(0.6), rules())

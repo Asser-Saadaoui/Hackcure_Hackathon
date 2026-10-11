@@ -43,3 +43,14 @@
     font-feature-settings: "cv11", "ss01";
   }
 }
+
+@layer base {
+  :focus-visible { outline: 3px solid hsl(var(--ring)); outline-offset: 3px; }
+  button:not([role="switch"]) { min-height: 40px; }
+  button:disabled { cursor: wait; opacity: .6; }
+  [dir="rtl"] .lucide-chevron-right, [dir="rtl"] .lucide-arrow-left { transform: scaleX(-1); }
+  [dir="rtl"] body { font-family: Tahoma, Arial, sans-serif; line-height: 1.7; }
+  .skip-link { position: fixed; inset-inline-start: 1rem; top: -100px; z-index: 100; padding: .75rem; background: white; border: 2px solid hsl(var(--ring)); }
+  .skip-link:focus { top: 1rem; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+}

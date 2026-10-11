@@ -2,24 +2,32 @@
 
 Logistic fusion, so every part's contribution is explainable (shown in the hospital dashboard):
 
-    z       = bias + W_NLP * (logit(p_nlp) - logit(threshold)) + W_RULES * s_rule
+    z       = b0 + b1 * logit(p_nlp) + b2 * s_rule
     p_final = sigmoid(z)
 
-- The NLP term is centred on the model's own decision threshold (0.15), so a score exactly at the
-  threshold contributes 0, above it pushes up, below it pushes down.
+- Coefficients come from fusion_coefs.json. Contributions use the equivalent
+  prevalence-centered form; the ensemble threshold remains 0.15 independently.
 - When the NLP model abstains (insufficient input) or is unavailable, its term is 0 and the
   uncertainty rises: the rules still count, a critical rule still wins.
-- Parameters are hand-set for the prototype, NOT fitted. Re-fit them (logistic regression on
-  [nlp_term, s_rule]) once clinician-labelled Tunisian cases exist.
+- This is an exploratory weak-label fit, not clinical calibration. It did not
+  improve NLP-only CV Brier; see FUSION.md. Critical rules still override fusion.
 """
 import math
+import json
+from pathlib import Path
 
-VERSION = 'fusion-logistic-0.1'
-BIAS = -1.5
-W_NLP = 0.8
-W_RULES = 4.0
+VERSION = 'fusion-logistic-weak-fit-0.2'
+COEFS = json.loads(Path(__file__).with_name('fusion_coefs.json').read_text())
+B0 = float(COEFS['b0'])
+W_NLP = float(COEFS['b1'])
+W_RULES = float(COEFS['b2'])
+PREVALENCE = float(COEFS['prevalence'])
 DEFAULT_THRESHOLD = 0.15
-EPS = 1e-4
+EPS = float(COEFS['eps'])
+if not (all(math.isfinite(v) for v in (B0, W_NLP, W_RULES, PREVALENCE, EPS))
+        and 0 < EPS < .5 and EPS <= PREVALENCE <= 1-EPS):
+    raise ValueError('Invalid fusion coefficients')
+BIAS = B0 + W_NLP * math.log(PREVALENCE / (1-PREVALENCE))
 
 # Level bands on p_final (the decision policy applies rule floors on top).
 EMERGENCY_AT = 0.85
@@ -33,7 +41,10 @@ def logit(p):
 
 
 def sigmoid(z):
-    return 1 / (1 + math.exp(-z))
+    if z >= 0:
+        return 1 / (1 + math.exp(-z))
+    e = math.exp(z)
+    return e / (1 + e)
 
 
 def fuse(ml, rules):
@@ -43,7 +54,7 @@ def fuse(ml, rules):
     threshold = ml.get('threshold') or DEFAULT_THRESHOLD
     s_rule = rules['s_rule']
 
-    nlp_term = W_NLP * (logit(p_nlp) - logit(threshold)) if p_nlp is not None else 0.0
+    nlp_term = W_NLP * (logit(p_nlp) - logit(PREVALENCE)) if p_nlp is not None else 0.0
     rules_term = W_RULES * s_rule
     p_final = sigmoid(BIAS + nlp_term + rules_term)
 
@@ -58,6 +69,10 @@ def fuse(ml, rules):
         uncertainty_reasons=reasons,
         contributions=dict(bias=BIAS, nlp=round(nlp_term, 3), rules=round(rules_term, 3)),
         fusion_version=VERSION,
+        fusion_metadata=dict(coefficient_source='fusion_coefs.json', fit_population=COEFS['fit_population'],
+                             n_train=COEFS['n_train'], prevalence=PREVALENCE,
+                             date=COEFS['date'], score_reference='weak_binary_annotations',
+                             missing_nlp_policy='omit_centered_nlp_term_not_a_fitted_probability'),
         clinically_calibrated=False,
     )
 

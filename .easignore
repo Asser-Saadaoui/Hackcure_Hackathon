@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# Env & secrets
+.env
+.env*.local
+*.pem
+*.key
+
+# Build output
+dist/
+dist-native/
+web-build/
+.expo/
+
+# Datasets (keep out of Git)
+*.csv
+*.parquet
+*.sqlite*
+
+# Editors & OS
+.idea/
+.vscode/
+.DS_Store
+
+# Local databases
+*.db
+*.db.bak-*
+.vite/
+
+# EAS Android builds use the standalone mobile app only.
+/ai/
+/backend/
+/dashboard/
+/data/
+/deploy/
+/docs/
+/hospital-sim/
+/docker-compose.yml
+/.env.example
+/README.md

@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { ArrowRight, Phone, ShieldAlert } from 'lucide-react-native';
 import { useState } from 'react';
 import { ActivityIndicator, Linking, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Alert } from '@/components/alert';
 import { AppText } from '@/components/app-text';
@@ -11,6 +12,8 @@ import { Chip } from '@/components/chip';
 import { Hassanito } from '@/components/hassanito';
 import { PrototypeNotice } from '@/components/prototype-notice';
 import { Screen } from '@/components/screen';
+import { NetworkStatus } from '@/components/network-status';
+import { EXPERIENCE } from '@/i18n/experience';
 import { Colors, Spacing } from '@/constants/theme';
 import { useI18n } from '@/i18n';
 import { LANGUAGES } from '@/i18n/strings';
@@ -25,6 +28,7 @@ type Phase = 'consent' | 'starting';
 
 export default function WelcomeScreen() {
   const { t, language, setLanguage } = useI18n();
+  const copy = EXPERIENCE[language];
   const { width, fontScale } = useWindowDimensions();
   const wide = width >= 900 && fontScale <= 1.4;
   const [phase, setPhase] = useState<Phase>('consent');
@@ -47,7 +51,10 @@ export default function WelcomeScreen() {
   };
 
   return (
-    <Screen maxWidth={wide ? 1000 : 560}>
+    <View style={{ flex: 1 }}><Screen maxWidth={wide ? 1000 : 560}>
+      <View style={styles.field}><AppText variant="label">{t('chooseLanguage')}</AppText>
+        <View style={styles.chips} accessibilityRole="radiogroup">{LANGUAGES.map(l => <Chip key={l.code} role="radio" label={l.label} selected={l.code === language} onPress={() => setLanguage(l.code)} />)}</View>
+      </View>
       {/* Always visible, even before consent: emergencies never wait. */}
       <Alert
         variant="destructive"
@@ -60,32 +67,25 @@ export default function WelcomeScreen() {
       <View style={styles.panel}>
       <View style={styles.intro}>
         <AppText variant="small" style={styles.eyebrow}>SAHHANITO · صحة نيتو</AppText>
-        <AppText variant="title" style={styles.welcomeTitle}>{language === 'en' ? 'Labess?\nLet’s start together.' : language === 'fr' ? 'Labess ?\nCommençons ensemble.' : 'لاباس؟\nنبدأو مع بعضنا.'}</AppText>
-        <AppText style={styles.lead}>{t('tagline')}</AppText>
+        <AppText variant="title" style={styles.welcomeTitle}>{copy.welcomeTitle}</AppText>
+        <AppText style={styles.lead}>{copy.welcomeIntro}</AppText>
       </View>
+      <Card><AppText variant="subtitle">{copy.howTitle}</AppText>
+        {[copy.how1, copy.how2, copy.how3].map((step, i) => <View key={i} style={styles.step}><AppText style={styles.number}>{i + 1}</AppText><AppText style={{ flex: 1 }}>{step}</AppText></View>)}
+      </Card>
       <Hassanito state={phase === 'starting' ? 'thinking' : 'idle'} presentation="hero" />
       <PrototypeNotice />
-      <Button label={language === 'en' ? 'Explore the platform' : language === 'fr' ? 'Découvrir la plateforme' : 'اكتشف المنصّة'} variant="ghost" onPress={() => router.push('/home')} />
       </View>
 
       <View style={[styles.panel, styles.consentPanel]}>
       {phase === 'consent' && (
         <>
-          <View style={styles.field}>
-            <AppText variant="label">{t('chooseLanguage')}</AppText>
-            <View style={styles.chips} accessibilityRole="radiogroup">
-              {LANGUAGES.map((l) => (
-                <Chip key={l.code} role="radio" label={l.label} selected={l.code === language} onPress={() => setLanguage(l.code)} />
-              ))}
-            </View>
-          </View>
-
           <Card>
             <AppText variant="subtitle">{t('consentTitle')}</AppText>
             <AppText style={styles.muted}>{t('consentBody')}</AppText>
           </Card>
 
-          {error && <AppText variant="small" style={styles.error} accessibilityRole="alert">{t('errorRetry')}</AppText>}
+          {error && <AppText variant="small" style={styles.error} accessibilityRole="alert">{copy.sessionError}</AppText>}
           <Button label={t('agreeContinue')} size="lg" iconRight={ArrowRight} onPress={finish} />
         </>
       )}
@@ -98,12 +98,24 @@ export default function WelcomeScreen() {
       )}
       </View>
       </View>
+      <Alert variant="destructive" icon={ShieldAlert} title={copy.emergencyTitle}><AppText>{copy.emergencyBody}</AppText></Alert>
+      <Card><AppText variant="subtitle">{copy.prepareTitle}</AppText><AppText>{copy.prepareBody}</AppText></Card>
+      <Card><AppText variant="subtitle">{copy.privacyTitle}</AppText><AppText>{copy.privacyBody}</AppText></Card>
+      <NetworkStatus />
     </Screen>
+      <SafeAreaView edges={['bottom', 'left', 'right']} style={styles.emergencyDock}>
+        <AppText variant="small" style={{ flex: 1 }}>{copy.emergencyTitle}</AppText>
+        <Button label={t('call190')} icon={Phone} variant="destructive" onPress={() => Linking.openURL('tel:190')} />
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   layout: { gap: Spacing.xxl },
+  emergencyDock: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderTopWidth: 1, borderColor: Colors.border, backgroundColor: Colors.card },
+  step: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
+  number: { color: Colors.primary, fontWeight: '700', minWidth: 20 },
   desktopLayout: { flexDirection: 'row', alignItems: 'flex-start', paddingTop: Spacing.xxl },
   panel: { flex: 1, gap: Spacing.lg, minWidth: 0, padding: 24, backgroundColor: '#E5F1FF', borderRadius: 28 },
   consentPanel: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: Colors.border },
