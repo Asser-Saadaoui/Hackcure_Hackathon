@@ -294,7 +294,7 @@ export default function ChatScreen() {
 
             {/* After a decision only a case under review can still receive information. */}
             {(!outcome || outcome.kind === 'under_review') && (
-              <ChatInput onSend={(text) => send(text)} disabled={sending} onActivity={setListening}
+              <ChatInput onSend={(text) => send(text)} disabled={sending} busy={sending} onActivity={setListening}
                 onAttach={photo.sending ? undefined : photo.open} />
             )}
             {photo.element}
