@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
 import { router, Stack } from 'expo-router';
-import { ArrowRight, ClipboardList, History, Phone, RotateCcw, Settings, ShieldAlert, Stethoscope } from 'lucide-react-native';
+import { useHeaderHeight } from 'expo-router/react-navigation';
+import { ArrowRight, ClipboardList, Phone, RotateCcw, ShieldAlert, Stethoscope } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,7 +18,7 @@ import { ChatPhoto } from '@/components/ed-chat/chat-photo';
 import { Hassanito } from '@/components/hassanito';
 import { usePhotoCapture } from '@/components/photo/use-photo-capture';
 import { GridPattern } from '@/components/grid-pattern';
-import { Colors, Fonts, MaxContentWidth, Spacing } from '@/constants/theme';
+import { Colors, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useI18n } from '@/i18n';
 import { api } from '@/lib/api';
 import { casePhotoPath, HttpError } from '@/lib/http-api';
@@ -53,6 +54,7 @@ const timeOf = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: '2-
 const localId = () => 'local-' + Math.random().toString(36).slice(2);
 
 export default function ChatScreen() {
+  const headerHeight = useHeaderHeight();
   const { t, language } = useI18n();
   const [caseId, setCaseId] = useState<string | null>(null);
   const [items, setItems] = useState<Item[]>([]);
@@ -196,28 +198,18 @@ export default function ChatScreen() {
     <>
       <Stack.Screen
         options={{
-          headerRight: () => (
-            <View style={styles.headerActions}>
-              {items.length > 0 && (
-                <Pressable accessibilityRole="button" accessibilityLabel={t('newConversation')} onPress={newConversation} disabled={sending} hitSlop={8} style={styles.headerIcon}>
-                  <RotateCcw size={18} color={Colors.mutedFg} strokeWidth={2.25} />
-                </Pressable>
-              )}
-              <Pressable accessibilityRole="button" accessibilityLabel={t('historyTitle')} onPress={() => router.push('/history')} hitSlop={8} style={styles.headerIcon}>
-                <History size={18} color={Colors.mutedFg} strokeWidth={2.25} />
-              </Pressable>
-              <Pressable accessibilityRole="button" accessibilityLabel={t('settingsTitle')} onPress={() => router.push('/settings')} hitSlop={8} style={styles.headerIcon}>
-                <Settings size={18} color={Colors.mutedFg} strokeWidth={2.25} />
-              </Pressable>
-            </View>
-          ),
+          // History/settings live in the shared menu. Keep one New action below.
+          headerRight: () => null,
         }}
       />
       <SafeAreaView style={styles.safe} edges={['bottom', 'left', 'right']}>
         <GridPattern />
-        <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
+        <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={headerHeight}>
           <View style={styles.column}>
-            {/* Always reachable: emergencies never wait for the conversation. */}
+            {/* Intro and answers scroll with the conversation, freeing room on phones.
+                Call 190 remains fixed in the shared shell, including when this banner scrolls away. */}
+            <ScrollView ref={scrollRef} style={styles.flex} contentContainerStyle={styles.messages}
+              keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" onContentSizeChange={scrollToEnd}>
             <View style={styles.emergencyWrap}>
               <Alert
                 variant="destructive"
@@ -228,12 +220,11 @@ export default function ChatScreen() {
             </View>
 
             <View style={styles.pageHead}>
-              <AppText variant="subtitle">{t('chatTitle')}</AppText>
-              {items.length > 0 && <Button label={t('newConversation')} size="sm" variant="ghost" icon={RotateCcw} onPress={newConversation} disabled={sending} />}
+              <AppText variant="subtitle" style={{flexShrink:1}}>{t('chatTitle')}</AppText>
+              {items.length > 0 && <Button label={t('newConversation')} size="sm" style={{minHeight:44}} variant="ghost" icon={RotateCcw} onPress={newConversation} disabled={sending} />}
             </View>
             <View style={styles.companion}><Hassanito compact state={mascotState === 'alert' ? 'alert' : sending ? 'thinking' : listening ? 'listening' : mascotState} /></View>
 
-            <ScrollView ref={scrollRef} style={styles.flex} contentContainerStyle={styles.messages} onContentSizeChange={scrollToEnd}>
               {resumeError && <Alert variant="warning" title={t('errorRetry')}>
                 <Button label={t('retry')} variant="outline" onPress={resume} disabled={sending} />
               </Alert>}
@@ -275,9 +266,8 @@ export default function ChatScreen() {
                   </View>
                 </Alert>
               )}
+              {quickReplies.length > 0 && !sending && !outcome && <AnswerButtons options={quickReplies} onPick={(q) => send(q)} />}
             </ScrollView>
-
-            {quickReplies.length > 0 && !sending && !outcome && <AnswerButtons options={quickReplies} onPick={(q) => send(q)} />}
 
             {outcome && !sending && (
               <View style={styles.outcome}>
@@ -297,7 +287,7 @@ export default function ChatScreen() {
 
             {/* After a decision only a case under review can still receive information. */}
             {(!outcome || outcome.kind === 'under_review') && (
-              <ChatInput onSend={(text) => send(text)} disabled={sending} onActivity={setListening}
+              <ChatInput onSend={(text) => send(text)} disabled={sending} busy={sending} onActivity={setListening}
                 onAttach={photo.sending ? undefined : photo.open} />
             )}
             {photo.element}
@@ -315,16 +305,13 @@ const styles = StyleSheet.create({
   photoSending: { alignSelf: 'flex-end' },
   photoLocal: { width: 200, height: 200, borderRadius: 10 },
   photoError: { color: Colors.destructive, alignSelf: 'flex-end' },
-  flex: { flex: 1 },
-  column: { flex: 1, width: '100%', maxWidth: MaxContentWidth + 200, alignSelf: 'center' },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, paddingHorizontal: Spacing.sm },
+  flex: { flex: 1, minHeight: 0 },
+  column: { flex: 1, minHeight: 0, width: '100%', maxWidth: MaxContentWidth + 200, alignSelf: 'center' },
   degradedActions: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginTop: Spacing.sm },
   outcome: { gap: Spacing.sm, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, borderTopWidth: 1, borderTopColor: Colors.border, backgroundColor: Colors.card },
-  headerIcon: { padding: 10, borderRadius: 999 },   // ≥ 44 px touch target
-  headerLink: { color: Colors.primary, fontFamily: Fonts.medium, fontSize: 14 },
-  emergencyWrap: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.md },
-  pageHead: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  companion: { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm },
+  emergencyWrap: { paddingTop: Spacing.xs },
+  pageHead: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  companion: { paddingVertical: Spacing.xs },
   messages: { padding: Spacing.lg, gap: Spacing.lg },
   itemWrap: { gap: Spacing.xs },
   retry: { alignSelf: 'flex-end' },

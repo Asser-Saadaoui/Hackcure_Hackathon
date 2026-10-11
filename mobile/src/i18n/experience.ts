@@ -1,6 +1,9 @@
 import type { Language } from '@/lib/types';
 
 const en = {
+  overviewUpdated: 'Updated', overviewRefresh: 'Refresh overview', overviewRefreshing: 'Refreshing your cases…', overviewStale: 'Your cases could not be refreshed. Previous information may be out of date.', overviewResume: 'Continue where you left off', overviewResumeAction: 'Open my latest case', overviewResumeNote: 'Open your latest ongoing case to see its current step.', caseTriaging: 'Symptom intake', caseEmergency: 'Emergency guidance', caseReview: 'Clinician review', caseResult: 'Assessment ready', caseReferred: 'Hospital referral', caseClosed: 'Closed',
+  mascotMessagesTitle: 'A word from Hassanito', mascotMessage1: 'One message at a time. I’m here to help you explain.', mascotMessage2: 'Use your own words, in the language you’re comfortable with.', mascotMessage3: 'Not sure how to answer? You can say that, too.',
+  workspaceTagline: 'Your health, one step at a time', careTitle: 'From your words to your next step', careYou: 'You', careHospital: 'Hospital', careClinic: 'Clinic', careEmergency: 'Emergency', careDoctor: 'Doctor', careNote: 'Possible care routes, illustrated. This is not a live connection or a confirmed referral.',
   welcomeTitle: 'Labess? Let’s start together.', welcomeIntro: 'Describe what is happening, answer a few questions, and follow the suggested next steps. This prototype does not diagnose or replace emergency services.',
   howTitle: 'How it works', how1: 'Tell us your symptoms in your own words.', how2: 'Answer questions about timing, severity and your situation.', how3: 'Read the guidance; a clinician may need to review your case.',
   emergencyTitle: 'Do not wait for the app', emergencyBody: 'If you have chest pain, severe trouble breathing, heavy bleeding or loss of consciousness, call 190. If you think there is immediate danger, call directly.',
@@ -12,6 +15,9 @@ const en = {
 };
 type Copy = { [K in keyof typeof en]: string };
 const fr: Copy = {
+  overviewUpdated: 'Actualisé', overviewRefresh: 'Actualiser le tableau de bord', overviewRefreshing: 'Actualisation de vos dossiers…', overviewStale: 'Vos dossiers n’ont pas pu être actualisés. Les informations précédentes peuvent être périmées.', overviewResume: 'Reprenez votre parcours', overviewResumeAction: 'Ouvrir mon dernier dossier', overviewResumeNote: 'Ouvrez votre dernier dossier en cours pour consulter son étape actuelle.', caseTriaging: 'Recueil des symptômes', caseEmergency: 'Consignes d’urgence', caseReview: 'Vérification clinique', caseResult: 'Évaluation disponible', caseReferred: 'Orientation hospitalière', caseClosed: 'Clôturé',
+  mascotMessagesTitle: 'Un mot de Hassanito', mascotMessage1: 'Un message à la fois. Je vous aide à expliquer.', mascotMessage2: 'Utilisez vos mots, dans la langue qui vous convient.', mascotMessage3: 'Vous ne savez pas quoi répondre ? Vous pouvez le dire aussi.',
+  workspaceTagline: 'Votre santé, une étape à la fois', careTitle: 'De vos mots à la prochaine étape', careYou: 'Vous', careHospital: 'Hôpital', careClinic: 'Clinique', careEmergency: 'Urgences', careDoctor: 'Médecin', careNote: 'Illustration des parcours possibles. Ce n’est pas une connexion en direct ni une orientation confirmée.',
   welcomeTitle: 'Labess ? Commençons ensemble.', welcomeIntro: 'Décrivez votre situation, répondez à quelques questions et suivez les prochaines étapes proposées. Ce prototype ne pose pas de diagnostic et ne remplace pas les secours.',
   howTitle: 'Comment ça marche', how1: 'Décrivez vos symptômes avec vos mots.', how2: 'Répondez aux questions sur le début, la gravité et votre situation.', how3: 'Lisez les conseils ; un clinicien peut devoir vérifier votre dossier.',
   emergencyTitle: 'N’attendez pas l’application', emergencyBody: 'Douleur thoracique, grande difficulté à respirer, saignement important ou perte de connaissance : appelez le 190. En cas de danger immédiat, appelez directement.',
@@ -22,6 +28,9 @@ const fr: Copy = {
   historySearch: 'Rechercher un dossier ou un hôpital', noMatches: 'Aucun dossier correspondant.', historyError: 'Impossible de charger votre historique. Vérifiez la connexion et réessayez.', clearSearch: 'Effacer la recherche', loadingHistory: 'Chargement de votre historique…',
 };
 const ar: Copy = {
+  overviewUpdated: 'آخر تحديث', overviewRefresh: 'تحديث لوحة المتابعة', overviewRefreshing: 'جارٍ تحديث حالاتك…', overviewStale: 'تعذّر تحديث حالاتك. قد تكون المعلومات السابقة قديمة.', overviewResume: 'تابع من حيث توقفت', overviewResumeAction: 'فتح آخر حالة', overviewResumeNote: 'افتح آخر حالة جارية للاطلاع على مرحلتها الحالية.', caseTriaging: 'جمع الأعراض', caseEmergency: 'إرشادات الطوارئ', caseReview: 'مراجعة مختص', caseResult: 'التقييم متاح', caseReferred: 'توجيه إلى مستشفى', caseClosed: 'مغلقة',
+  mascotMessagesTitle: 'كلمة من حسنّيتو', mascotMessage1: 'رسالة واحدة كل مرة. أنا هنا لمساعدتك على الشرح.', mascotMessage2: 'عبّر بكلماتك وباللغة التي ترتاح لها.', mascotMessage3: 'لا تعرف كيف تجيب؟ يمكنك قول ذلك أيضًا.',
+  workspaceTagline: 'صحتك، خطوة بخطوة', careTitle: 'من كلماتك إلى الخطوة التالية', careYou: 'أنت', careHospital: 'المستشفى', careClinic: 'العيادة', careEmergency: 'الطوارئ', careDoctor: 'الطبيب', careNote: 'رسم توضيحي لمسارات الرعاية الممكنة، وليس اتصالًا مباشرًا أو إحالة مؤكدة.',
   welcomeTitle: 'لنبدأ معًا.', welcomeIntro: 'صف ما يحدث، وأجب عن بعض الأسئلة، ثم اتبع الخطوات المقترحة. هذا النموذج التجريبي لا يشخّص الحالات ولا يعوّض خدمات الطوارئ.',
   howTitle: 'كيف تعمل المنصة', how1: 'صف أعراضك بكلماتك.', how2: 'أجب عن أسئلة حول بداية الأعراض وشدّتها وحالتك.', how3: 'اقرأ التوجيهات؛ قد تحتاج حالتك إلى مراجعة مختص.',
   emergencyTitle: 'لا تنتظر التطبيق', emergencyBody: 'عند ألم الصدر أو صعوبة شديدة في التنفس أو نزيف شديد أو فقدان الوعي، اتصل بالرقم 190. إذا اعتقدت أن هناك خطرًا فوريًا، اتصل مباشرة.',
@@ -32,6 +41,9 @@ const ar: Copy = {
   historySearch: 'ابحث برمز الحالة أو المستشفى', noMatches: 'لا توجد حالات مطابقة.', historyError: 'تعذّر تحميل السجل. تحقق من الاتصال وحاول مجددًا.', clearSearch: 'مسح البحث', loadingHistory: 'جارٍ تحميل السجل…',
 };
 const darija: Copy = {
+  overviewUpdated: 'آخر تحديث', overviewRefresh: 'حدّث لوحة المتابعة', overviewRefreshing: 'نحدّثوا في حالاتك…', overviewStale: 'ما نجّمناش نحدّثوا حالاتك. المعلومات القديمة تنجم ما عادش تكون صحيحة.', overviewResume: 'كمّل من وين وقفت', overviewResumeAction: 'افتح آخر حالة متاعي', overviewResumeNote: 'افتح آخر حالة مازالت جارية باش تشوف وين وصلت.', caseTriaging: 'جمع الأعراض', caseEmergency: 'تعليمات الاستعجالي', caseReview: 'مراجعة مختص', caseResult: 'التقييم حاضر', caseReferred: 'توجيه للسبيطار', caseClosed: 'تسكّرت',
+  mascotMessagesTitle: 'كلمة من حسنّيتو', mascotMessage1: 'رسالة برسالة. أنا هنا باش نعاونك تفسّر.', mascotMessage2: 'احكي بكلامك وباللغة اللي ترتاحلها.', mascotMessage3: 'ما تعرفش كيفاش تجاوب؟ تنجم تقول هذا زادة.',
+  workspaceTagline: 'صحتك، خطوة بخطوة', careTitle: 'من كلامك للخطوة الجاية', careYou: 'إنت', careHospital: 'السبيطار', careClinic: 'المصحّة', careEmergency: 'الاستعجالي', careDoctor: 'الطبيب', careNote: 'رسم يوضّح مسارات العناية الممكنة. موش اتصال مباشر ولا توجيه مؤكّد.',
   welcomeTitle: 'لاباس؟ نبدأو مع بعضنا.', welcomeIntro: 'احكيلنا شنوة صاير، جاوب على شوية أسئلة واتبع الخطوات المقترحة. النموذج التجريبي هذا ما يشخّصش وما يعوّضش الإسعاف.',
   howTitle: 'كيفاش تخدم', how1: 'احكيلنا على الأعراض بكلامك.', how2: 'جاوب على وقتاش بدات الأعراض، قوّتها وحالتك.', how3: 'اقرا التوجيهات؛ ينجم يلزم مختص يثبّت في حالتك.',
   emergencyTitle: 'ما تستناش التطبيق', emergencyBody: 'كان عندك وجيعة في الصدر، صعوبة كبيرة في التنفّس، نزيف كبير ولا فقدان وعي، عيّط للـ190. كان تحسّ فما خطر توا، عيّط مباشرة.',

@@ -118,7 +118,7 @@ export function CaseView({ detail, onBack, onChanged }: { detail: CaseDetail; on
         <div className="flex flex-wrap items-center gap-2">
           <LevelBadge level={c.level} className="text-sm" />
           <span className="font-mono text-sm text-muted-foreground">{c.referenceCode}</span>
-          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">{t(STATUS[r.status] ?? r.status)}</span>
+          <span className="rounded-full bg-cream-100 px-2 py-0.5 text-xs font-medium text-cream-900">{t(STATUS[r.status] ?? r.status)}</span>
           {detail.patientAge && <Fact icon={User}>{detail.patientAge}</Fact>}
           <Fact icon={Clock}>{r.distanceKm ?? "?"} km · ~{detail.ambulance ? detail.ambulance.etaMinutes : r.etaMinutes} min</Fact>
           {r.arrivalMode && <Fact icon={r.arrivalMode === "AMBULANCE" ? Ambulance : Footprints}>{r.arrivalMode === "AMBULANCE" ? t("Ambulance (simulée)") : t("Vient seul")}</Fact>}
@@ -165,7 +165,7 @@ export function CaseView({ detail, onBack, onChanged }: { detail: CaseDetail; on
           onDone={(name) => { setRerouting(false); setMoved(name ?? t("un autre hôpital")); onChanged(); }} />
       )}
       {rejecting && (
-        <Card className="border-amber-300">
+        <Card className="border-cream-300">
           <CardContent className="space-y-3 pt-5">
             <p className="text-sm font-medium">{t("Le dossier sera proposé automatiquement à l'hôpital adapté suivant.")}</p>
             <div className="flex flex-wrap gap-1.5">
@@ -224,7 +224,7 @@ export function CaseView({ detail, onBack, onChanged }: { detail: CaseDetail; on
                 {why.modelFactors && why.modelFactors.length > 0 && <ModelFactors factors={why.modelFactors} />}
                 <p className="text-xs">
                   <span className={cn("rounded-full px-2 py-0.5 font-medium",
-                    why.confidence === t("élevée") ? "bg-emerald-100 text-emerald-800" : why.confidence === "moyenne" ? "bg-amber-100 text-amber-900" : "bg-red-100 text-red-800")}>
+                    why.confidence === t("élevée") ? "bg-emerald-100 text-emerald-800" : why.confidence === "moyenne" ? "bg-cream-100 text-cream-900" : "bg-red-100 text-red-800")}>
                     {t("Confiance")}{' '}{why.confidence}
                   </span>{" "}<span className="text-muted-foreground">{why.confidenceNote}</span>
                 </p>

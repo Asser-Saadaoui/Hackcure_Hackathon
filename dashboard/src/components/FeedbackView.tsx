@@ -19,11 +19,11 @@ export function FeedbackView({ items, onError }: { items: TriageFeedback[]; onEr
         <Button variant="outline" size="sm" onClick={() => downloadFeedbackCsv().catch((e) => onError((e as Error).message))}><Download className="me-1.5 h-4 w-4" />{t("Exporter (CSV)")}</Button>
       </div>
       {items.length === 0 && (
-        <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed bg-card py-16 text-center text-sm text-muted-foreground"><Flag className="h-8 w-8" />{t("Aucun signalement.")}</div>
+        <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed bg-card py-16 text-center text-sm text-muted-foreground magic-surface"><Flag className="h-8 w-8" />{t("Aucun signalement.")}</div>
       )}
       <ul className="space-y-2">
         {items.map((f) => (
-          <li key={f.id} className="space-y-1.5 rounded-xl border bg-card p-4 text-sm">
+          <li key={f.id} className="space-y-1.5 rounded-xl border bg-card p-4 text-sm magic-surface">
             <div className="flex flex-wrap items-center gap-2">
               <span className={f.kind === "FALSE_NEGATIVE" ? "rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-800" : "rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-800"}>
                 {f.kind === "FALSE_NEGATIVE" ? t("Faux négatif") : t("Surévalué")}

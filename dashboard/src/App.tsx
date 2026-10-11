@@ -1,6 +1,8 @@
 import { t, useLanguage, LanguageSelect } from "@/i18n";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bell, ClipboardCheck, Flag, Gauge, Inbox, LogOut, Network } from "lucide-react";
+import { Bell, ClipboardCheck, Flag, Gauge, Hospital as HospitalIcon, Inbox, LogOut, Network, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Brand } from "@/components/Brand";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { FeedbackView } from "@/components/FeedbackView";
@@ -165,13 +167,19 @@ export default function App() {
       <a className="skip-link" href="#main-content">{t("Aller au contenu")}</a>
       <header className="border-b bg-card">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
-          <Brand section={user.hospitalName ?? t("Régulation")} />
+          <div className="flex min-w-0 flex-wrap items-center gap-3">
+            <Brand />
+            <Badge variant="secondary" className="max-w-full gap-2 rounded-xl border-primary/15 px-3 py-2 text-sm font-semibold text-primary">
+              {user.hospitalName ? <HospitalIcon className="h-4 w-4 shrink-0" aria-hidden="true" /> : <ClipboardCheck className="h-4 w-4 shrink-0" aria-hidden="true" />}
+              <span className="min-w-0 break-words">{user.hospitalName ?? t("Régulation")}</span>
+            </Badge>
+          </div>
           <nav aria-label={t("Urgences")} className="order-3 flex w-full flex-wrap gap-1 sm:order-none sm:ms-6 sm:w-auto">
             {nav.filter((n) => n.show).map((n) => (
               <button key={n.id} aria-current={view === n.id ? 'page' : undefined} onClick={() => { setView(n.id); setOpenId(null); setError(null); }}
                 className={cn("inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium", view === n.id ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground")}>
                 <n.icon className="h-4 w-4" />{t(n.label)}
-                {n.id === "reviews" && reviews.length > 0 && <span className="rounded-full bg-orange-500 px-1.5 text-xs text-white">{reviews.length}</span>}
+                {n.id === "reviews" && reviews.length > 0 && <span className="rounded-full bg-cream-500 px-1.5 text-xs text-white">{reviews.length}</span>}
               </button>
             ))}
           </nav>
@@ -181,7 +189,6 @@ export default function App() {
               <button onClick={() => Notification.requestPermission().then((p) => setAlerts(p === "granted"))}
                 className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs text-muted-foreground hover:text-foreground"><Bell className="h-3.5 w-3.5" />{t("Activer les alertes")}</button>
             )}
-            <span className="hidden text-muted-foreground md:inline">{user.name}</span>
             <button onClick={logout} className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground" aria-label={t("Se déconnecter")}><LogOut className="h-4 w-4" /></button>
           </div>
         </div>
@@ -190,11 +197,11 @@ export default function App() {
       <main id="main-content" tabIndex={-1} className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
           <span role="status">{loading[openId ? 'detail' : view] ? t("Chargement…") : updated[openId ? "detail" : view] ? `${t("Dernière mise à jour")} · ${new Date(updated[openId ? "detail" : view]).toLocaleTimeString(language === 'fr' ? 'fr-TN' : language === 'en' ? 'en-GB' : 'ar-TN', { hour: '2-digit', minute: '2-digit', hour12: false })}` : ''}</span>
-          <button className="rounded-lg border bg-card px-3 py-2" disabled={loading[openId ? 'detail' : view]} onClick={() => {
+          <Button variant="outline" size="sm" disabled={loading[openId ? 'detail' : view]} onClick={() => {
             if (openId) loadDetail(); else if (view === 'incoming') loadRows(); else if (view === 'network') loadNetwork(); else if (view === 'availability') loadHospital(); else if (view === 'reviews') loadReviews(); else loadFeedback();
-          }}>{t("Actualiser")}</button>
+          }}><RefreshCw className="h-4 w-4" aria-hidden="true" />{t("Actualiser")}</Button>
         </div>
-        {(failures[openId ? 'detail' : view] || error) && <div role="alert" className="mb-4 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm">
+        {(failures[openId ? 'detail' : view] || error) && <div role="alert" className="magic-surface mb-4 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm">
           <p className="font-semibold">{t("Données non actualisées")}</p><p>{t(failures[openId ? 'detail' : view] || error || '')}</p>
         </div>}
         <ErrorBoundary key={`${view}:${openId ?? ""}`} onReset={() => setOpenId(null)}>

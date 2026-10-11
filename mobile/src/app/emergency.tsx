@@ -245,5 +245,5 @@ const styles = StyleSheet.create({
   stepNumber: { width: 24, height: 24, borderRadius: Radius.pill, backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
   stepNumberText: { color: Colors.accentFg, fontFamily: Fonts.semibold, fontSize: 13 },
   note: { borderStartWidth: 2, borderStartColor: Colors.warningBorder, backgroundColor: Colors.warningBg, borderRadius: Radius.md, padding: Spacing.md, marginTop: Spacing.xs },
-  noteText: { color: '#9A3412' },
+  noteText: { color: '#6B4F36' },
 });

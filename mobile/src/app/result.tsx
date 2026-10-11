@@ -28,7 +28,7 @@ import type { CaseDetail, Decision, RiskLevel } from '@/lib/types';
 
 const TONES: Record<Exclude<RiskLevel, 'EMERGENCY'>, { icon: LucideIcon; bg: string; fg: string; title: StringKey; body: StringKey }> = {
   LOW: { icon: HeartPulse, bg: '#DCFCE7', fg: '#166534', title: 'resultLowTitle', body: 'resultLowBody' },
-  HIGH: { icon: AlertTriangle, bg: '#FFEDD5', fg: '#C2410C', title: 'resultHighTitle', body: 'resultHighBody' },
+  HIGH: { icon: AlertTriangle, bg: '#EFE3D3', fg: '#6B4F36', title: 'resultHighTitle', body: 'resultHighBody' },
   UNCERTAIN: { icon: Stethoscope, bg: '#EDE9FE', fg: '#6D28D9', title: 'resultUncertainTitle', body: 'resultUncertainBody' },
 };
 
@@ -232,9 +232,9 @@ const styles = StyleSheet.create({
   stepNumber: { width: 24, height: 24, borderRadius: Radius.pill, backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
   stepNumberText: { color: Colors.accentFg, fontFamily: Fonts.semibold, fontSize: 13 },
   flagText: { color: Colors.destructiveText },
-  stepNumberWarning: { backgroundColor: '#FFEDD5' },
-  stepNumberTextWarning: { color: '#C2410C' },
-  warnCard: { borderColor: '#FED7AA', backgroundColor: '#FFF7ED' },
+  stepNumberWarning: { backgroundColor: '#EFE3D3' },
+  stepNumberTextWarning: { color: '#6B4F36' },
+  warnCard: { borderColor: '#D5BFA5', backgroundColor: '#FAF5EE' },
   timeline: { marginTop: Spacing.sm, gap: Spacing.xs },
   tlRow: { flexDirection: 'row', gap: Spacing.md },
   tlRail: { alignItems: 'center', width: 22 },

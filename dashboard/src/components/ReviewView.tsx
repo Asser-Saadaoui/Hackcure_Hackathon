@@ -28,7 +28,7 @@ export function ReviewView({ items, onDone }: { items: ReviewItem[]; onDone: () 
       </div>
       {error && <p role="alert" className="text-sm text-destructive">{t(error)}</p>}
       {items.length === 0 && (
-        <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed bg-card py-16 text-center text-sm text-muted-foreground">
+        <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed bg-card py-16 text-center text-sm text-muted-foreground magic-surface">
           <CheckCircle2 className="h-8 w-8" />{t("Aucun dossier en attente.")}{' '}</div>
       )}
       {items.map((it) => (
@@ -54,7 +54,7 @@ export function ReviewView({ items, onDone }: { items: ReviewItem[]; onDone: () 
             <Input aria-label={t("Note pour le patient (facultatif)")} placeholder={t("Note pour le patient (facultatif)")} value={notes[it.caseId] ?? ""} onChange={(e) => setNotes({ ...notes, [it.caseId]: e.target.value })} />
             <div className="flex flex-wrap gap-2">
               <Button disabled={busy !== null} variant="destructive" onClick={() => decide(it.caseId, "EMERGENCY")}>{t("Urgence vitale")}</Button>
-              <Button disabled={busy !== null} className="bg-orange-500 hover:bg-orange-500/90" onClick={() => decide(it.caseId, "HIGH")}>{t("Urgent aujourd'hui")}</Button>
+              <Button disabled={busy !== null} className="bg-cream-500 hover:bg-cream-500/90" onClick={() => decide(it.caseId, "HIGH")}>{t("Urgent aujourd'hui")}</Button>
               <Button disabled={busy !== null} variant="outline" onClick={() => decide(it.caseId, "LOW")}>{t("Peu urgent")}</Button>
             </div>
           </CardContent>

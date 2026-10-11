@@ -15,7 +15,7 @@ const Node = forwardRef<HTMLDivElement, { className?: string; children: React.Re
 ));
 Node.displayName = "Node";
 
-const BEAM = { gradientStartColor: "#2563EB", gradientStopColor: "#FF7C8C", pathColor: "#94A3B8", pathOpacity: 0.25 };
+const BEAM = { gradientStartColor: "#3885AB", gradientStopColor: "#95BFD1", pathColor: "#94A3B8", pathOpacity: 0.25 };
 
 export function NetworkBeam({ className }: { className?: string }) {
   const container = useRef<HTMLDivElement>(null);

@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react-native';
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/app-text';
@@ -9,14 +9,15 @@ type Props = { variant?: 'destructive' | 'warning'; icon?: LucideIcon; title?: s
 
 const TONES = {
   destructive: { border: Colors.destructiveBorder, bg: Colors.destructiveBg, fg: Colors.destructiveText },
-  warning: { border: Colors.warningBorder, bg: Colors.warningBg, fg: '#9A3412' },
+  warning: { border: Colors.warningBorder, bg: Colors.warningBg, fg: '#6B4F36' },
 };
 
 /** Left-border callout used for red flags / urgent notices (central-park case detail). */
 export function Alert({ variant = 'destructive', icon: Icon, title, children, action }: Props) {
+  const id = useId();
   const tone = TONES[variant];
   return (
-    <View accessibilityRole="alert" style={[styles.box, { borderStartColor: tone.border, backgroundColor: tone.bg }]}>
+    <View nativeID={`magic-card-${variant === 'destructive' ? 'danger' : 'warning'}-${id}`} accessibilityRole="alert" style={[styles.box, { borderStartColor: tone.border, backgroundColor: tone.bg }]}>
       <View style={styles.content}>
         {title && (
           <View style={styles.titleRow}>

@@ -4,6 +4,7 @@ import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
 import { Inter_700Bold } from '@expo-google-fonts/inter/700Bold';
 import { useFonts } from 'expo-font';
 import { Stack, usePathname } from 'expo-router';
+import { getHeaderTitle, Header } from 'expo-router/react-navigation';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
@@ -12,10 +13,12 @@ import { Linking, Platform, useWindowDimensions, View } from 'react-native';
 import { Phone } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/button';
+import { MagicSurfaceEffects } from '@/components/magic-surface-effects';
 
 import { BrandTitle } from '@/components/brand-title';
 import { ConnectionBanner } from '@/components/connection-banner';
 import { PlatformShell } from '@/components/platform-shell';
+import { CompactNavigation, SidebarProvider } from '@/components/sidebar';
 import { Colors } from '@/constants/theme';
 import { LanguageProvider, useI18n } from '@/i18n';
 
@@ -37,6 +40,10 @@ function Navigator() {
           headerTitle: () => <BrandTitle section={t('patientSection')} />,
           headerTitleAlign: 'left',
           headerShown: !desktop,
+          header: desktop ? undefined : ({options,route,back}) => <View>
+            <Header {...options} title={getHeaderTitle(options,route.name)} back={back} />
+            <CompactNavigation />
+          </View>,
           contentStyle: { backgroundColor: Colors.background },
         }}>
         <Stack.Screen name="index" options={{ headerShown: false }} />
@@ -71,7 +78,8 @@ export default function RootLayout() {
 
   return (
     <LanguageProvider>
-      <Navigator />
+      <MagicSurfaceEffects />
+      <SidebarProvider><Navigator /></SidebarProvider>
     </LanguageProvider>
   );
 }

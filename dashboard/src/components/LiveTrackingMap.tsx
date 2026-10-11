@@ -8,7 +8,7 @@ import { AMBULANCE } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { Tracking } from "@/types";
 
-const COLORS = { hospital: "#177082", patient: "#2563EB", ambulance: "#DC2626" };
+const COLORS = { hospital: "#177082", patient: "#3885AB", ambulance: "#DC2626" };
 const STEPS = ["DISPATCHED", "EN_ROUTE_TO_PATIENT", "AT_PATIENT", "TRANSPORTING", "ARRIVED"];
 
 function dot(color: string, size: number) {

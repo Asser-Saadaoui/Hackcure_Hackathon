@@ -1,4 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
+import { useHeaderHeight } from 'expo-router/react-navigation';
 import { AlertTriangle, Phone, ShieldAlert } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -27,6 +28,7 @@ import type { ChatKind, ChatMessage } from '@/lib/types';
 const TYPING_TIMEOUT_MS = 10_000;
 
 export default function EdChatScreen() {
+  const headerHeight = useHeaderHeight();
   const { t } = useI18n();
   const params = useLocalSearchParams<{ caseId?: string; referralId?: string }>();
   const [caseId, setCaseId] = useState<string | null>(params.caseId ?? null);
@@ -119,7 +121,7 @@ export default function EdChatScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['bottom', 'left', 'right']}>
       <GridPattern />
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={headerHeight}>
         <View style={styles.column}>
           <View style={styles.top}>
             <AppText variant="subtitle">{hospital ?? t('chatWithEd')}</AppText>
@@ -153,7 +155,7 @@ export default function EdChatScreen() {
               onPress={() => send(t('iFeelWorseDefault'), 'WORSE')}
               disabled={!referralId}
               style={({ pressed }) => [styles.worse, pressed && styles.pressed]}>
-              <AlertTriangle size={16} color="#C2410C" strokeWidth={2.5} />
+              <AlertTriangle size={16} color="#6B4F36" strokeWidth={2.5} />
               <AppText style={styles.worseText}>{t('iFeelWorse')}</AppText>
             </Pressable>
           </View>
@@ -173,7 +175,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   column: { flex: 1, width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center' },
   top: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.lg, gap: Spacing.sm },
-  noticeText: { color: '#9A3412' },
+  noticeText: { color: '#6B4F36' },
   escalationText: { color: Colors.destructiveText, fontFamily: Fonts.semibold },
   messages: { padding: Spacing.lg, gap: Spacing.lg },
   error: { color: Colors.destructive, alignSelf: 'flex-end' },
@@ -182,7 +184,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm,
     minHeight: 44, borderRadius: Radius.md, borderWidth: 1.5, borderColor: Colors.warningBorder, backgroundColor: Colors.warningBg,
   },
-  worseText: { color: '#C2410C', fontFamily: Fonts.semibold },
+  worseText: { color: '#6B4F36', fontFamily: Fonts.semibold },
   pressed: { opacity: 0.85 },
   sending: { alignSelf: 'flex-end' },
 });

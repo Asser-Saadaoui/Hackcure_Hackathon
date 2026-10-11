@@ -25,6 +25,7 @@ export default {
         ],
       },
       colors: {
+        cream: {50:"#FAF5EE",100:"#EFE3D3",300:"#D5BFA5",500:"#8B6748",600:"#8B6748",700:"#6B4F36",800:"#6B4F36",900:"#6B4F36"},
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

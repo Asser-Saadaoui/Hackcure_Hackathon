@@ -1,14 +1,17 @@
 import { Camera, Mic, Square, SendHorizontal } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
-import { Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
 
-import { Colors, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
+import { AppText } from '@/components/app-text';
+import { InputGroup, InputGroupAddon, InputGroupButton } from '@/components/input-group';
+import { Colors, Fonts, Spacing } from '@/constants/theme';
 import { useI18n } from '@/i18n';
 import { startDictation, voiceSupported } from '@/lib/voice';
 
 type Props = {
   onSend: (text: string) => void;
   disabled?: boolean;
+  busy?: boolean;
   onActivity?: (active: boolean) => void;
   /** Shows a photo button. Photos are for the hospital team: the AI never reads them. */
   onAttach?: () => void;
@@ -16,9 +19,18 @@ type Props = {
 
 const MAX_LENGTH = 1000;
 
-/** shadcn-style textarea + icon send button. Enter sends on web; Shift+Enter makes a new line. */
-export function ChatInput({ onSend, disabled, onActivity, onAttach }: Props) {
+const HINT = {
+  en:'Enter to send · Shift + Enter for a new line',
+  fr:'Entrée pour envoyer · Maj + Entrée pour une nouvelle ligne',
+  ar:'Enter للإرسال · Shift + Enter لسطر جديد',
+  darija:'Enter تبعث · Shift + Enter تزيد سطر',
+};
+
+/** shadcn Input Group composer. Existing photo, dictation and send callbacks stay screen-owned. */
+export function ChatInput({ onSend, disabled, busy = false, onActivity, onAttach }: Props) {
   const { t, rtl, language } = useI18n();
+  const { width, height } = useWindowDimensions();
+  const compact = width < 900 || height < 700;
   const [text, setText] = useState('');
   const [focused, setFocused] = useState(false);
   const [listening, setListening] = useState(false);
@@ -46,19 +58,10 @@ export function ChatInput({ onSend, disabled, onActivity, onAttach }: Props) {
   };
 
   return (
-    <View style={styles.bar}>
-      {onAttach && (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('attachPhoto')}
-          onPress={onAttach}
-          disabled={disabled}
-          style={({ pressed }) => [styles.mic, disabled && styles.sendDisabled, pressed && styles.pressed]}>
-          <Camera size={20} color={Colors.primary} strokeWidth={2.25} />
-        </Pressable>
-      )}
+    <View style={[styles.bar, compact && styles.compactBar]}>
+    <InputGroup focused={focused || listening}>
       <TextInput
-        style={[styles.input, focused && styles.inputFocused, { textAlign: rtl ? 'right' : 'left' }]}
+        style={[styles.input, compact && styles.compactInput, { textAlign: rtl ? 'right' : 'left' }, rtl && styles.arabic]}
         value={text}
         onChangeText={(value) => { setText(value); onActivity?.(value.length > 0); }}
         onFocus={() => { setFocused(true); onActivity?.(true); }}
@@ -70,66 +73,79 @@ export function ChatInput({ onSend, disabled, onActivity, onAttach }: Props) {
         accessibilityLabel={t('chatPlaceholder')}
         onKeyPress={(e) => {
           if (Platform.OS !== 'web') return;
-          const ne = e.nativeEvent as unknown as { key: string; shiftKey?: boolean };
-          if (ne.key === 'Enter' && !ne.shiftKey) {
+          const ne = e.nativeEvent as unknown as { key: string; shiftKey?: boolean; isComposing?:boolean; keyCode?:number };
+          if (ne.key === 'Enter' && !ne.shiftKey && !ne.isComposing && ne.keyCode !== 229) {
             (e as unknown as { preventDefault?: () => void }).preventDefault?.();
             send();
           }
         }}
       />
+      <InputGroupAddon>
+      <View style={styles.tools}>
+      {onAttach && <InputGroupButton accessibilityLabel={t('attachPhoto')}
+        onPress={onAttach} disabled={disabled}>
+        <Camera size={20} color={Colors.primary} strokeWidth={2} />
+      </InputGroupButton>}
       {canDictate && (
-        <Pressable
-          accessibilityRole="button"
+        <InputGroupButton
           accessibilityLabel={listening ? t('voiceStop') : t('voiceDictate')}
+          accessibilityState={{selected:listening}}
           onPress={toggleVoice}
           disabled={disabled}
-          style={({ pressed }) => [styles.mic, listening && styles.micOn, pressed && styles.pressed]}>
+          style={listening && styles.micOn}>
           {listening ? <Square size={18} color={Colors.primaryFg} strokeWidth={2.5} /> : <Mic size={20} color={Colors.primary} strokeWidth={2.25} />}
-        </Pressable>
+        </InputGroupButton>
       )}
-      <Pressable
-        accessibilityRole="button"
+      </View>
+      <View style={styles.sendTools}>
+      {listening && <AppText variant="small" accessibilityLiveRegion="polite" style={styles.listening}>{t('voiceListening')}</AppText>}
+      {text.length > MAX_LENGTH - 100 && <AppText variant="small">{text.length}/{MAX_LENGTH}</AppText>}
+      <InputGroupButton
         accessibilityLabel={t('send')}
+        accessibilityState={{busy}}
         onPress={send}
         disabled={!canSend}
-        style={({ pressed }) => [styles.send, !canSend && styles.sendDisabled, pressed && styles.pressed]}>
-        <SendHorizontal size={20} color={Colors.primaryFg} strokeWidth={2.25} style={rtl ? styles.flip : undefined} />
-      </Pressable>
+        style={[styles.send, !canSend && styles.sendDisabled]}>
+        {busy ? <ActivityIndicator size="small" color={Colors.primary} /> : <SendHorizontal size={20} color={canSend ? Colors.primaryFg : Colors.mutedFg} strokeWidth={2.25} style={rtl ? styles.flip : undefined} />}
+      </InputGroupButton>
+      </View>
+      </InputGroupAddon>
+    </InputGroup>
+    {Platform.OS === 'web' && !compact && <AppText variant="small" style={styles.hint}>{HINT[language]}</AppText>}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   bar: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: Spacing.sm,
+    gap:6,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    backgroundColor: Colors.card,
+    backgroundColor: Colors.background,
   },
   input: {
-    flex: 1,
-    minHeight: 46,
-    maxHeight: 120,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.md - 2,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    borderColor: Colors.input,
-    backgroundColor: Colors.card,
+    minHeight:52,
+    maxHeight:140,
+    paddingHorizontal:16,
+    paddingTop:14,
+    paddingBottom:8,
+    borderWidth:0,
+    borderRadius:22,
+    backgroundColor:'transparent',
+    textAlignVertical:'top',
     fontSize: 15,
     fontFamily: Fonts.regular,
     color: Colors.foreground,
   },
-  // focus-visible:ring-2 ring-primary
-  inputFocused: { borderColor: Colors.primary, borderWidth: 2, paddingHorizontal: Spacing.md - 1 },
-  send: { width: 46, height: 46, borderRadius: Radius.md, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center', ...Shadow },
-  sendDisabled: { opacity: 0.4 },
-  mic: { width: 46, height: 46, borderRadius: Radius.md, borderWidth: 1, borderColor: Colors.input, backgroundColor: Colors.card, alignItems: 'center', justifyContent: 'center' },
-  micOn: { backgroundColor: Colors.destructive, borderColor: Colors.destructive },
-  pressed: { opacity: 0.88 },
+  compactBar: {paddingVertical:8},
+  compactInput: {height:48, minHeight:48, maxHeight:96, paddingTop:12},
+  arabic: {fontFamily:Platform.OS === 'web' ? 'Arial' : undefined},
+  tools: {flexDirection:'row', alignItems:'center', gap:4},
+  sendTools: {flexDirection:'row', alignItems:'center', justifyContent:'flex-end', gap:8, flex:1, minWidth:0},
+  send: {backgroundColor:Colors.primary, borderRadius:999},
+  sendDisabled: {backgroundColor:Colors.secondary, opacity:1},
+  micOn: {backgroundColor:Colors.destructive},
+  listening: {color:Colors.destructive, flexShrink:1},
+  hint: {fontSize:11, lineHeight:16, textAlign:'center'},
   flip: { transform: [{ scaleX: -1 }] },
 });

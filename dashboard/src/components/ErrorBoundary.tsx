@@ -12,7 +12,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode; onReset?: ()
   render() {
     if (!this.state.error) return this.props.children;
     return (
-      <div className="space-y-3 rounded-xl border border-destructive/30 bg-destructive/5 p-6 text-sm">
+      <div className="space-y-3 rounded-xl border border-destructive/30 bg-destructive/5 p-6 text-sm magic-surface">
         <p className="font-medium text-destructive">{t("Cet écran n'a pas pu s'afficher.")}</p>
         <p className="text-muted-foreground">{this.state.error.message}</p>
         <button className="rounded-md border bg-card px-3 py-1.5" onClick={() => { this.setState({ error: null }); this.props.onReset?.(); }}>{t("Retour")}</button>

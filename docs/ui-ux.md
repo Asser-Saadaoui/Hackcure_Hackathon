@@ -25,3 +25,13 @@ Native export is a bundling check, not a physical-device test. Translation copy 
 
 ## Floating desktop companion
 Hassanito uses the existing screen-owned state and sprite sheets as a free-floating character at the page edge at web widths of 1400px and above (ordinary text scale). There is no panel, background or extra sidebar. React's existing DOM portal escapes scrolling and route transforms; inactive screens do not render an extra companion. The character remains above the emergency-call bar. Arabic/Darija mirror the placement. His status text remains accessible to screen readers; smaller screens retain the inline mascot and speech bubble. Emergency screens retain their calm inline presentation; reduced-motion behavior is preserved. Only React DOM type declarations were added as a development dependency, with no new runtime package.
+### Patient care network
+
+The home screen illustrates patient → Sahhanito → hospital, clinic, emergency, and doctor routes. It is explanatory, not a live connection or confirmed referral. Copy lives in the four-language `mobile/src/i18n/experience.ts` catalog.
+
+`care-network.web.tsx` uses a lightweight adaptation of the supplied Magic UI Animated Beam (MIT), retaining ref-based endpoint measurement and curved SVG paths without adding Motion. Reduced-motion preference disables the animated gradient; RTL reverses the layout and beam direction. `care-network.tsx` provides a static native SVG companion. Neither changes triage, referrals, or hospital availability.
+### Particle welcome hero
+
+The existing Welcome entry uses a navy hero with blue Floating 3D Particles adapted from the supplied Magic UI component (MIT). The decoration stays behind the introduction; consent, emergency contact, information cards, and entry routing are preserved. It appears only on Welcome.
+
+The canvas caps rendering at 30fps, caps DPR at 2, reduces particle count on phone widths, and stops scheduling frames when hidden, off-screen, or reduced motion is enabled. Native screens use static SVG decoration. No dependency was added.

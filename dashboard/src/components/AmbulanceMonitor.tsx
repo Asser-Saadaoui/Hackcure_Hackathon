@@ -25,7 +25,7 @@ function Gauge({ label, value, display, unit, min, max, alert }: { label: string
   return (
     <div className={cn("flex flex-col items-center gap-1 rounded-lg border p-2", alert ? "border-red-300 bg-red-50" : "bg-card")}>
       <AnimatedCircularProgressBar className="size-24 text-base" min={min} max={max} value={value ?? min}
-        gaugePrimaryColor={alert ? "#DC2626" : "#2563EB"} gaugeSecondaryColor={alert ? "#FECACA" : "#E2E8F0"}>
+        gaugePrimaryColor={alert ? "#DC2626" : "#3885AB"} gaugeSecondaryColor={alert ? "#FECACA" : "#E2E8F0"}>
         <span className={cn("font-mono text-lg font-semibold tabular-nums", alert && "text-red-700")}>{display ?? value ?? "?"}</span>
         <span className="text-[10px] font-normal text-muted-foreground">{unit}</span>
       </AnimatedCircularProgressBar>
@@ -56,7 +56,7 @@ export function AmbulanceMonitor({ referralId }: { referralId: string }) {
       <CardHeader className="pb-2">
         <CardTitle className="flex flex-wrap items-center gap-2 text-base">
           <Activity className="h-4 w-4 text-primary" />{t("Moniteur ambulance")}
-          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">{t("SIMULÉ")}</span>
+          <span className="rounded-full bg-cream-100 px-2 py-0.5 text-xs font-medium text-cream-800">{t("SIMULÉ")}</span>
           <span className="inline-flex items-center gap-1 text-xs font-normal text-muted-foreground" title={t("Message signé par l’appareil (HMAC-SHA256), horodaté, numéro de séquence vérifié")}>
             <ShieldCheck className="h-3.5 w-3.5" />{last.deviceId} · {age != null ? t("il y a {s} s", { s: age }) : ""}
           </span>
@@ -78,7 +78,7 @@ export function AmbulanceMonitor({ referralId }: { referralId: string }) {
         </div>
         <div className="grid grid-cols-2 gap-4 text-xs text-muted-foreground">
           <div><p>{t("FC (5 dernières min)")}</p><Spark values={series("heartRate").slice(-60)} color="#DC2626" low={40} high={160} /></div>
-          <div><p>{t("SpO₂ (5 dernières min)")}</p><Spark values={series("spo2").slice(-60)} color="#2563EB" low={80} high={100} /></div>
+          <div><p>{t("SpO₂ (5 dernières min)")}</p><Spark values={series("spo2").slice(-60)} color="#3885AB" low={80} high={100} /></div>
         </div>
       </CardContent>
     </Card>

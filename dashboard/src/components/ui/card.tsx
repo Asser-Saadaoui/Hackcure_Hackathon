@@ -1,9 +1,10 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { MagicCard } from './magic-card';
 
 const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div
+    <MagicCard
       ref={ref}
       className={cn(
         "rounded-xl border bg-card text-card-foreground shadow-sm",
